@@ -40,21 +40,26 @@ def tokenize(text: str) -> list[str]:
 
 
 def search_qa(
-    db: Session, question: str, category: str | None = None
-) -> tuple[str, str | None, int | None]:
-    query = db.query(QaKnowledge).filter(QaKnowledge.is_active == True)
+    db: Session, question: str, category: str | None = None, company_id: int = 1
+) -> tuple[str, str | None, int | None, float | None]:
+    """Search QA filtered by company_id. Returns (answer, category, qa_id, confidence_score)."""
+    query = db.query(QaKnowledge).filter(
+        QaKnowledge.is_active == True,
+        QaKnowledge.company_id == company_id,
+    )
     if category and category != "전체":
         query = query.filter(QaKnowledge.category == category)
 
     qa_list = query.all()
     if not qa_list:
-        return FALLBACK_MESSAGE, None, None
+        return FALLBACK_MESSAGE, None, None, None
 
     tokens = tokenize(question)
     normalized_question = normalize_text(question)
 
     best_score = 0
     best_qa = None
+    max_possible = 0
 
     for qa in qa_list:
         score = 0
@@ -79,6 +84,10 @@ def search_qa(
             best_qa = qa
 
     if best_score == 0 or best_qa is None:
-        return FALLBACK_MESSAGE, None, None
+        return FALLBACK_MESSAGE, None, None, 0.0
 
-    return best_qa.answer, best_qa.category, best_qa.qa_id
+    # Calculate confidence score (0.0 to 1.0)
+    max_possible = 5 + len(tokens) * 6  # max: substring(5) + per-token(3+2+1)
+    confidence = min(best_score / max(max_possible, 1), 1.0)
+
+    return best_qa.answer, best_qa.category, best_qa.qa_id, round(confidence, 3)

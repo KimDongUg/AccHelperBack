@@ -1,22 +1,16 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import require_admin, require_auth
 from app.models.chat_log import ChatLog
+from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
-from app.routers.auth import get_current_user
 from app.schemas.qa import QaCreate, QaListResponse, QaResponse, QaUpdate
 
 router = APIRouter(prefix="/api/qa", tags=["qa"])
-
-
-def require_admin(session_token: str | None = Cookie(None)):
-    user = get_current_user(session_token)
-    if not user:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
-    return user
 
 
 @router.get("", response_model=QaListResponse)
@@ -27,9 +21,10 @@ def list_qa(
     category: str = "",
     status: str = "",
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_auth),
 ):
-    query = db.query(QaKnowledge)
+    company_id = user["company_id"]
+    query = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id)
 
     if search:
         query = query.filter(
@@ -61,20 +56,20 @@ def check_duplicate(
     question: str = Query(..., min_length=1),
     exclude_id: int | None = Query(None),
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_auth),
 ):
     """Return similar questions for duplicate warning."""
+    company_id = user["company_id"]
     q = question.strip().lower()
     if len(q) < 5:
         return {"duplicates": []}
 
-    all_qa = db.query(QaKnowledge).all()
+    all_qa = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).all()
     results = []
     for qa in all_qa:
         if exclude_id and qa.qa_id == exclude_id:
             continue
         existing = qa.question.strip().lower()
-        # Simple character overlap similarity
         if len(q) == 0 or len(existing) == 0:
             continue
         common = sum(1 for c in q if c in existing)
@@ -94,9 +89,14 @@ def check_duplicate(
 def get_qa(
     qa_id: int,
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_auth),
 ):
-    qa = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id).first()
+    company_id = user["company_id"]
+    qa = (
+        db.query(QaKnowledge)
+        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
+        .first()
+    )
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
     return qa
@@ -106,9 +106,25 @@ def get_qa(
 def create_qa(
     data: QaCreate,
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin),
 ):
-    qa = QaKnowledge(**data.model_dump())
+    company_id = user["company_id"]
+
+    # Check max_qa_count quota
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if company:
+        current_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).count()
+        if current_count >= company.max_qa_count:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Q&A 수 한도({company.max_qa_count}개)를 초과했습니다.",
+            )
+
+    qa = QaKnowledge(
+        **data.model_dump(),
+        company_id=company_id,
+        created_by=user["user_id"],
+    )
     db.add(qa)
     db.commit()
     db.refresh(qa)
@@ -120,9 +136,14 @@ def update_qa(
     qa_id: int,
     data: QaUpdate,
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin),
 ):
-    qa = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id).first()
+    company_id = user["company_id"]
+    qa = (
+        db.query(QaKnowledge)
+        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
+        .first()
+    )
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
@@ -130,6 +151,7 @@ def update_qa(
     for key, value in update_data.items():
         setattr(qa, key, value)
     qa.updated_at = datetime.utcnow()
+    qa.updated_by = user["user_id"]
     db.commit()
     db.refresh(qa)
     return qa
@@ -139,13 +161,17 @@ def update_qa(
 def delete_qa(
     qa_id: int,
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin),
 ):
-    qa = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id).first()
+    company_id = user["company_id"]
+    qa = (
+        db.query(QaKnowledge)
+        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
+        .first()
+    )
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
-    # Nullify references in chat_logs
     db.query(ChatLog).filter(ChatLog.qa_id == qa_id).update(
         {ChatLog.qa_id: None}, synchronize_session="fetch"
     )
@@ -158,13 +184,19 @@ def delete_qa(
 def toggle_qa(
     qa_id: int,
     db: Session = Depends(get_db),
-    _user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin),
 ):
-    qa = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id).first()
+    company_id = user["company_id"]
+    qa = (
+        db.query(QaKnowledge)
+        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
+        .first()
+    )
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
     qa.is_active = not qa.is_active
     qa.updated_at = datetime.utcnow()
+    qa.updated_by = user["user_id"]
     db.commit()
     db.refresh(qa)
     return qa

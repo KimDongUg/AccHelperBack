@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경리 도우미 - AI 경리 업무 챗봇</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+
+    <header class="header" role="banner">
+        <div class="header-left">
+            <div class="header-logo" aria-label="경리 도우미 홈">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>경리 도우미</span>
+            </div>
+            <nav class="header-nav" aria-label="메인 내비게이션">
+                <a href="/" class="active" aria-current="page">AI 챗봇</a>
+                <a href="#" class="disabled" aria-disabled="true" title="준비 중입니다">부과내역서</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <span id="companyLabel" class="company-label" style="display:none;"></span>
+            <a href="/admin.html" class="btn btn-outline btn-sm" id="adminLink">관리자</a>
+        </div>
+    </header>
+
+    <!-- Company Selection -->
+    <main id="companySelection" class="company-selection" style="display:none;">
+        <div class="company-hero">
+            <div class="company-hero-icon">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            </div>
+            <h1>회사를 선택해 주세요</h1>
+            <p>경리 도우미를 이용할 회사를 선택하세요</p>
+        </div>
+        <div class="company-grid" id="companyGrid">
+            <!-- Populated by JS -->
+        </div>
+        <div class="company-loading" id="companyLoading">
+            <div class="company-spinner"></div>
+            <p>회사 목록을 불러오는 중...</p>
+        </div>
+        <div class="company-error" id="companyError" style="display:none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+            <p id="companyErrorMsg">회사 목록을 불러올 수 없습니다.</p>
+            <button class="btn btn-outline btn-sm" onclick="loadCompanies()">다시 시도</button>
+        </div>
+    </main>
+
+    <!-- Chat Section -->
+    <main id="chatSection" class="chat-container" style="display:none;">
+        <div class="chat-hero">
+            <h1>경리 업무, AI가 도와드립니다</h1>
+            <p>세금, 급여, 비용처리 등 경리 업무에 관한 궁금한 점을 물어보세요</p>
+        </div>
+
+        <!-- Category filters -->
+        <div class="category-filters" role="toolbar" aria-label="카테고리 필터">
+            <button class="category-btn active" data-category="전체" aria-pressed="true">전체</button>
+            <button class="category-btn" data-category="세금" aria-pressed="false">세금</button>
+            <button class="category-btn" data-category="급여" aria-pressed="false">급여</button>
+            <button class="category-btn" data-category="비용처리" aria-pressed="false">비용처리</button>
+            <button class="category-btn" data-category="회계처리" aria-pressed="false">회계처리</button>
+            <button class="category-btn" data-category="기타" aria-pressed="false">기타</button>
+        </div>
+
+        <!-- Chat messages -->
+        <div class="chat-messages" id="chatMessages" role="log" aria-label="채팅 메시지" aria-live="polite">
+            <div class="message bot" role="article">
+                <div class="message-avatar" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div class="message-bubble">
+                    안녕하세요! 경리 도우미입니다.<br>
+                    세금, 급여, 비용처리, 회계처리 등 경리 업무에 대해 궁금한 점을 물어보세요.
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator" role="status" aria-label="응답 작성 중">
+            <span></span><span></span><span></span>
+        </div>
+
+        <!-- Quick questions -->
+        <div class="quick-questions" id="quickQuestions" aria-label="자주 묻는 질문">
+            <button class="quick-btn" data-question="부가가치세 신고 기한은 언제인가요?">부가세 신고 기한</button>
+            <button class="quick-btn" data-question="4대보험 요율은 어떻게 되나요?">4대보험 요율</button>
+            <button class="quick-btn" data-question="접대비 한도는 얼마인가요?">접대비 한도</button>
+            <button class="quick-btn" data-question="퇴직금 계산은 어떻게 하나요?">퇴직금 계산</button>
+            <button class="quick-btn" data-question="경리 업무 월별 체크리스트를 알려주세요.">월별 체크리스트</button>
+        </div>
+
+        <!-- Chat input -->
+        <div class="chat-input-wrap">
+            <label for="chatInput" class="sr-only">질문 입력</label>
+            <input type="text" id="chatInput" class="chat-input" placeholder="질문을 입력하세요..." autocomplete="off" aria-label="질문 입력">
+            <button id="sendBtn" class="chat-send-btn" aria-label="전송">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+        </div>
+    </main>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/index.js"></script>
+</body>
+</html>

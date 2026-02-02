@@ -1,22 +1,79 @@
 from sqlalchemy.orm import Session
 
 from app.models.admin_user import AdminUser
+from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
 from app.services.auth_service import hash_password
 
 
 def seed_data(db: Session):
+    # --- Seed companies ---
+    if db.query(Company).count() == 0:
+        default_company = Company(
+            company_name="기본 회사",
+            company_code="DEFAULT",
+            business_number="000-00-00000",
+            industry="일반",
+            subscription_plan="enterprise",
+            max_qa_count=1000,
+            max_admins=50,
+            is_active=True,
+        )
+        demo_company = Company(
+            company_name="데모 회사",
+            company_code="DEMO",
+            business_number="111-11-11111",
+            industry="IT",
+            subscription_plan="free",
+            max_qa_count=50,
+            max_admins=3,
+            is_active=True,
+        )
+        db.add(default_company)
+        db.add(demo_company)
+        db.commit()
+
+    # --- Seed admin users ---
     if db.query(AdminUser).count() == 0:
+        # Default company super_admin
         admin = AdminUser(
+            company_id=1,
             username="admin",
             password_hash=hash_password("admin123"),
             email="admin@example.com",
+            full_name="시스템 관리자",
+            role="super_admin",
             is_active=True,
         )
         db.add(admin)
+
+        # Demo company admin
+        demo_admin = AdminUser(
+            company_id=2,
+            username="demo_admin",
+            password_hash=hash_password("demo123"),
+            email="admin@demo.com",
+            full_name="데모 관리자",
+            role="admin",
+            is_active=True,
+        )
+        db.add(demo_admin)
+
+        # Demo company viewer
+        demo_viewer = AdminUser(
+            company_id=2,
+            username="demo_viewer",
+            password_hash=hash_password("demo123"),
+            email="viewer@demo.com",
+            full_name="데모 뷰어",
+            role="viewer",
+            is_active=True,
+        )
+        db.add(demo_viewer)
         db.commit()
 
-    if db.query(QaKnowledge).count() == 0:
+    # --- Seed QA for default company (company_id=1) ---
+    if db.query(QaKnowledge).filter(QaKnowledge.company_id == 1).count() == 0:
         qa_entries = [
             # 세금 (Tax) - 5 entries
             {
@@ -176,6 +233,46 @@ def seed_data(db: Session):
         ]
 
         for entry in qa_entries:
-            qa = QaKnowledge(**entry)
+            qa = QaKnowledge(company_id=1, **entry)
+            db.add(qa)
+        db.commit()
+
+    # --- Seed QA for demo company (company_id=2) ---
+    if db.query(QaKnowledge).filter(QaKnowledge.company_id == 2).count() == 0:
+        demo_qa_entries = [
+            {
+                "category": "세금",
+                "question": "부가세 신고는 언제 하나요?",
+                "answer": "부가가치세 신고는 1기(1~6월분)는 7월 25일까지, 2기(7~12월분)는 다음 해 1월 25일까지입니다.",
+                "keywords": "부가세,신고,기한",
+            },
+            {
+                "category": "급여",
+                "question": "4대보험 요율 알려주세요",
+                "answer": "국민연금 9%, 건강보험 7.09%, 장기요양 건강보험의 12.81%, 고용보험 1.8%입니다.",
+                "keywords": "4대보험,요율",
+            },
+            {
+                "category": "비용처리",
+                "question": "접대비 한도가 얼마인가요?",
+                "answer": "중소기업 기준 연 3,600만원이 기본 한도이며, 매출액에 따라 추가됩니다.",
+                "keywords": "접대비,한도",
+            },
+            {
+                "category": "회계처리",
+                "question": "감가상각은 어떻게 하나요?",
+                "answer": "정액법과 정률법이 있으며, 건물은 정액법만 가능합니다. 자산별 내용연수에 따라 상각합니다.",
+                "keywords": "감가상각,정액법,정률법",
+            },
+            {
+                "category": "기타",
+                "question": "데모 회사 테스트 질문입니다",
+                "answer": "이것은 데모 회사의 테스트 Q&A입니다. 회사별로 별도의 Q&A 데이터가 관리됩니다.",
+                "keywords": "데모,테스트",
+            },
+        ]
+
+        for entry in demo_qa_entries:
+            qa = QaKnowledge(company_id=2, **entry)
             db.add(qa)
         db.commit()

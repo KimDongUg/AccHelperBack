@@ -16,11 +16,10 @@ from sqlalchemy import text
 from app.config import APP_ENV, CORS_ORIGINS, LOG_LEVEL, TRUSTED_HOSTS
 from app.database import Base, SessionLocal, engine
 from app.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware, setup_logging
-from app.models.admin_user import AdminUser
-from app.models.chat_log import ChatLog
-from app.models.qa_knowledge import QaKnowledge
+from app.migrate import run_migration
+from app.models import AdminActivityLog, AdminUser, ChatLog, Company, QaKnowledge
 from app.rate_limit import limiter
-from app.routers import auth, chat, qa, stats
+from app.routers import activity_logs, admins, auth, chat, companies, qa, stats
 from app.seed import seed_data
 
 logger = logging.getLogger("acchelper")
@@ -33,10 +32,17 @@ INDEX_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS ix_qa_knowledge_category ON qa_knowledge (category)",
     "CREATE INDEX IF NOT EXISTS ix_qa_knowledge_is_active ON qa_knowledge (is_active)",
     "CREATE INDEX IF NOT EXISTS ix_qa_knowledge_category_is_active ON qa_knowledge (category, is_active)",
+    "CREATE INDEX IF NOT EXISTS ix_qa_knowledge_company_id ON qa_knowledge (company_id)",
+    "CREATE INDEX IF NOT EXISTS ix_qa_knowledge_company_category ON qa_knowledge (company_id, category)",
     "CREATE INDEX IF NOT EXISTS ix_chat_logs_session_id ON chat_logs (session_id)",
     "CREATE INDEX IF NOT EXISTS ix_chat_logs_qa_id ON chat_logs (qa_id)",
     "CREATE INDEX IF NOT EXISTS ix_chat_logs_category ON chat_logs (category)",
     "CREATE INDEX IF NOT EXISTS ix_chat_logs_timestamp ON chat_logs (timestamp)",
+    "CREATE INDEX IF NOT EXISTS ix_chat_logs_company_id ON chat_logs (company_id)",
+    "CREATE INDEX IF NOT EXISTS ix_admin_users_company_id ON admin_users (company_id)",
+    "CREATE INDEX IF NOT EXISTS ix_admin_activity_logs_company_id ON admin_activity_logs (company_id)",
+    "CREATE INDEX IF NOT EXISTS ix_admin_activity_logs_user_id ON admin_activity_logs (user_id)",
+    "CREATE INDEX IF NOT EXISTS ix_admin_activity_logs_timestamp ON admin_activity_logs (timestamp)",
 ]
 
 
@@ -47,6 +53,9 @@ async def lifespan(app: FastAPI):
 
     setup_logging(LOG_LEVEL)
     logger.info("Starting AccHelper (env=%s)", APP_ENV)
+
+    # Run migration before create_all
+    run_migration(engine)
 
     Base.metadata.create_all(bind=engine)
 
@@ -89,6 +98,9 @@ app.include_router(auth.router)
 app.include_router(chat.router)
 app.include_router(qa.router)
 app.include_router(stats.router)
+app.include_router(companies.router)
+app.include_router(admins.router)
+app.include_router(activity_logs.router)
 
 if (STATIC_DIR / "css").exists():
     app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")

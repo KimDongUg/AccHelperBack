@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 - 경리 도우미</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+
+    <header class="header" role="banner">
+        <div class="header-left">
+            <a href="/" class="header-logo" aria-label="경리 도우미 홈으로 이동">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>경리 도우미</span>
+            </a>
+        </div>
+        <div class="header-right">
+            <span id="headerCompanyName" style="font-size:var(--text-sm);color:var(--primary);font-weight:600"></span>
+            <span id="adminUsername" style="font-size:var(--text-sm);color:var(--gray-600)"></span>
+            <span id="roleBadge" class="role-badge" style="display:none"></span>
+            <a href="/" class="btn btn-outline btn-sm">챗봇</a>
+            <button id="logoutBtn" class="btn btn-sm" style="color:var(--gray-600)" aria-label="로그아웃">로그아웃</button>
+        </div>
+    </header>
+
+    <main id="main-content" class="admin-container">
+        <h1 class="admin-title">관리 대시보드</h1>
+
+        <!-- Stats — 3 cards -->
+        <div class="stats-grid" role="region" aria-label="통계 요약">
+            <div class="stat-card">
+                <div class="stat-icon blue" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>총 Q&A</h4>
+                    <div class="stat-value" id="statTotal" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>활성 Q&A</h4>
+                    <div class="stat-value" id="statActive" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>오늘의 대화</h4>
+                    <div class="stat-value" id="statToday" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav" role="tablist" aria-label="관리 탭">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="qa" id="tabQa">Q&A 관리</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="admins" id="tabAdmins" style="display:none">관리자 관리</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
+        </div>
+
+        <!-- Tab: Q&A Management -->
+        <div class="tab-content active" id="tabContentQa" role="tabpanel">
+            <!-- Toolbar -->
+            <div class="toolbar" role="toolbar" aria-label="Q&A 검색 및 필터">
+                <div class="search-wrap">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <label for="searchInput" class="sr-only">검색</label>
+                    <input type="text" id="searchInput" class="form-control search-input" placeholder="질문, 답변, 키워드 검색..." aria-label="Q&A 검색">
+                </div>
+                <label for="categoryFilter" class="sr-only">카테고리 필터</label>
+                <select id="categoryFilter" class="form-control" aria-label="카테고리 필터">
+                    <option value="">전체 카테고리</option>
+                    <option value="세금">세금</option>
+                    <option value="급여">급여</option>
+                    <option value="비용처리">비용처리</option>
+                    <option value="회계처리">회계처리</option>
+                    <option value="기타">기타</option>
+                </select>
+                <label for="statusFilter" class="sr-only">상태 필터</label>
+                <select id="statusFilter" class="form-control" aria-label="상태 필터">
+                    <option value="">전체 상태</option>
+                    <option value="active">활성</option>
+                    <option value="inactive">비활성</option>
+                </select>
+                <button class="btn btn-primary" id="addQaBtn" onclick="openCreateModal()" aria-label="새 Q&A 추가">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    새 Q&A 추가
+                </button>
+            </div>
+
+            <!-- Table -->
+            <div class="qa-table-wrap" id="qaTableWrap">
+                <div class="table-loading" id="tableLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="Q&A 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col" style="width:80px">카테고리</th>
+                                <th scope="col" class="col-question">질문</th>
+                                <th scope="col" class="col-answer">답변 미리보기</th>
+                                <th scope="col" style="width:60px">상태</th>
+                                <th scope="col" style="width:100px" class="col-date">수정일</th>
+                                <th scope="col" style="width:120px" class="col-actions">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qaTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <p>등록된 Q&A가 없습니다.</p>
+                </div>
+                <nav class="pagination" id="pagination" aria-label="페이지 내비게이션"></nav>
+            </div>
+        </div>
+
+        <!-- Tab: Admin Management -->
+        <div class="tab-content" id="tabContentAdmins" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">관리자 목록</h3>
+                <button class="btn btn-primary" id="addAdminBtn" onclick="openAdminModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    관리자 추가
+                </button>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="관리자 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col">이메일</th>
+                                <th scope="col">이름</th>
+                                <th scope="col" style="width:80px">역할</th>
+                                <th scope="col" style="width:60px">상태</th>
+                                <th scope="col" style="width:150px">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Activity Logs -->
+        <div class="tab-content" id="tabContentLogs" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">활동 로그</h3>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="활동 로그">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col" style="width:120px">작업 유형</th>
+                                <th scope="col" style="width:100px">대상</th>
+                                <th scope="col">상세</th>
+                                <th scope="col" style="width:140px">시간</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="logEmptyState" class="empty-state" style="display:none">
+                    <p>활동 로그가 없습니다.</p>
+                </div>
+                <nav class="pagination" id="logPagination" aria-label="로그 페이지 내비게이션"></nav>
+            </div>
+        </div>
+    </main>
+
+    <!-- Create/Edit QA Modal -->
+    <div class="modal-overlay" id="qaModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">새 Q&A 등록</h3>
+                <button class="modal-close" onclick="closeModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editQaId">
+                <div class="form-group">
+                    <label for="modalCategory">카테고리 <span class="required" aria-hidden="true">*</span></label>
+                    <select id="modalCategory" class="form-control" aria-required="true">
+                        <option value="세금">세금</option>
+                        <option value="급여">급여</option>
+                        <option value="비용처리">비용처리</option>
+                        <option value="회계처리">회계처리</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="modalQuestion">질문 <span class="required" aria-hidden="true">*</span></label>
+                    <textarea id="modalQuestion" class="form-control" rows="3" placeholder="질문을 입력하세요 (최소 5자)" minlength="5" aria-required="true" aria-describedby="questionHint"></textarea>
+                    <div class="field-hint" id="questionHint" aria-live="polite"></div>
+                    <div class="duplicate-warn" id="duplicateWarn" style="display:none" role="alert"></div>
+                </div>
+                <div class="form-group">
+                    <label for="modalAnswer">답변 <span class="required" aria-hidden="true">*</span></label>
+                    <textarea id="modalAnswer" class="form-control" rows="5" placeholder="답변을 입력하세요 (최소 10자)" minlength="10" aria-required="true" aria-describedby="answerHint"></textarea>
+                    <div class="field-hint" id="answerHint" aria-live="polite"></div>
+                </div>
+                <div class="form-group">
+                    <label for="modalKeywords">키워드 (쉼표로 구분)</label>
+                    <input type="text" id="modalKeywords" class="form-control" placeholder="예: 부가세,신고,기한">
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" id="modalActive" checked>
+                    <label for="modalActive">활성화</label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">취소</button>
+                <button class="btn btn-primary" id="modalSaveBtn" onclick="saveQa()" aria-label="저장">
+                    <span class="btn-text">저장</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Modal -->
+    <div class="modal-overlay" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="adminModalTitle">관리자 추가</h3>
+                <button class="modal-close" onclick="closeAdminModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editAdminId">
+                <div class="form-group">
+                    <label for="adminEmail">이메일 <span class="required">*</span></label>
+                    <input type="email" id="adminEmail" class="form-control" placeholder="이메일을 입력하세요" required>
+                </div>
+                <div class="form-group" id="adminPasswordGroup">
+                    <label for="adminPassword">비밀번호 <span class="required">*</span></label>
+                    <input type="password" id="adminPassword" class="form-control" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="adminFullName">이름</label>
+                    <input type="text" id="adminFullName" class="form-control" placeholder="이름을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="adminPhone">전화번호</label>
+                    <input type="text" id="adminPhone" class="form-control" placeholder="전화번호를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="adminDepartment">부서</label>
+                    <input type="text" id="adminDepartment" class="form-control" placeholder="부서를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="adminPosition">직급</label>
+                    <input type="text" id="adminPosition" class="form-control" placeholder="직급을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="adminRole">역할</label>
+                    <select id="adminRole" class="form-control">
+                        <option value="admin">관리자</option>
+                        <option value="viewer">뷰어 (읽기 전용)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeAdminModal()">취소</button>
+                <button class="btn btn-primary" id="adminSaveBtn" onclick="saveAdmin()">저장</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirm -->
+    <div class="confirm-overlay" id="deleteConfirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" aria-describedby="deleteConfirmDesc">
+        <div class="confirm-dialog">
+            <div class="confirm-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3 id="deleteConfirmTitle">삭제 확인</h3>
+            <p id="deleteConfirmDesc">정말 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
+            <div class="actions">
+                <button class="btn btn-outline" onclick="closeDeleteConfirm()">취소</button>
+                <button class="btn btn-danger" id="confirmDeleteBtn" aria-label="삭제 확인">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/admin.js"></script>
+</body>
+</html>

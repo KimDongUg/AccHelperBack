@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import RATE_LIMIT_AUTH, SESSION_EXPIRE_HOURS
 from app.database import get_db
 from app.models.admin_user import AdminUser
+from app.models.company import Company
 from app.rate_limit import limiter
 from app.schemas.auth import AuthCheckResponse, LoginRequest, LoginResponse, SessionData
 from app.services.auth_service import verify_password
@@ -14,7 +15,6 @@ from app.services.auth_service import verify_password
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 # In-memory session store
-# {token: {"user_id": int, "username": str, "login_time": datetime, "expiry_time": datetime}}
 sessions: dict[str, dict] = {}
 
 
@@ -29,7 +29,14 @@ def _cleanup_expired():
 def _make_session_data(sess: dict) -> SessionData:
     return SessionData(
         user_id=sess["user_id"],
-        username=sess["username"],
+        username=sess.get("username"),
+        company_id=sess["company_id"],
+        company_code=sess["company_code"],
+        company_name=sess["company_name"],
+        email=sess["email"],
+        full_name=sess.get("full_name"),
+        role=sess["role"],
+        permissions=sess.get("permissions"),
         login_time=sess["login_time"].isoformat() + "Z",
         expiry_time=sess["expiry_time"].isoformat() + "Z",
     )
@@ -50,7 +57,20 @@ def get_current_user(session_token: str | None = Cookie(None)) -> dict | None:
 def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     _cleanup_expired()
 
-    user = db.query(AdminUser).filter(AdminUser.username == req.username).first()
+    # 3-field login: company_code -> email -> password
+    company = (
+        db.query(Company)
+        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .first()
+    )
+    if not company:
+        return LoginResponse(success=False, message="회사 코드를 찾을 수 없습니다.")
+
+    user = (
+        db.query(AdminUser)
+        .filter(AdminUser.company_id == company.company_id, AdminUser.email == req.email)
+        .first()
+    )
     if not user or not user.is_active:
         return LoginResponse(success=False, message="사용자를 찾을 수 없습니다.")
 
@@ -68,6 +88,13 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     sessions[token] = {
         "user_id": user.user_id,
         "username": user.username,
+        "company_id": company.company_id,
+        "company_code": company.company_code,
+        "company_name": company.company_name,
+        "email": user.email,
+        "full_name": user.full_name,
+        "role": user.role,
+        "permissions": user.permissions,
         "login_time": now,
         "expiry_time": expiry,
     }

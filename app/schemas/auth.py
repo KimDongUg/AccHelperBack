@@ -4,14 +4,22 @@ from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
-    username: str
+    company_code: str
+    email: str
     password: str
     remember: bool = False
 
 
 class SessionData(BaseModel):
     user_id: int
-    username: str
+    username: str | None = None
+    company_id: int
+    company_code: str
+    company_name: str
+    email: str
+    full_name: str | None = None
+    role: str
+    permissions: str | None = None
     login_time: str
     expiry_time: str
 

@@ -1,12 +1,15 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException
+from fastapi import APIRouter, Depends
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.dependencies import require_auth, require_super_admin
+from app.models.admin_user import AdminUser
 from app.models.chat_log import ChatLog
+from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
-from app.routers.auth import get_current_user
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -14,25 +17,29 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 @router.get("")
 def get_stats(
     db: Session = Depends(get_db),
-    session_token: str | None = Cookie(None),
+    user: dict = Depends(require_auth),
 ):
-    user = get_current_user(session_token)
-    if not user:
-        raise HTTPException(status_code=401, detail="로그인이 필요합니다.")
+    company_id = user["company_id"]
 
-    total_qa = db.query(QaKnowledge).count()
-    active_qa = db.query(QaKnowledge).filter(QaKnowledge.is_active == True).count()
+    total_qa = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).count()
+    active_qa = (
+        db.query(QaKnowledge)
+        .filter(QaKnowledge.company_id == company_id, QaKnowledge.is_active == True)
+        .count()
+    )
 
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     today_chats = (
-        db.query(ChatLog).filter(ChatLog.timestamp >= today_start).count()
+        db.query(ChatLog)
+        .filter(ChatLog.company_id == company_id, ChatLog.timestamp >= today_start)
+        .count()
     )
 
-    total_chats = db.query(ChatLog).count()
+    total_chats = db.query(ChatLog).filter(ChatLog.company_id == company_id).count()
 
     # Category distribution
     categories = {}
-    for qa in db.query(QaKnowledge).all():
+    for qa in db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).all():
         categories[qa.category] = categories.get(qa.category, 0) + 1
 
     return {
@@ -41,4 +48,58 @@ def get_stats(
         "today_chats": today_chats,
         "total_chats": total_chats,
         "categories": categories,
+    }
+
+
+@router.get("/overview")
+def get_overview(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """Super admin: overview stats across all companies."""
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+
+    total_companies = db.query(Company).filter(Company.deleted_at == None).count()
+    active_companies = (
+        db.query(Company)
+        .filter(Company.is_active == True, Company.deleted_at == None)
+        .count()
+    )
+    total_admins = db.query(AdminUser).count()
+    total_qa = db.query(QaKnowledge).count()
+    total_chats = db.query(ChatLog).count()
+    today_chats = db.query(ChatLog).filter(ChatLog.timestamp >= today_start).count()
+
+    # Per-company breakdown
+    company_stats = []
+    companies = (
+        db.query(Company)
+        .filter(Company.deleted_at == None)
+        .order_by(Company.company_id)
+        .all()
+    )
+    for c in companies:
+        qa_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == c.company_id).count()
+        chat_count = db.query(ChatLog).filter(ChatLog.company_id == c.company_id).count()
+        admin_count = db.query(AdminUser).filter(AdminUser.company_id == c.company_id).count()
+        company_stats.append({
+            "company_id": c.company_id,
+            "company_name": c.company_name,
+            "company_code": c.company_code,
+            "is_active": c.is_active,
+            "qa_count": qa_count,
+            "chat_count": chat_count,
+            "admin_count": admin_count,
+            "max_qa_count": c.max_qa_count,
+            "max_admins": c.max_admins,
+        })
+
+    return {
+        "total_companies": total_companies,
+        "active_companies": active_companies,
+        "total_admins": total_admins,
+        "total_qa": total_qa,
+        "total_chats": total_chats,
+        "today_chats": today_chats,
+        "companies": company_stats,
     }

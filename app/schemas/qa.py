@@ -21,11 +21,16 @@ class QaUpdate(BaseModel):
 
 class QaResponse(BaseModel):
     qa_id: int
+    company_id: int
     category: str
     question: str
     answer: str
     keywords: str
     is_active: bool
+    created_by: int | None = None
+    updated_by: int | None = None
+    view_count: int = 0
+    used_count: int = 0
     created_at: datetime
     updated_at: datetime
 
