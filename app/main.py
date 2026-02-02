@@ -90,8 +90,10 @@ app.include_router(chat.router)
 app.include_router(qa.router)
 app.include_router(stats.router)
 
-app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")
-app.mount("/js", StaticFiles(directory=str(STATIC_DIR / "js")), name="js")
+if (STATIC_DIR / "css").exists():
+    app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")
+if (STATIC_DIR / "js").exists():
+    app.mount("/js", StaticFiles(directory=str(STATIC_DIR / "js")), name="js")
 
 
 @app.get("/api/health")
@@ -114,23 +116,22 @@ def health_check():
 
 _NO_CACHE = "no-cache, no-store, must-revalidate"
 
+if STATIC_DIR.exists():
 
-@app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    response = FileResponse(str(STATIC_DIR / "index.html"))
-    response.headers["Cache-Control"] = _NO_CACHE
-    return response
+    @app.get("/", response_class=HTMLResponse)
+    async def serve_index():
+        response = FileResponse(str(STATIC_DIR / "index.html"))
+        response.headers["Cache-Control"] = _NO_CACHE
+        return response
 
+    @app.get("/login.html", response_class=HTMLResponse)
+    async def serve_login():
+        response = FileResponse(str(STATIC_DIR / "login.html"))
+        response.headers["Cache-Control"] = _NO_CACHE
+        return response
 
-@app.get("/login.html", response_class=HTMLResponse)
-async def serve_login():
-    response = FileResponse(str(STATIC_DIR / "login.html"))
-    response.headers["Cache-Control"] = _NO_CACHE
-    return response
-
-
-@app.get("/admin.html", response_class=HTMLResponse)
-async def serve_admin():
-    response = FileResponse(str(STATIC_DIR / "admin.html"))
-    response.headers["Cache-Control"] = _NO_CACHE
-    return response
+    @app.get("/admin.html", response_class=HTMLResponse)
+    async def serve_admin():
+        response = FileResponse(str(STATIC_DIR / "admin.html"))
+        response.headers["Cache-Control"] = _NO_CACHE
+        return response
