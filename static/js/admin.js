@@ -325,7 +325,7 @@ function resetModalHints() {
 function openCreateModal() {
     document.getElementById('modalTitle').textContent = '새 Q&A 추가';
     document.getElementById('editQaId').value = '';
-    document.getElementById('modalCategory').value = '세금';
+    document.getElementById('modalCategory').value = '이주정산';
     document.getElementById('modalQuestion').value = '';
     document.getElementById('modalAnswer').value = '';
     document.getElementById('modalKeywords').value = '';
