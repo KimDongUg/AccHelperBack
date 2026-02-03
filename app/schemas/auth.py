@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
-    company_code: str
+    company_id: int
     email: str
     password: str
     remember: bool = False
@@ -31,7 +31,7 @@ class LoginResponse(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    company_code: str
+    company_id: int
     email: str
     password: str
     full_name: str
@@ -49,7 +49,7 @@ class AuthCheckResponse(BaseModel):
 
 
 class FindEmailRequest(BaseModel):
-    company_code: str
+    company_id: int
     full_name: str
 
 
@@ -60,7 +60,7 @@ class FindEmailResponse(BaseModel):
 
 
 class ResetPasswordRequest(BaseModel):
-    company_code: str
+    company_id: int
     email: str
 
 

@@ -74,14 +74,14 @@ def get_current_user(session_token: str | None = Cookie(None)) -> dict | None:
 def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     _cleanup_expired()
 
-    # 3-field login: company_code -> email -> password
+    # Lookup company by ID
     company = (
         db.query(Company)
-        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .filter(Company.company_id == req.company_id, Company.is_active == True, Company.deleted_at == None)
         .first()
     )
     if not company:
-        return LoginResponse(success=False, message="회사 코드를 찾을 수 없습니다.")
+        return LoginResponse(success=False, message="회사 ID를 찾을 수 없습니다.")
 
     # Try normal company-scoped lookup first
     user = (
@@ -151,11 +151,11 @@ def register(req: RegisterRequest, request: Request, db: Session = Depends(get_d
     # Validate company
     company = (
         db.query(Company)
-        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .filter(Company.company_id == req.company_id, Company.is_active == True, Company.deleted_at == None)
         .first()
     )
     if not company:
-        return RegisterResponse(success=False, message="회사 코드를 찾을 수 없습니다.")
+        return RegisterResponse(success=False, message="회사 ID를 찾을 수 없습니다.")
 
     # Check max_admins quota
     current_count = db.query(AdminUser).filter(AdminUser.company_id == company.company_id).count()
@@ -212,10 +212,10 @@ def check_auth(session_token: str | None = Cookie(None)):
 @router.post("/find-email", response_model=FindEmailResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
 def find_email(req: FindEmailRequest, request: Request, db: Session = Depends(get_db)):
-    """Find email by company_code + full_name. Returns masked email."""
+    """Find email by company_id + full_name. Returns masked email."""
     company = (
         db.query(Company)
-        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .filter(Company.company_id == req.company_id, Company.is_active == True, Company.deleted_at == None)
         .first()
     )
     if not company:
@@ -258,7 +258,7 @@ def reset_password(req: ResetPasswordRequest, request: Request, db: Session = De
     """Generate temp password and send via email."""
     company = (
         db.query(Company)
-        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .filter(Company.company_id == req.company_id, Company.is_active == True, Company.deleted_at == None)
         .first()
     )
     if not company:
