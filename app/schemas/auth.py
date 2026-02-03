@@ -46,3 +46,24 @@ class RegisterResponse(BaseModel):
 class AuthCheckResponse(BaseModel):
     authenticated: bool
     session: SessionData | None = None
+
+
+class FindEmailRequest(BaseModel):
+    company_code: str
+    full_name: str
+
+
+class FindEmailResponse(BaseModel):
+    success: bool
+    message: str
+    masked_email: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    company_code: str
+    email: str
+
+
+class ResetPasswordResponse(BaseModel):
+    success: bool
+    message: str

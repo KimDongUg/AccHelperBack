@@ -4,20 +4,30 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Cookie, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from app.config import RATE_LIMIT_AUTH, SESSION_EXPIRE_HOURS
+from app.config import RATE_LIMIT_AUTH, RATE_LIMIT_PASSWORD_RESET, SESSION_EXPIRE_HOURS
 from app.database import get_db
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.rate_limit import limiter
 from app.schemas.auth import (
     AuthCheckResponse,
+    FindEmailRequest,
+    FindEmailResponse,
     LoginRequest,
     LoginResponse,
     RegisterRequest,
     RegisterResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
     SessionData,
 )
-from app.services.auth_service import hash_password, verify_password
+from app.services.auth_service import (
+    generate_temp_password,
+    hash_password,
+    mask_email,
+    verify_password,
+)
+from app.services.email_service import send_temp_password_email
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -197,3 +207,79 @@ def check_auth(session_token: str | None = Cookie(None)):
             session=_make_session_data(user),
         )
     return AuthCheckResponse(authenticated=False)
+
+
+@router.post("/find-email", response_model=FindEmailResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def find_email(req: FindEmailRequest, request: Request, db: Session = Depends(get_db)):
+    """Find email by company_code + full_name. Returns masked email."""
+    company = (
+        db.query(Company)
+        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .first()
+    )
+    if not company:
+        return FindEmailResponse(success=False, message="일치하는 정보를 찾을 수 없습니다.")
+
+    user = (
+        db.query(AdminUser)
+        .filter(
+            AdminUser.company_id == company.company_id,
+            AdminUser.full_name == req.full_name,
+            AdminUser.is_active == True,
+        )
+        .first()
+    )
+    if not user:
+        return FindEmailResponse(success=False, message="일치하는 정보를 찾을 수 없습니다.")
+
+    masked = mask_email(user.email)
+    return FindEmailResponse(
+        success=True,
+        message="이메일을 찾았습니다.",
+        masked_email=masked,
+    )
+
+
+@router.post("/reset-password", response_model=ResetPasswordResponse)
+@limiter.limit(RATE_LIMIT_PASSWORD_RESET)
+def reset_password(req: ResetPasswordRequest, request: Request, db: Session = Depends(get_db)):
+    """Generate temp password and send via email."""
+    company = (
+        db.query(Company)
+        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .first()
+    )
+    if not company:
+        # Generic message to avoid user enumeration
+        return ResetPasswordResponse(success=True, message="등록된 이메일이라면 임시 비밀번호가 발송됩니다.")
+
+    user = (
+        db.query(AdminUser)
+        .filter(
+            AdminUser.company_id == company.company_id,
+            AdminUser.email == req.email,
+            AdminUser.is_active == True,
+        )
+        .first()
+    )
+    if not user:
+        return ResetPasswordResponse(success=True, message="등록된 이메일이라면 임시 비밀번호가 발송됩니다.")
+
+    temp_pw = generate_temp_password(10)
+    old_hash = user.password_hash
+
+    # Update password in DB first
+    user.password_hash = hash_password(temp_pw)
+    db.commit()
+
+    # Send email — rollback on failure
+    if not send_temp_password_email(user.email, temp_pw):
+        user.password_hash = old_hash
+        db.commit()
+        return ResetPasswordResponse(
+            success=False,
+            message="이메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+        )
+
+    return ResetPasswordResponse(success=True, message="임시 비밀번호가 이메일로 발송되었습니다.")

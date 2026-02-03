@@ -33,5 +33,14 @@ RATE_LIMIT_AUTH = os.getenv("RATE_LIMIT_AUTH", "30/minute")
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+# SMTP (Naver)
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM = os.getenv("SMTP_FROM", "")
+SITE_URL = os.getenv("SITE_URL", "http://localhost:8000")
+
+# Rate Limiting (password reset — stricter)
+RATE_LIMIT_PASSWORD_RESET = os.getenv("RATE_LIMIT_PASSWORD_RESET", "5/minute")
+
 # Static files
 STATIC_CACHE_MAX_AGE = int(os.getenv("STATIC_CACHE_MAX_AGE", "86400"))
