@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 
 class QaCreate(BaseModel):
+    company_id: int | None = None  # super_admin only; None → session company_id
     category: str
     question: str
     answer: str
@@ -12,6 +13,7 @@ class QaCreate(BaseModel):
 
 
 class QaUpdate(BaseModel):
+    company_id: int | None = None  # super_admin only
     category: str | None = None
     question: str | None = None
     answer: str | None = None
@@ -33,6 +35,7 @@ class QaResponse(BaseModel):
     used_count: int = 0
     created_at: datetime
     updated_at: datetime
+    company_name: str | None = None
 
     model_config = {"from_attributes": True}
 

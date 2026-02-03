@@ -20,12 +20,17 @@ def list_qa(
     search: str = "",
     category: str = "",
     status: str = "",
+    company_id: int | None = Query(None, alias="company_id"),
     db: Session = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
-    company_id = user["company_id"]
+    user_company_id = user["company_id"]
     query = db.query(QaKnowledge)
-    if company_id != 0:
+    if user_company_id != 0:
+        # Non-super_admin: always filter by own company
+        query = query.filter(QaKnowledge.company_id == user_company_id)
+    elif company_id is not None:
+        # super_admin with company filter
         query = query.filter(QaKnowledge.company_id == company_id)
 
     if search:
@@ -50,7 +55,19 @@ def list_qa(
         .all()
     )
 
-    return QaListResponse(items=items, total=total, page=page, pages=pages)
+    # Build company_id → company_name map
+    company_map = {}
+    if user_company_id == 0:
+        companies = db.query(Company.company_id, Company.company_name).all()
+        company_map = {c.company_id: c.company_name for c in companies}
+
+    result_items = []
+    for item in items:
+        resp = QaResponse.model_validate(item)
+        resp.company_name = company_map.get(item.company_id)
+        result_items.append(resp)
+
+    return QaListResponse(items=result_items, total=total, page=page, pages=pages)
 
 
 @router.get("/check-duplicate")
@@ -96,14 +113,19 @@ def get_qa(
     db: Session = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
-    company_id = user["company_id"]
+    user_company_id = user["company_id"]
     query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
-    if company_id != 0:
-        query = query.filter(QaKnowledge.company_id == company_id)
+    if user_company_id != 0:
+        query = query.filter(QaKnowledge.company_id == user_company_id)
     qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
-    return qa
+
+    resp = QaResponse.model_validate(qa)
+    if user_company_id == 0:
+        company = db.query(Company).filter(Company.company_id == qa.company_id).first()
+        resp.company_name = company.company_name if company else None
+    return resp
 
 
 @router.post("", response_model=QaResponse, status_code=201)
@@ -112,28 +134,39 @@ def create_qa(
     db: Session = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    company_id = user["company_id"]
+    user_company_id = user["company_id"]
+
+    # super_admin can specify target company_id
+    target_company_id = user_company_id
+    if user_company_id == 0 and data.company_id is not None:
+        target_company_id = data.company_id
 
     # Check max_qa_count quota (skip for super_admin)
-    if company_id != 0:
-        company = db.query(Company).filter(Company.company_id == company_id).first()
+    if target_company_id != 0:
+        company = db.query(Company).filter(Company.company_id == target_company_id).first()
         if company:
-            current_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).count()
+            current_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == target_company_id).count()
             if current_count >= company.max_qa_count:
                 raise HTTPException(
                     status_code=403,
                     detail=f"Q&A 수 한도({company.max_qa_count}개)를 초과했습니다.",
                 )
 
+    qa_data = data.model_dump(exclude={"company_id"})
     qa = QaKnowledge(
-        **data.model_dump(),
-        company_id=company_id,
+        **qa_data,
+        company_id=target_company_id,
         created_by=user["user_id"],
     )
     db.add(qa)
     db.commit()
     db.refresh(qa)
-    return qa
+
+    resp = QaResponse.model_validate(qa)
+    if user_company_id == 0:
+        company = db.query(Company).filter(Company.company_id == qa.company_id).first()
+        resp.company_name = company.company_name if company else None
+    return resp
 
 
 @router.put("/{qa_id}", response_model=QaResponse)
@@ -143,22 +176,30 @@ def update_qa(
     db: Session = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    company_id = user["company_id"]
+    user_company_id = user["company_id"]
     query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
-    if company_id != 0:
-        query = query.filter(QaKnowledge.company_id == company_id)
+    if user_company_id != 0:
+        query = query.filter(QaKnowledge.company_id == user_company_id)
     qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
     update_data = data.model_dump(exclude_unset=True)
+    # Only super_admin can change company_id
+    if "company_id" in update_data and user_company_id != 0:
+        del update_data["company_id"]
     for key, value in update_data.items():
         setattr(qa, key, value)
     qa.updated_at = datetime.utcnow()
     qa.updated_by = user["user_id"]
     db.commit()
     db.refresh(qa)
-    return qa
+
+    resp = QaResponse.model_validate(qa)
+    if user_company_id == 0:
+        company = db.query(Company).filter(Company.company_id == qa.company_id).first()
+        resp.company_name = company.company_name if company else None
+    return resp
 
 
 @router.delete("/{qa_id}")
@@ -189,10 +230,10 @@ def toggle_qa(
     db: Session = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    company_id = user["company_id"]
+    user_company_id = user["company_id"]
     query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
-    if company_id != 0:
-        query = query.filter(QaKnowledge.company_id == company_id)
+    if user_company_id != 0:
+        query = query.filter(QaKnowledge.company_id == user_company_id)
     qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
@@ -201,4 +242,9 @@ def toggle_qa(
     qa.updated_by = user["user_id"]
     db.commit()
     db.refresh(qa)
-    return qa
+
+    resp = QaResponse.model_validate(qa)
+    if user_company_id == 0:
+        company = db.query(Company).filter(Company.company_id == qa.company_id).first()
+        resp.company_name = company.company_name if company else None
+    return resp

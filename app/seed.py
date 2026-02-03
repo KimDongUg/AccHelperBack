@@ -237,42 +237,9 @@ def seed_data(db: Session):
             db.add(qa)
         db.commit()
 
-    # --- Seed QA for demo company (company_id=2) ---
+    # --- Seed QA for demo company (company_id=2) — same 25 entries ---
     if db.query(QaKnowledge).filter(QaKnowledge.company_id == 2).count() == 0:
-        demo_qa_entries = [
-            {
-                "category": "세금",
-                "question": "부가세 신고는 언제 하나요?",
-                "answer": "부가가치세 신고는 1기(1~6월분)는 7월 25일까지, 2기(7~12월분)는 다음 해 1월 25일까지입니다.",
-                "keywords": "부가세,신고,기한",
-            },
-            {
-                "category": "급여",
-                "question": "4대보험 요율 알려주세요",
-                "answer": "국민연금 9%, 건강보험 7.09%, 장기요양 건강보험의 12.81%, 고용보험 1.8%입니다.",
-                "keywords": "4대보험,요율",
-            },
-            {
-                "category": "비용처리",
-                "question": "접대비 한도가 얼마인가요?",
-                "answer": "중소기업 기준 연 3,600만원이 기본 한도이며, 매출액에 따라 추가됩니다.",
-                "keywords": "접대비,한도",
-            },
-            {
-                "category": "회계처리",
-                "question": "감가상각은 어떻게 하나요?",
-                "answer": "정액법과 정률법이 있으며, 건물은 정액법만 가능합니다. 자산별 내용연수에 따라 상각합니다.",
-                "keywords": "감가상각,정액법,정률법",
-            },
-            {
-                "category": "기타",
-                "question": "데모 회사 테스트 질문입니다",
-                "answer": "이것은 데모 회사의 테스트 Q&A입니다. 회사별로 별도의 Q&A 데이터가 관리됩니다.",
-                "keywords": "데모,테스트",
-            },
-        ]
-
-        for entry in demo_qa_entries:
+        for entry in qa_entries:
             qa = QaKnowledge(company_id=2, **entry)
             db.add(qa)
         db.commit()
