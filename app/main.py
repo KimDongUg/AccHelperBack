@@ -52,8 +52,9 @@ async def lifespan(app: FastAPI):
     _start_time = time.time()
 
     setup_logging(LOG_LEVEL)
-    logger.info("Starting AccHelper (env=%s, db=%s)",
-                APP_ENV, "postgresql" if DATABASE_URL.startswith("postgresql") else "sqlite")
+    db_type = DATABASE_URL.split("://")[0] if "://" in DATABASE_URL else "unknown"
+    masked_url = DATABASE_URL[:30] + "..." if len(DATABASE_URL) > 30 else DATABASE_URL
+    logger.info("Starting AccHelper (env=%s, db_type=%s, url=%s)", APP_ENV, db_type, masked_url)
 
     try:
         # Run migration before create_all
