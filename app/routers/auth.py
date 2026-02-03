@@ -230,6 +230,17 @@ def find_email(req: FindEmailRequest, request: Request, db: Session = Depends(ge
         )
         .first()
     )
+    # Fallback: check super_admin (company_id=0)
+    if not user:
+        user = (
+            db.query(AdminUser)
+            .filter(
+                AdminUser.company_id == 0,
+                AdminUser.full_name == req.full_name,
+                AdminUser.is_active == True,
+            )
+            .first()
+        )
     if not user:
         return FindEmailResponse(success=False, message="일치하는 정보를 찾을 수 없습니다.")
 
@@ -263,6 +274,17 @@ def reset_password(req: ResetPasswordRequest, request: Request, db: Session = De
         )
         .first()
     )
+    # Fallback: check super_admin (company_id=0)
+    if not user:
+        user = (
+            db.query(AdminUser)
+            .filter(
+                AdminUser.company_id == 0,
+                AdminUser.email == req.email,
+                AdminUser.is_active == True,
+            )
+            .first()
+        )
     if not user:
         return ResetPasswordResponse(success=True, message="등록된 이메일이라면 임시 비밀번호가 발송됩니다.")
 
