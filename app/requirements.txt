@@ -6,3 +6,4 @@ python-multipart>=0.0.12
 pydantic>=2.10.0
 python-dotenv>=1.0.0
 slowapi>=0.1.9
+psycopg2-binary>=2.9.9

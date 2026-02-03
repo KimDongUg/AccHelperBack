@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인 - 경리 도우미</title>
+    <title>회원가입 - 경리 도우미</title>
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/login.css">
 </head>
 <body>
-    <a href="#login-form" class="skip-link">로그인 폼으로 건너뛰기</a>
+    <a href="#registerForm" class="skip-link">회원가입 폼으로 건너뛰기</a>
 
     <header class="header" role="banner">
         <div class="header-left">
@@ -23,23 +23,28 @@
     </header>
 
     <main class="login-wrapper">
-        <div class="login-card" id="loginCard">
-            <!-- Lock icon -->
+        <div class="login-card" id="registerCard">
+            <!-- User icon -->
             <div class="login-icon" aria-hidden="true">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
             </div>
 
             <div class="login-title">
-                <h2>로그인</h2>
-                <p>로그인해 주세요</p>
+                <h2>회원가입</h2>
+                <p>새 계정을 만들어 주세요</p>
             </div>
 
-            <div id="loginError" class="login-error" role="alert" aria-live="assertive">
+            <div id="registerError" class="login-error" role="alert" aria-live="assertive">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <span id="loginErrorMsg"></span>
+                <span id="registerErrorMsg"></span>
             </div>
 
-            <form id="loginForm" class="login-form" novalidate aria-label="관리자 로그인 폼">
+            <div id="registerSuccess" class="login-success" role="status" aria-live="polite">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                <span id="registerSuccessMsg"></span>
+            </div>
+
+            <form id="registerForm" class="login-form" novalidate aria-label="회원가입 폼">
                 <div class="form-group">
                     <label for="companyCode">회사 코드</label>
                     <div class="input-wrap">
@@ -64,21 +69,44 @@
                         <span class="input-icon" aria-hidden="true">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                         </span>
-                        <input type="password" id="password" class="form-control" placeholder="비밀번호를 입력하세요" autocomplete="current-password" required aria-required="true">
+                        <input type="password" id="password" class="form-control" placeholder="비밀번호를 입력하세요 (6자 이상)" autocomplete="new-password" required aria-required="true" minlength="6">
                     </div>
                 </div>
-                <div class="login-remember">
-                    <input type="checkbox" id="remember">
-                    <label for="remember">로그인 상태 유지</label>
+                <div class="form-group">
+                    <label for="passwordConfirm">비밀번호 확인</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </span>
+                        <input type="password" id="passwordConfirm" class="form-control" placeholder="비밀번호를 다시 입력하세요" autocomplete="new-password" required aria-required="true">
+                    </div>
                 </div>
-                <button type="submit" class="btn btn-primary login-btn" id="loginBtn" aria-label="로그인">
-                    <span class="btn-text">로그인</span>
+                <div class="form-group">
+                    <label for="fullName">이름</label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        </span>
+                        <input type="text" id="fullName" class="form-control" placeholder="이름을 입력하세요" autocomplete="name" required aria-required="true">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="phone">전화번호 <span style="color:var(--gray-400);font-weight:400">(선택)</span></label>
+                    <div class="input-wrap">
+                        <span class="input-icon" aria-hidden="true">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        </span>
+                        <input type="tel" id="phone" class="form-control" placeholder="전화번호를 입력하세요" autocomplete="tel">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary login-btn" id="registerBtn" aria-label="회원가입">
+                    <span class="btn-text">회원가입</span>
                     <span class="spinner" aria-hidden="true"></span>
                 </button>
             </form>
 
             <div class="login-signup">
-                계정이 없으신가요? <a href="/register.html">회원가입</a>
+                이미 계정이 있으신가요? <a href="/login.html">로그인</a>
             </div>
 
         </div>
@@ -98,6 +126,6 @@
     </footer>
 
     <script src="/js/api.js"></script>
-    <script src="/js/login.js"></script>
+    <script src="/js/register.js"></script>
 </body>
 </html>

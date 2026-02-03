@@ -25,7 +25,7 @@ def list_public_companies(db: Session = Depends(get_db)):
     companies = (
         db.query(Company)
         .filter(Company.is_active == True, Company.deleted_at == None)
-        .order_by(Company.company_name)
+        .order_by(Company.company_id)
         .all()
     )
     return companies

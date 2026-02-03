@@ -43,10 +43,9 @@ def search_qa(
     db: Session, question: str, category: str | None = None, company_id: int = 1
 ) -> tuple[str, str | None, int | None, float | None]:
     """Search QA filtered by company_id. Returns (answer, category, qa_id, confidence_score)."""
-    query = db.query(QaKnowledge).filter(
-        QaKnowledge.is_active == True,
-        QaKnowledge.company_id == company_id,
-    )
+    query = db.query(QaKnowledge).filter(QaKnowledge.is_active == True)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
     if category and category != "전체":
         query = query.filter(QaKnowledge.category == category)
 

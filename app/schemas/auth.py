@@ -30,6 +30,19 @@ class LoginResponse(BaseModel):
     session: SessionData | None = None
 
 
+class RegisterRequest(BaseModel):
+    company_code: str
+    email: str
+    password: str
+    full_name: str
+    phone: str | None = None
+
+
+class RegisterResponse(BaseModel):
+    success: bool
+    message: str
+
+
 class AuthCheckResponse(BaseModel):
     authenticated: bool
     session: SessionData | None = None

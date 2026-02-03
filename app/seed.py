@@ -10,8 +10,8 @@ def seed_data(db: Session):
     # --- Seed companies ---
     if db.query(Company).count() == 0:
         default_company = Company(
-            company_name="기본 회사",
-            company_code="DEFAULT",
+            company_name="세종푸르지오시티 2차",
+            company_code="세종 가름로 255-21",
             business_number="000-00-00000",
             industry="일반",
             subscription_plan="enterprise",
@@ -20,8 +20,8 @@ def seed_data(db: Session):
             is_active=True,
         )
         demo_company = Company(
-            company_name="데모 회사",
-            company_code="DEMO",
+            company_name="세종더리치 호수의 아침",
+            company_code="세종 가름로 253",
             business_number="111-11-11111",
             industry="IT",
             subscription_plan="free",
@@ -35,9 +35,9 @@ def seed_data(db: Session):
 
     # --- Seed admin users ---
     if db.query(AdminUser).count() == 0:
-        # Default company super_admin
+        # Super admin (company_id=0: access all companies)
         admin = AdminUser(
-            company_id=1,
+            company_id=0,
             username="admin",
             password_hash=hash_password("admin123"),
             email="admin@example.com",

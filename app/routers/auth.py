@@ -9,8 +9,15 @@ from app.database import get_db
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.rate_limit import limiter
-from app.schemas.auth import AuthCheckResponse, LoginRequest, LoginResponse, SessionData
-from app.services.auth_service import verify_password
+from app.schemas.auth import (
+    AuthCheckResponse,
+    LoginRequest,
+    LoginResponse,
+    RegisterRequest,
+    RegisterResponse,
+    SessionData,
+)
+from app.services.auth_service import hash_password, verify_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -66,11 +73,21 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     if not company:
         return LoginResponse(success=False, message="회사 코드를 찾을 수 없습니다.")
 
+    # Try normal company-scoped lookup first
     user = (
         db.query(AdminUser)
         .filter(AdminUser.company_id == company.company_id, AdminUser.email == req.email)
         .first()
     )
+
+    # If not found, check for super_admin (company_id=0) by email only
+    if not user:
+        user = (
+            db.query(AdminUser)
+            .filter(AdminUser.company_id == 0, AdminUser.email == req.email)
+            .first()
+        )
+
     if not user or not user.is_active:
         return LoginResponse(success=False, message="사용자를 찾을 수 없습니다.")
 
@@ -84,11 +101,14 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     expire_hours = SESSION_EXPIRE_HOURS * 7 if req.remember else SESSION_EXPIRE_HOURS
     expiry = now + timedelta(hours=expire_hours)
 
+    # super_admin (company_id=0) keeps company_id=0 in session
+    session_company_id = user.company_id if user.company_id == 0 else company.company_id
+
     token = str(uuid.uuid4())
     sessions[token] = {
         "user_id": user.user_id,
         "username": user.username,
-        "company_id": company.company_id,
+        "company_id": session_company_id,
         "company_code": company.company_code,
         "company_name": company.company_name,
         "email": user.email,
@@ -113,6 +133,51 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         message="로그인 성공",
         session=_make_session_data(sessions[token]),
     )
+
+
+@router.post("/register", response_model=RegisterResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def register(req: RegisterRequest, request: Request, db: Session = Depends(get_db)):
+    # Validate company
+    company = (
+        db.query(Company)
+        .filter(Company.company_code == req.company_code, Company.is_active == True, Company.deleted_at == None)
+        .first()
+    )
+    if not company:
+        return RegisterResponse(success=False, message="회사 코드를 찾을 수 없습니다.")
+
+    # Check max_admins quota
+    current_count = db.query(AdminUser).filter(AdminUser.company_id == company.company_id).count()
+    if current_count >= company.max_admins:
+        return RegisterResponse(
+            success=False,
+            message=f"해당 회사의 관리자 수 한도({company.max_admins}명)를 초과했습니다.",
+        )
+
+    # Check duplicate email within company
+    existing = (
+        db.query(AdminUser)
+        .filter(AdminUser.company_id == company.company_id, AdminUser.email == req.email)
+        .first()
+    )
+    if existing:
+        return RegisterResponse(success=False, message="이미 등록된 이메일입니다.")
+
+    # Create user with viewer role
+    user = AdminUser(
+        company_id=company.company_id,
+        email=req.email,
+        password_hash=hash_password(req.password),
+        full_name=req.full_name,
+        phone=req.phone,
+        role="viewer",
+        is_active=True,
+    )
+    db.add(user)
+    db.commit()
+
+    return RegisterResponse(success=True, message="회원가입이 완료되었습니다. 로그인해 주세요.")
 
 
 @router.post("/logout")

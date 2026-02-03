@@ -21,25 +21,24 @@ def get_stats(
 ):
     company_id = user["company_id"]
 
-    total_qa = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).count()
-    active_qa = (
-        db.query(QaKnowledge)
-        .filter(QaKnowledge.company_id == company_id, QaKnowledge.is_active == True)
-        .count()
-    )
+    qa_query = db.query(QaKnowledge)
+    if company_id != 0:
+        qa_query = qa_query.filter(QaKnowledge.company_id == company_id)
+
+    total_qa = qa_query.count()
+    active_qa = qa_query.filter(QaKnowledge.is_active == True).count()
 
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    today_chats = (
-        db.query(ChatLog)
-        .filter(ChatLog.company_id == company_id, ChatLog.timestamp >= today_start)
-        .count()
-    )
+    chat_query = db.query(ChatLog)
+    if company_id != 0:
+        chat_query = chat_query.filter(ChatLog.company_id == company_id)
 
-    total_chats = db.query(ChatLog).filter(ChatLog.company_id == company_id).count()
+    today_chats = chat_query.filter(ChatLog.timestamp >= today_start).count()
+    total_chats = chat_query.count()
 
     # Category distribution
     categories = {}
-    for qa in db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).all():
+    for qa in qa_query.all():
         categories[qa.category] = categories.get(qa.category, 0) + 1
 
     return {

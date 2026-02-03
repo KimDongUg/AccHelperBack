@@ -79,12 +79,10 @@ def list_admins(
 ):
     """List admins for current company."""
     company_id = user["company_id"]
-    admins = (
-        db.query(AdminUser)
-        .filter(AdminUser.company_id == company_id)
-        .order_by(AdminUser.user_id)
-        .all()
-    )
+    query = db.query(AdminUser)
+    if company_id != 0:
+        query = query.filter(AdminUser.company_id == company_id)
+    admins = query.order_by(AdminUser.user_id).all()
     return AdminListResponse(items=admins, total=len(admins))
 
 
@@ -95,11 +93,10 @@ def get_admin(
     user: dict = Depends(require_admin),
 ):
     company_id = user["company_id"]
-    admin = (
-        db.query(AdminUser)
-        .filter(AdminUser.user_id == user_id, AdminUser.company_id == company_id)
-        .first()
-    )
+    query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
+    if company_id != 0:
+        query = query.filter(AdminUser.company_id == company_id)
+    admin = query.first()
     if not admin:
         raise HTTPException(status_code=404, detail="관리자를 찾을 수 없습니다.")
     return admin
@@ -113,22 +110,22 @@ def create_admin(
 ):
     company_id = user["company_id"]
 
-    # Check max_admins quota
-    company = db.query(Company).filter(Company.company_id == company_id).first()
-    if company:
-        current_count = db.query(AdminUser).filter(AdminUser.company_id == company_id).count()
-        if current_count >= company.max_admins:
-            raise HTTPException(
-                status_code=403,
-                detail=f"관리자 수 한도({company.max_admins}명)를 초과했습니다.",
-            )
+    # Check max_admins quota (skip for super_admin)
+    if company_id != 0:
+        company = db.query(Company).filter(Company.company_id == company_id).first()
+        if company:
+            current_count = db.query(AdminUser).filter(AdminUser.company_id == company_id).count()
+            if current_count >= company.max_admins:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"관리자 수 한도({company.max_admins}명)를 초과했습니다.",
+                )
 
-    # Check duplicate email within company
-    existing = (
-        db.query(AdminUser)
-        .filter(AdminUser.company_id == company_id, AdminUser.email == data.email)
-        .first()
-    )
+    # Check duplicate email within company (or globally for super_admin)
+    dup_query = db.query(AdminUser).filter(AdminUser.email == data.email)
+    if company_id != 0:
+        dup_query = dup_query.filter(AdminUser.company_id == company_id)
+    existing = dup_query.first()
     if existing:
         raise HTTPException(status_code=400, detail="이미 등록된 이메일입니다.")
 
@@ -160,11 +157,10 @@ def update_admin(
     user: dict = Depends(require_admin),
 ):
     company_id = user["company_id"]
-    admin = (
-        db.query(AdminUser)
-        .filter(AdminUser.user_id == user_id, AdminUser.company_id == company_id)
-        .first()
-    )
+    query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
+    if company_id != 0:
+        query = query.filter(AdminUser.company_id == company_id)
+    admin = query.first()
     if not admin:
         raise HTTPException(status_code=404, detail="관리자를 찾을 수 없습니다.")
 
@@ -175,15 +171,13 @@ def update_admin(
 
     # Check email uniqueness if changing
     if "email" in update_data and update_data["email"] != admin.email:
-        existing = (
-            db.query(AdminUser)
-            .filter(
-                AdminUser.company_id == company_id,
-                AdminUser.email == update_data["email"],
-                AdminUser.user_id != user_id,
-            )
-            .first()
+        dup_query = db.query(AdminUser).filter(
+            AdminUser.email == update_data["email"],
+            AdminUser.user_id != user_id,
         )
+        if company_id != 0:
+            dup_query = dup_query.filter(AdminUser.company_id == company_id)
+        existing = dup_query.first()
         if existing:
             raise HTTPException(status_code=400, detail="이미 등록된 이메일입니다.")
 
@@ -201,11 +195,10 @@ def delete_admin(
     user: dict = Depends(require_admin),
 ):
     company_id = user["company_id"]
-    admin = (
-        db.query(AdminUser)
-        .filter(AdminUser.user_id == user_id, AdminUser.company_id == company_id)
-        .first()
-    )
+    query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
+    if company_id != 0:
+        query = query.filter(AdminUser.company_id == company_id)
+    admin = query.first()
     if not admin:
         raise HTTPException(status_code=404, detail="관리자를 찾을 수 없습니다.")
     if admin.user_id == user["user_id"]:
@@ -225,11 +218,10 @@ def reset_password(
 ):
     """Admin resets another user's password."""
     company_id = user["company_id"]
-    admin = (
-        db.query(AdminUser)
-        .filter(AdminUser.user_id == user_id, AdminUser.company_id == company_id)
-        .first()
-    )
+    query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
+    if company_id != 0:
+        query = query.filter(AdminUser.company_id == company_id)
+    admin = query.first()
     if not admin:
         raise HTTPException(status_code=404, detail="관리자를 찾을 수 없습니다.")
 

@@ -183,6 +183,47 @@
     color: var(--gray-700);
 }
 
+/* Signup link */
+.login-signup {
+    text-align: center;
+    margin-top: 1.5rem;
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--gray-200);
+    font-size: var(--text-sm);
+    color: var(--gray-600);
+}
+
+.login-signup a {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.login-signup a:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+/* Success message */
+.login-success {
+    background: #E8F5E9;
+    color: #2E7D32;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-md);
+    display: none;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.login-success.show {
+    display: flex;
+}
+
+.login-success svg {
+    flex-shrink: 0;
+}
+
 /* Success transition */
 .login-card.success {
     animation: successPulse 0.4s ease;

@@ -13,7 +13,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
-from app.config import APP_ENV, CORS_ORIGINS, LOG_LEVEL, TRUSTED_HOSTS
+from app.config import APP_ENV, CORS_ORIGINS, DATABASE_URL, LOG_LEVEL, TRUSTED_HOSTS
 from app.database import Base, SessionLocal, engine
 from app.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware, setup_logging
 from app.migrate import run_migration
@@ -59,11 +59,14 @@ async def lifespan(app: FastAPI):
 
     Base.metadata.create_all(bind=engine)
 
-    with engine.connect() as conn:
-        for stmt in INDEX_STATEMENTS:
-            conn.execute(text(stmt))
-        conn.commit()
-    logger.info("Database indexes ensured")
+    # Manual index creation only needed for SQLite migration path.
+    # PostgreSQL gets indexes from model index=True via create_all.
+    if DATABASE_URL.startswith("sqlite"):
+        with engine.connect() as conn:
+            for stmt in INDEX_STATEMENTS:
+                conn.execute(text(stmt))
+            conn.commit()
+        logger.info("SQLite indexes ensured")
 
     db = SessionLocal()
     try:
@@ -142,8 +145,30 @@ if STATIC_DIR.exists():
         response.headers["Cache-Control"] = _NO_CACHE
         return response
 
+    @app.get("/register.html", response_class=HTMLResponse)
+    async def serve_register():
+        response = FileResponse(str(STATIC_DIR / "register.html"))
+        response.headers["Cache-Control"] = _NO_CACHE
+        return response
+
     @app.get("/admin.html", response_class=HTMLResponse)
     async def serve_admin():
         response = FileResponse(str(STATIC_DIR / "admin.html"))
         response.headers["Cache-Control"] = _NO_CACHE
         return response
+
+    @app.get("/privacy.html", response_class=HTMLResponse)
+    async def serve_privacy():
+        return FileResponse(str(STATIC_DIR / "privacy.html"))
+
+    @app.get("/terms.html", response_class=HTMLResponse)
+    async def serve_terms():
+        return FileResponse(str(STATIC_DIR / "terms.html"))
+
+    @app.get("/copyright.html", response_class=HTMLResponse)
+    async def serve_copyright():
+        return FileResponse(str(STATIC_DIR / "copyright.html"))
+
+    @app.get("/contact.html", response_class=HTMLResponse)
+    async def serve_contact():
+        return FileResponse(str(STATIC_DIR / "contact.html"))

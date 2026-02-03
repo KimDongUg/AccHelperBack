@@ -19,7 +19,9 @@ def list_activity_logs(
 ):
     """List activity logs for current company."""
     company_id = user["company_id"]
-    query = db.query(AdminActivityLog).filter(AdminActivityLog.company_id == company_id)
+    query = db.query(AdminActivityLog)
+    if company_id != 0:
+        query = query.filter(AdminActivityLog.company_id == company_id)
 
     if action_type:
         query = query.filter(AdminActivityLog.action_type == action_type)

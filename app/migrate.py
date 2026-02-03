@@ -34,7 +34,15 @@ def _add_column_if_missing(conn, table_name: str, col_name: str, col_def: str):
 
 
 def run_migration(engine: Engine):
-    """Run idempotent migration before create_all."""
+    """Run idempotent migration before create_all.
+
+    This migration uses SQLite-specific syntax (PRAGMA, sqlite_master).
+    On PostgreSQL, create_all handles schema creation, so we skip.
+    """
+    if engine.url.get_backend_name() != "sqlite":
+        logger.info("Non-SQLite backend detected — skipping SQLite migration")
+        return
+
     with engine.connect() as conn:
         # --- admin_users table ---
         if _table_exists(conn, "admin_users"):

@@ -24,7 +24,9 @@ def list_qa(
     user: dict = Depends(require_auth),
 ):
     company_id = user["company_id"]
-    query = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id)
+    query = db.query(QaKnowledge)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
 
     if search:
         query = query.filter(
@@ -64,7 +66,10 @@ def check_duplicate(
     if len(q) < 5:
         return {"duplicates": []}
 
-    all_qa = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).all()
+    qa_query = db.query(QaKnowledge)
+    if company_id != 0:
+        qa_query = qa_query.filter(QaKnowledge.company_id == company_id)
+    all_qa = qa_query.all()
     results = []
     for qa in all_qa:
         if exclude_id and qa.qa_id == exclude_id:
@@ -92,11 +97,10 @@ def get_qa(
     user: dict = Depends(require_auth),
 ):
     company_id = user["company_id"]
-    qa = (
-        db.query(QaKnowledge)
-        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
-        .first()
-    )
+    query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
+    qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
     return qa
@@ -110,15 +114,16 @@ def create_qa(
 ):
     company_id = user["company_id"]
 
-    # Check max_qa_count quota
-    company = db.query(Company).filter(Company.company_id == company_id).first()
-    if company:
-        current_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).count()
-        if current_count >= company.max_qa_count:
-            raise HTTPException(
-                status_code=403,
-                detail=f"Q&A 수 한도({company.max_qa_count}개)를 초과했습니다.",
-            )
+    # Check max_qa_count quota (skip for super_admin)
+    if company_id != 0:
+        company = db.query(Company).filter(Company.company_id == company_id).first()
+        if company:
+            current_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == company_id).count()
+            if current_count >= company.max_qa_count:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Q&A 수 한도({company.max_qa_count}개)를 초과했습니다.",
+                )
 
     qa = QaKnowledge(
         **data.model_dump(),
@@ -139,11 +144,10 @@ def update_qa(
     user: dict = Depends(require_admin),
 ):
     company_id = user["company_id"]
-    qa = (
-        db.query(QaKnowledge)
-        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
-        .first()
-    )
+    query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
+    qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
@@ -164,11 +168,10 @@ def delete_qa(
     user: dict = Depends(require_admin),
 ):
     company_id = user["company_id"]
-    qa = (
-        db.query(QaKnowledge)
-        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
-        .first()
-    )
+    query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
+    qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
@@ -187,11 +190,10 @@ def toggle_qa(
     user: dict = Depends(require_admin),
 ):
     company_id = user["company_id"]
-    qa = (
-        db.query(QaKnowledge)
-        .filter(QaKnowledge.qa_id == qa_id, QaKnowledge.company_id == company_id)
-        .first()
-    )
+    query = db.query(QaKnowledge).filter(QaKnowledge.qa_id == qa_id)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
+    qa = query.first()
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
     qa.is_active = not qa.is_active

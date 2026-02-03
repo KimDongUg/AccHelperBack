@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>개인정보처리방침 - 경리 도우미</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/policy.css">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+
+    <header class="header" role="banner">
+        <div class="header-left">
+            <a href="/" class="header-logo" aria-label="경리 도우미 홈으로 이동">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <span>경리 도우미</span>
+            </a>
+        </div>
+        <div class="header-right">
+            <a href="/" class="btn btn-outline btn-sm">챗봇으로 돌아가기</a>
+        </div>
+    </header>
+
+    <main id="main-content" class="policy-container">
+        <h1 class="policy-title">개인정보처리방침</h1>
+        <p class="policy-date">시행일: 2026년 1월 1일</p>
+
+        <section class="policy-section">
+            <h2>1. 개인정보의 처리 목적</h2>
+            <p>경리 도우미(이하 "서비스")는 다음의 목적을 위하여 개인정보를 처리합니다. 처리하고 있는 개인정보는 다음의 목적 이외의 용도로는 이용되지 않으며, 이용 목적이 변경되는 경우에는 별도의 동의를 받는 등 필요한 조치를 이행할 예정입니다.</p>
+            <ul>
+                <li>서비스 제공: AI 기반 경리 업무 상담 챗봇 서비스 제공</li>
+                <li>관리자 계정 관리: 관리자 로그인, 인증 및 권한 관리</li>
+                <li>서비스 개선: 이용 통계 분석 및 서비스 품질 향상</li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>2. 수집하는 개인정보 항목</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>구분</th>
+                        <th>수집 항목</th>
+                        <th>수집 목적</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>관리자 계정</td>
+                        <td>이메일, 비밀번호(암호화), 이름, 전화번호, 부서, 직급</td>
+                        <td>관리자 인증 및 계정 관리</td>
+                    </tr>
+                    <tr>
+                        <td>채팅 이용</td>
+                        <td>질문 내용, 세션 ID, 이용 시간</td>
+                        <td>챗봇 서비스 제공 및 품질 개선</td>
+                    </tr>
+                    <tr>
+                        <td>자동 수집</td>
+                        <td>IP 주소, 접속 로그, 브라우저 정보</td>
+                        <td>서비스 안정성 확보 및 부정 이용 방지</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="policy-section">
+            <h2>3. 개인정보의 보유 및 이용 기간</h2>
+            <p>서비스는 개인정보 수집 및 이용 목적이 달성된 후에는 해당 정보를 지체 없이 파기합니다.</p>
+            <ul>
+                <li>관리자 계정 정보: 계정 삭제 시까지</li>
+                <li>채팅 로그: 수집일로부터 1년</li>
+                <li>접속 로그: 통신비밀보호법에 따라 3개월</li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>4. 개인정보의 제3자 제공</h2>
+            <p>서비스는 이용자의 개인정보를 원칙적으로 외부에 제공하지 않습니다. 다만, 아래의 경우에는 예외로 합니다.</p>
+            <ul>
+                <li>이용자가 사전에 동의한 경우</li>
+                <li>법령의 규정에 의거하거나, 수사 목적으로 법령에 정해진 절차와 방법에 따라 수사기관의 요구가 있는 경우</li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>5. 개인정보의 파기 절차 및 방법</h2>
+            <p>서비스는 개인정보 보유 기간의 경과, 처리 목적 달성 등 개인정보가 불필요하게 되었을 때에는 지체 없이 해당 개인정보를 파기합니다.</p>
+            <ul>
+                <li>전자적 파일 형태: 복구 및 재생이 되지 않도록 안전하게 삭제</li>
+                <li>종이 문서: 분쇄기로 분쇄하거나 소각하여 파기</li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>6. 개인정보의 안전성 확보 조치</h2>
+            <p>서비스는 개인정보의 안전성 확보를 위해 다음과 같은 조치를 취하고 있습니다.</p>
+            <ul>
+                <li>비밀번호 암호화(bcrypt) 저장</li>
+                <li>HTTPS를 통한 데이터 전송 암호화</li>
+                <li>JWT 기반 인증 토큰 관리</li>
+                <li>API 요청 속도 제한(Rate Limiting)</li>
+                <li>보안 헤더 적용(CSP, X-Frame-Options 등)</li>
+                <li>관리자 활동 로그 기록</li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>7. 정보주체의 권리·의무</h2>
+            <p>이용자는 개인정보주체로서 다음과 같은 권리를 행사할 수 있습니다.</p>
+            <ul>
+                <li>개인정보 열람 요구</li>
+                <li>오류 등이 있을 경우 정정 요구</li>
+                <li>삭제 요구</li>
+                <li>처리 정지 요구</li>
+            </ul>
+            <p>위 권리 행사는 운영자 이메일을 통해 요청할 수 있으며, 서비스는 이에 대해 지체 없이 조치하겠습니다.</p>
+        </section>
+
+        <section class="policy-section">
+            <h2>8. 개인정보 보호책임자</h2>
+            <ul>
+                <li>담당자: 경리 도우미 운영팀</li>
+                <li>이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></li>
+            </ul>
+        </section>
+
+        <section class="policy-section">
+            <h2>9. 개인정보처리방침 변경</h2>
+            <p>이 개인정보처리방침은 시행일로부터 적용되며, 법령 및 방침에 따른 변경 내용의 추가, 삭제 및 정정이 있는 경우에는 변경 사항의 시행 7일 전부터 서비스를 통하여 공지하겠습니다.</p>
+        </section>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-inner">
+            <nav class="footer-links" aria-label="정책 링크">
+                <a href="/privacy.html">개인정보처리방침</a>
+                <a href="/terms.html">이용약관</a>
+                <a href="/copyright.html">저작권 정책</a>
+                <a href="/contact.html">문의하기</a>
+            </nav>
+            <p class="footer-copyright">&copy; 2026 경리 도우미(Accounting Helper). All rights reserved.</p>
+            <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
+        </div>
+    </footer>
+</body>
+</html>
