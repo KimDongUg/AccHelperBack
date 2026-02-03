@@ -52,27 +52,33 @@ async def lifespan(app: FastAPI):
     _start_time = time.time()
 
     setup_logging(LOG_LEVEL)
-    logger.info("Starting AccHelper (env=%s)", APP_ENV)
+    logger.info("Starting AccHelper (env=%s, db=%s)",
+                APP_ENV, "postgresql" if DATABASE_URL.startswith("postgresql") else "sqlite")
 
-    # Run migration before create_all
-    run_migration(engine)
-
-    Base.metadata.create_all(bind=engine)
-
-    # Manual index creation only needed for SQLite migration path.
-    # PostgreSQL gets indexes from model index=True via create_all.
-    if DATABASE_URL.startswith("sqlite"):
-        with engine.connect() as conn:
-            for stmt in INDEX_STATEMENTS:
-                conn.execute(text(stmt))
-            conn.commit()
-        logger.info("SQLite indexes ensured")
-
-    db = SessionLocal()
     try:
-        seed_data(db)
-    finally:
-        db.close()
+        # Run migration before create_all
+        run_migration(engine)
+
+        Base.metadata.create_all(bind=engine)
+
+        # Manual index creation only needed for SQLite migration path.
+        # PostgreSQL gets indexes from model index=True via create_all.
+        if DATABASE_URL.startswith("sqlite"):
+            with engine.connect() as conn:
+                for stmt in INDEX_STATEMENTS:
+                    conn.execute(text(stmt))
+                conn.commit()
+            logger.info("SQLite indexes ensured")
+
+        db = SessionLocal()
+        try:
+            seed_data(db)
+        finally:
+            db.close()
+
+        logger.info("Database ready")
+    except Exception as exc:
+        logger.error("Database init failed: %s", exc)
 
     yield
     logger.info("Shutting down AccHelper")
@@ -121,9 +127,11 @@ def health_check():
     except Exception:
         db_status = "disconnected"
 
+    db_type = "postgresql" if DATABASE_URL.startswith("postgresql") else "sqlite"
     return {
         "status": "healthy" if db_status == "connected" else "unhealthy",
         "database": db_status,
+        "database_type": db_type,
         "environment": APP_ENV,
         "uptime_seconds": round(time.time() - _start_time, 1),
     }
