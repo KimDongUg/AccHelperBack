@@ -4,7 +4,8 @@
     padding: var(--space-lg);
     display: flex;
     flex-direction: column;
-    height: calc(100vh - var(--header-height));
+    flex: 1;
+    min-height: 0;
 }
 
 .chat-hero {
@@ -399,6 +400,29 @@
     margin-bottom: var(--space-md);
 }
 
+/* Company card disabled (준비중) */
+.company-card-disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.company-card-disabled:hover {
+    border-color: var(--gray-200);
+    box-shadow: var(--shadow-sm);
+    transform: none;
+}
+
+.company-card-badge {
+    margin-left: auto;
+    padding: 0.2rem 0.6rem;
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: var(--gray-500);
+    background: var(--gray-100);
+    border-radius: 10px;
+}
+
 /* Company label in header */
 .company-label {
     font-size: var(--text-sm);
@@ -409,11 +433,56 @@
     border-radius: 10px;
 }
 
+/* ── Site Introduction ─────────────────────── */
+.site-intro {
+    width: 100%;
+    padding: 1.5rem 2rem;
+    line-height: 1.6;
+    color: #333;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    overflow: hidden;
+}
+
+.site-intro-inner {
+    transition: transform 24s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.site-intro-inner.fade {
+    transition: opacity 2s ease;
+    opacity: 0;
+}
+
+
+.site-intro-title {
+    font-size: 1.05rem;
+    font-weight: var(--font-bold);
+    color: #222;
+    margin-bottom: 0.5rem;
+}
+
+.site-intro p {
+    margin-bottom: 0.5rem;
+}
+
+.site-intro p:last-child {
+    margin-bottom: 0;
+}
+
+.site-intro a {
+    color: var(--primary);
+    font-weight: var(--font-medium);
+    text-decoration: none;
+}
+
+.site-intro a:hover {
+    text-decoration: underline;
+}
+
 /* ── Responsive ─────────────────────────────── */
 @media (max-width: 767px) {
     .chat-container {
         padding: var(--space-md);
-        height: calc(100vh - 56px);
     }
 
     .chat-hero h1 {

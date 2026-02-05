@@ -55,6 +55,7 @@ class CompanyPublicResponse(BaseModel):
     company_code: str
     industry: str | None = None
     logo_url: str | None = None
+    is_active: bool = True
 
     model_config = {"from_attributes": True}
 

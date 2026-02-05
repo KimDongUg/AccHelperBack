@@ -21,10 +21,10 @@ router = APIRouter(prefix="/api/companies", tags=["companies"])
 
 @router.get("/public", response_model=list[CompanyPublicResponse])
 def list_public_companies(db: Session = Depends(get_db)):
-    """List active companies for public display (chatbot company selection)."""
+    """List companies for public display (chatbot company selection)."""
     companies = (
         db.query(Company)
-        .filter(Company.is_active == True, Company.deleted_at == None)
+        .filter(Company.deleted_at == None)
         .order_by(Company.company_id)
         .all()
     )

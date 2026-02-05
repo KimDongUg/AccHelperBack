@@ -1,3 +1,24 @@
+/* ── Site Intro slide-up ───────────────────── */
+setTimeout(() => {
+    const intro = document.querySelector('.site-intro');
+    if (!intro) return;
+    const inner = intro.querySelector('.site-intro-inner');
+    const totalH = intro.offsetHeight;
+
+    // 높이 고정하여 사라져도 레이아웃 변동 없음
+    intro.style.height = totalH + 'px';
+
+    // 컨테이너 전체 높이만큼 위로 이동 (패딩 포함)
+    requestAnimationFrame(() => {
+        inner.style.transform = 'translateY(-' + totalH + 'px)';
+    });
+
+    // 슬라이드(24초) 끝난 뒤 남은 글자 fade out
+    setTimeout(() => {
+        inner.classList.add('fade');
+    }, 24000);
+}, 5000);
+
 /* ── State ──────────────────────────────────── */
 let currentCompanyCode = null;
 let sessionId = sessionStorage.getItem('chatSessionId');
@@ -56,7 +77,7 @@ async function loadCompanies() {
 
         companies.forEach(c => {
             const card = document.createElement('button');
-            card.className = 'company-card';
+            card.className = 'company-card' + (c.is_active ? '' : ' company-card-disabled');
             card.setAttribute('type', 'button');
 
             const icon = document.createElement('div');
@@ -78,9 +99,17 @@ async function loadCompanies() {
             card.appendChild(icon);
             card.appendChild(info);
 
-            card.addEventListener('click', () => {
-                window.location.href = `/?company=${encodeURIComponent(c.company_code)}`;
-            });
+            if (!c.is_active) {
+                const badge = document.createElement('span');
+                badge.className = 'company-card-badge';
+                badge.textContent = '준비중';
+                card.appendChild(badge);
+                card.disabled = true;
+            } else {
+                card.addEventListener('click', () => {
+                    window.location.href = `/?company=${encodeURIComponent(c.company_code)}`;
+                });
+            }
 
             companyGrid.appendChild(card);
         });
