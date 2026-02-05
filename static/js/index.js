@@ -8,9 +8,13 @@ setTimeout(() => {
 
     if (isMobile) {
         // 모바일: margin-top으로 섹션 자체를 위로 밀어 헤더 뒤로 사라지게
-        intro.style.transition = 'margin-top 24s cubic-bezier(0.4, 0, 0.2, 1)';
+        intro.style.marginTop = '0px';
+        // 브라우저가 초기 상태를 확실히 그린 후 transition 시작
         requestAnimationFrame(() => {
-            intro.style.marginTop = '-' + totalH + 'px';
+            requestAnimationFrame(() => {
+                intro.style.transition = 'margin-top 24s cubic-bezier(0.4, 0, 0.2, 1)';
+                intro.style.marginTop = '-' + totalH + 'px';
+            });
         });
     } else {
         // 태블릿/데스크탑: 높이 고정, 레이아웃 변동 없음
