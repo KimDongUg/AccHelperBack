@@ -4,14 +4,27 @@ setTimeout(() => {
     if (!intro) return;
     const inner = intro.querySelector('.site-intro-inner');
     const totalH = intro.offsetHeight;
+    const isMobile = window.innerWidth <= 767;
 
-    // 높이 고정하여 사라져도 레이아웃 변동 없음
-    intro.style.height = totalH + 'px';
-
-    // 컨테이너 전체 높이만큼 위로 이동 (패딩 포함)
-    requestAnimationFrame(() => {
-        inner.style.transform = 'translateY(-' + totalH + 'px)';
-    });
+    if (isMobile) {
+        // 모바일: 컨테이너도 함께 줄어들며 아래 컨텐츠가 따라 올라감
+        intro.style.height = totalH + 'px';
+        intro.style.transition = 'height 24s cubic-bezier(0.4, 0, 0.2, 1)';
+        requestAnimationFrame(() => {
+            inner.style.transform = 'translateY(-' + totalH + 'px)';
+            intro.style.height = '0px';
+            intro.style.overflow = 'hidden';
+            intro.style.paddingTop = '0';
+            intro.style.paddingBottom = '0';
+            intro.style.borderBottom = 'none';
+        });
+    } else {
+        // 태블릿/데스크탑: 높이 고정, 레이아웃 변동 없음
+        intro.style.height = totalH + 'px';
+        requestAnimationFrame(() => {
+            inner.style.transform = 'translateY(-' + totalH + 'px)';
+        });
+    }
 
     // 슬라이드(24초) 끝난 뒤 남은 글자 fade out
     setTimeout(() => {
