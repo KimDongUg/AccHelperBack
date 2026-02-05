@@ -453,6 +453,16 @@
     opacity: 0;
 }
 
+/* 모바일: margin-top 애니메이션 */
+.site-intro.mobile-slide {
+    animation: mobileSlideUp 24s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes mobileSlideUp {
+    from { margin-top: 0; }
+    to   { margin-top: var(--intro-h); }
+}
+
 
 .site-intro-title {
     font-size: 1.05rem;
