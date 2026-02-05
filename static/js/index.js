@@ -1,19 +1,35 @@
 /* ── Site Intro slide-up ───────────────────── */
-setTimeout(() => {
-    const intro = document.querySelector('.site-intro');
-    if (!intro) return;
-    const inner = intro.querySelector('.site-intro-inner');
-    const totalH = intro.offsetHeight;
+(function () {
+    const isMobile = window.innerWidth <= 400 && window.innerHeight <= 900;
 
-    intro.style.height = totalH + 'px';
-    requestAnimationFrame(() => {
-        inner.style.transform = 'translateY(-' + totalH + 'px)';
-    });
+    if (isMobile) {
+        // 모바일: 10초 후 3초간 fade out
+        setTimeout(() => {
+            const intro = document.querySelector('.site-intro');
+            if (!intro) return;
+            intro.style.transition = 'opacity 3s ease';
+            intro.style.opacity = '0';
+            setTimeout(() => { intro.remove(); }, 3000);
+        }, 10000);
+    } else {
+        // 태블릿/데스크탑: 5초 후 슬라이드업
+        setTimeout(() => {
+            const intro = document.querySelector('.site-intro');
+            if (!intro) return;
+            const inner = intro.querySelector('.site-intro-inner');
+            const totalH = intro.offsetHeight;
 
-    setTimeout(() => {
-        inner.classList.add('fade');
-    }, 24000);
-}, 5000);
+            intro.style.height = totalH + 'px';
+            requestAnimationFrame(() => {
+                inner.style.transform = 'translateY(-' + totalH + 'px)';
+            });
+
+            setTimeout(() => {
+                inner.classList.add('fade');
+            }, 24000);
+        }, 5000);
+    }
+})();
 
 /* ── State ──────────────────────────────────── */
 let currentCompanyCode = null;
