@@ -3,14 +3,14 @@
     const isMobile = window.innerWidth <= 400 && window.innerHeight <= 900;
 
     if (isMobile) {
-        // 모바일: 10초 후 3초간 fade out
+        // 모바일: 15초 후 3초간 fade out
         setTimeout(() => {
             const intro = document.querySelector('.site-intro');
             if (!intro) return;
             intro.style.transition = 'opacity 3s ease';
             intro.style.opacity = '0';
             setTimeout(() => { intro.remove(); }, 3000);
-        }, 10000);
+        }, 15000);
     } else {
         // 태블릿/데스크탑: 5초 후 슬라이드업
         setTimeout(() => {
