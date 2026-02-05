@@ -4,21 +4,12 @@ setTimeout(() => {
     if (!intro) return;
     const inner = intro.querySelector('.site-intro-inner');
     const totalH = intro.offsetHeight;
-    const isMobile = window.innerWidth <= 400 && window.innerHeight <= 900;
 
-    if (isMobile) {
-        // 모바일: CSS keyframes 애니메이션으로 위로 밀기
-        intro.style.setProperty('--intro-h', '-' + totalH + 'px');
-        intro.classList.add('mobile-slide');
-    } else {
-        // 태블릿/데스크탑: 높이 고정, 레이아웃 변동 없음
-        intro.style.height = totalH + 'px';
-        requestAnimationFrame(() => {
-            inner.style.transform = 'translateY(-' + totalH + 'px)';
-        });
-    }
+    intro.style.height = totalH + 'px';
+    requestAnimationFrame(() => {
+        inner.style.transform = 'translateY(-' + totalH + 'px)';
+    });
 
-    // 슬라이드(24초) 끝난 뒤 남은 글자 fade out
     setTimeout(() => {
         inner.classList.add('fade');
     }, 24000);
