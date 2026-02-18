@@ -21,6 +21,18 @@ class BillingStatusResponse(BaseModel):
     card_company: str | None = None
     card_number: str | None = None
     subscription_plan: str | None = None
+    trial_ends_at: str | None = None
+
+
+class BillingTrialResponse(BaseModel):
+    success: bool
+    message: str
+    trial_ends_at: str | None = None
+
+
+class BillingCancelResponse(BaseModel):
+    success: bool
+    message: str
 
 
 class BillingKeyDeactivateResponse(BaseModel):

@@ -1,7 +1,7 @@
 import logging
 import time
 from base64 import b64encode
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import httpx
 from fastapi import APIRouter, Cookie, Depends, Query, Request
@@ -14,10 +14,12 @@ from app.models.billing import BillingKey, PaymentHistory
 from app.models.company import Company
 from app.routers.auth import get_current_user
 from app.schemas.billing import (
+    BillingCancelResponse,
     BillingKeyDeactivateResponse,
     BillingPayRequest,
     BillingPayResponse,
     BillingStatusResponse,
+    BillingTrialResponse,
     PaymentHistoryItem,
     PaymentHistoryResponse,
 )
@@ -241,12 +243,17 @@ def billing_status(
     )
     company = db.query(Company).filter(Company.company_id == company_id).first()
 
+    trial_ends = None
+    if company and company.trial_ends_at:
+        trial_ends = company.trial_ends_at.isoformat() + "Z"
+
     return BillingStatusResponse(
         success=True,
         has_billing_key=bk is not None,
         card_company=bk.card_company if bk else None,
         card_number=bk.card_number if bk else None,
         subscription_plan=company.subscription_plan if company else None,
+        trial_ends_at=trial_ends,
     )
 
 
@@ -323,5 +330,85 @@ def billing_deactivate(
 
     logger.info("BillingKey deactivated for company_id=%d", company_id)
     return BillingKeyDeactivateResponse(success=True, message="구독이 해지되었습니다.")
+
+
+@router.post("/trial", response_model=BillingTrialResponse)
+def billing_trial(
+    company_id: int = Query(...),
+    session_token: str | None = Cookie(None),
+    db: Session = Depends(get_db),
+):
+    """14일 무료체험 시작"""
+    user = get_current_user(session_token)
+    if not user:
+        return BillingTrialResponse(success=False, message="로그인이 필요합니다.")
+
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        return BillingTrialResponse(success=False, message="회사를 찾을 수 없습니다.")
+
+    # 이미 유료 구독 중이면 거부
+    if company.subscription_plan == "enterprise":
+        return BillingTrialResponse(success=False, message="이미 구독 중입니다.")
+
+    # 이미 체험 사용했으면 거부
+    if company.trial_ends_at is not None:
+        return BillingTrialResponse(success=False, message="무료체험은 1회만 가능합니다.")
+
+    # 14일 무료체험 시작
+    trial_end = datetime.utcnow() + timedelta(days=14)
+    company.subscription_plan = "trial"
+    company.trial_ends_at = trial_end
+    company.max_qa_count = 1000
+    company.max_admins = 50
+    db.commit()
+
+    logger.info("Trial started for company_id=%d, ends_at=%s", company_id, trial_end)
+    return BillingTrialResponse(
+        success=True,
+        message="14일 무료체험이 시작되었습니다.",
+        trial_ends_at=trial_end.isoformat() + "Z",
+    )
+
+
+@router.post("/cancel", response_model=BillingCancelResponse)
+def billing_cancel(
+    company_id: int = Query(...),
+    session_token: str | None = Cookie(None),
+    db: Session = Depends(get_db),
+):
+    """구독 해지 (카드 비활성화 + free 다운그레이드)"""
+    user = get_current_user(session_token)
+    if not user:
+        return BillingCancelResponse(success=False, message="로그인이 필요합니다.")
+
+    if user["role"] not in ("admin", "super_admin"):
+        return BillingCancelResponse(success=False, message="권한이 없습니다.")
+
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        return BillingCancelResponse(success=False, message="회사를 찾을 수 없습니다.")
+
+    if company.subscription_plan == "free":
+        return BillingCancelResponse(success=False, message="현재 구독 중이 아닙니다.")
+
+    # 빌링키 비활성화
+    bk_list = (
+        db.query(BillingKey)
+        .filter(BillingKey.company_id == company_id, BillingKey.is_active == True)
+        .all()
+    )
+    for bk in bk_list:
+        bk.is_active = False
+        bk.deactivated_at = datetime.utcnow()
+
+    # free로 다운그레이드
+    company.subscription_plan = "free"
+    company.max_qa_count = 100
+    company.max_admins = 5
+    db.commit()
+
+    logger.info("Subscription cancelled for company_id=%d", company_id)
+    return BillingCancelResponse(success=True, message="구독이 해지되었습니다.")
 
 
