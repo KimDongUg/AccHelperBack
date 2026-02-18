@@ -5,14 +5,18 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_super_admin
+from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.schemas.company import (
     CompanyCreate,
     CompanyListResponse,
     CompanyPublicResponse,
+    CompanyRegisterRequest,
+    CompanyRegisterResponse,
     CompanyResponse,
     CompanyUpdate,
 )
+from app.services.auth_service import hash_password
 
 router = APIRouter(prefix="/api/companies", tags=["companies"])
 
@@ -42,6 +46,59 @@ def get_public_company(company_code: str, db: Session = Depends(get_db)):
     if not company:
         raise HTTPException(status_code=404, detail="회사를 찾을 수 없습니다.")
     return company
+
+
+@router.post("/register", response_model=CompanyRegisterResponse)
+def register_company(
+    data: CompanyRegisterRequest,
+    db: Session = Depends(get_db),
+):
+    """비로그인 회사 등록 (회사 + 관리자 동시 생성)"""
+    # 회사 코드 중복 체크
+    existing = db.query(Company).filter(Company.company_code == data.company_code).first()
+    if existing:
+        return CompanyRegisterResponse(success=False, message="이미 사용 중인 회사 코드입니다.")
+
+    # 회사 생성
+    company = Company(
+        company_name=data.company_name,
+        company_code=data.company_code,
+        business_number=data.business_number,
+        industry=data.industry,
+        address=data.address,
+        phone=data.phone,
+    )
+    db.add(company)
+    db.flush()  # company_id 확보
+
+    # 이메일 중복 체크
+    dup_email = (
+        db.query(AdminUser)
+        .filter(AdminUser.company_id == company.company_id, AdminUser.email == data.admin_email)
+        .first()
+    )
+    if dup_email:
+        db.rollback()
+        return CompanyRegisterResponse(success=False, message="이미 등록된 이메일입니다.")
+
+    # 관리자 생성
+    admin = AdminUser(
+        company_id=company.company_id,
+        email=data.admin_email,
+        password_hash=hash_password(data.admin_password),
+        full_name=data.admin_name,
+        phone=data.admin_phone,
+        role="admin",
+        is_active=True,
+    )
+    db.add(admin)
+    db.commit()
+
+    return CompanyRegisterResponse(
+        success=True,
+        message=f"회사가 등록되었습니다. 회사 ID: {company.company_id}",
+        company_id=company.company_id,
+    )
 
 
 # --- Admin endpoints (super_admin only) ---

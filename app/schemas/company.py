@@ -63,3 +63,22 @@ class CompanyPublicResponse(BaseModel):
 class CompanyListResponse(BaseModel):
     items: list[CompanyResponse]
     total: int
+
+
+class CompanyRegisterRequest(BaseModel):
+    company_name: str
+    company_code: str
+    business_number: str | None = None
+    industry: str | None = None
+    address: str | None = None
+    phone: str | None = None
+    admin_email: str
+    admin_password: str
+    admin_name: str
+    admin_phone: str | None = None
+
+
+class CompanyRegisterResponse(BaseModel):
+    success: bool
+    message: str
+    company_id: int | None = None
