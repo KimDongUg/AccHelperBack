@@ -9,6 +9,7 @@ from app.dependencies import require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.billing import BillingKey, PaymentHistory
 from app.models.company import Company
+from app.schemas.admin import AdminListResponse
 from app.schemas.admin_dashboard import (
     DashboardOverview,
     PaymentItem,
@@ -188,3 +189,19 @@ def list_all_payments(
         ))
 
     return PaymentListResponse(success=True, items=items, total=len(items))
+
+
+@router.get("/companies/{company_id}/admins", response_model=AdminListResponse)
+def list_company_admins(
+    company_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """특정 회사의 관리자 목록 (super_admin 전용)"""
+    admins = (
+        db.query(AdminUser)
+        .filter(AdminUser.company_id == company_id)
+        .order_by(AdminUser.user_id)
+        .all()
+    )
+    return AdminListResponse(items=admins, total=len(admins))
