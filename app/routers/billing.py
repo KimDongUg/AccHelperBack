@@ -103,6 +103,10 @@ async def billing_success(
         pay_amount = 24500
         pay_order_name = "보듬누리 구독"
 
+        # 회사명 조회 (토스 구매자명에 표시)
+        company = db.query(Company).filter(Company.company_id == company_id).first()
+        customer_name = company.company_name if company else f"company_{company_id}"
+
         async with httpx.AsyncClient() as client:
             pay_resp = await client.post(
                 f"{TOSS_API_BASE}/billing/{billing_key}",
@@ -111,6 +115,7 @@ async def billing_success(
                     "amount": pay_amount,
                     "orderId": order_id,
                     "orderName": pay_order_name,
+                    "customerName": customer_name,
                 },
                 headers=_toss_auth_header(),
                 timeout=30.0,
@@ -212,6 +217,10 @@ async def billing_pay(
 
     order_id = f"order_{req.company_id}_{int(time.time())}"
 
+    # 회사명 조회 (토스 구매자명에 표시)
+    company = db.query(Company).filter(Company.company_id == req.company_id).first()
+    customer_name = company.company_name if company else f"company_{req.company_id}"
+
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
@@ -221,6 +230,7 @@ async def billing_pay(
                     "amount": req.amount,
                     "orderId": order_id,
                     "orderName": req.order_name,
+                    "customerName": customer_name,
                 },
                 headers=_toss_auth_header(),
                 timeout=30.0,
