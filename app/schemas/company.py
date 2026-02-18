@@ -53,7 +53,9 @@ class CompanyPublicResponse(BaseModel):
     company_id: int
     company_name: str
     company_code: str
+    address: str | None = None
     industry: str | None = None
+    phone: str | None = None
     logo_url: str | None = None
     is_active: bool = True
 
