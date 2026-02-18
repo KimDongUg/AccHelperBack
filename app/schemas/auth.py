@@ -20,6 +20,8 @@ class SessionData(BaseModel):
     full_name: str | None = None
     role: str
     permissions: str | None = None
+    subscription_plan: str | None = None
+    billing_active: bool = False
     login_time: str
     expiry_time: str
 

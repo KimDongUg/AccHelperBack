@@ -54,6 +54,8 @@ def _make_session_data(sess: dict) -> SessionData:
         full_name=sess.get("full_name"),
         role=sess["role"],
         permissions=sess.get("permissions"),
+        subscription_plan=sess.get("subscription_plan"),
+        billing_active=sess.get("billing_active", False),
         login_time=sess["login_time"].isoformat() + "Z",
         expiry_time=sess["expiry_time"].isoformat() + "Z",
     )
@@ -114,6 +116,14 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     # super_admin (company_id=0) keeps company_id=0 in session
     session_company_id = user.company_id if user.company_id == 0 else company.company_id
 
+    # 구독 상태 확인
+    plan = company.subscription_plan or "free"
+    billing_active = False
+    if plan == "enterprise":
+        billing_active = True
+    elif plan == "trial" and company.trial_ends_at:
+        billing_active = company.trial_ends_at > now
+
     token = str(uuid.uuid4())
     sessions[token] = {
         "user_id": user.user_id,
@@ -125,6 +135,8 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         "full_name": user.full_name,
         "role": user.role,
         "permissions": user.permissions,
+        "subscription_plan": plan,
+        "billing_active": billing_active,
         "login_time": now,
         "expiry_time": expiry,
     }
@@ -199,9 +211,26 @@ def logout(response: Response, session_token: str | None = Cookie(None)):
 
 
 @router.get("/check", response_model=AuthCheckResponse)
-def check_auth(session_token: str | None = Cookie(None)):
+def check_auth(session_token: str | None = Cookie(None), db: Session = Depends(get_db)):
     user = get_current_user(session_token)
     if user:
+        # DB에서 최신 구독 상태 갱신
+        company = (
+            db.query(Company)
+            .filter(Company.company_id == user["company_id"])
+            .first()
+        )
+        if company:
+            plan = company.subscription_plan or "free"
+            now = datetime.utcnow()
+            billing_active = False
+            if plan == "enterprise":
+                billing_active = True
+            elif plan == "trial" and company.trial_ends_at:
+                billing_active = company.trial_ends_at > now
+            user["subscription_plan"] = plan
+            user["billing_active"] = billing_active
+
         return AuthCheckResponse(
             authenticated=True,
             session=_make_session_data(user),
