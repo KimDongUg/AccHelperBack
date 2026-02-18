@@ -28,6 +28,7 @@ class PaymentItem(BaseModel):
     id: int
     company_id: int
     company_name: str
+    admin_email: str | None = None
     order_id: str
     order_name: str
     amount: int

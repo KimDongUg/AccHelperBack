@@ -157,18 +157,27 @@ def list_all_payments(
     payments = query.order_by(PaymentHistory.paid_at.desc()).limit(200).all()
 
     items = []
-    # 회사명 캐시
+    # 회사명 + 관리자 이메일 캐시
     company_cache: dict[int, str] = {}
+    admin_cache: dict[int, str | None] = {}
 
     for p in payments:
         if p.company_id not in company_cache:
             c = db.query(Company).filter(Company.company_id == p.company_id).first()
             company_cache[p.company_id] = c.company_name if c else f"company_{p.company_id}"
+            admin = (
+                db.query(AdminUser)
+                .filter(AdminUser.company_id == p.company_id, AdminUser.is_active == True)
+                .order_by(AdminUser.user_id)
+                .first()
+            )
+            admin_cache[p.company_id] = admin.email if admin else None
 
         items.append(PaymentItem(
             id=p.id,
             company_id=p.company_id,
             company_name=company_cache[p.company_id],
+            admin_email=admin_cache.get(p.company_id),
             order_id=p.order_id,
             order_name=p.order_name,
             amount=p.amount,
