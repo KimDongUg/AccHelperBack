@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>결제 결과 - 보듬누리</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; background: #f9fafb;
+        }
+        .card {
+            text-align: center; background: #fff; border-radius: 16px;
+            padding: 48px; box-shadow: 0 4px 24px rgba(0,0,0,.08); max-width: 420px; width: 90%;
+        }
+        .icon { font-size: 64px; margin-bottom: 16px; }
+        .icon.success { color: #22c55e; }
+        .icon.fail { color: #ef4444; }
+        h1 { font-size: 24px; color: #111; margin-bottom: 12px; }
+        p { color: #666; font-size: 16px; line-height: 1.6; margin-bottom: 8px; }
+        .btn {
+            display: inline-block; margin-top: 24px; padding: 12px 32px;
+            background: #3b82f6; color: #fff; border-radius: 8px;
+            text-decoration: none; font-weight: 600; transition: background .2s;
+        }
+        .btn:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="card" id="result-card">
+        <div class="icon" id="result-icon"></div>
+        <h1 id="result-title"></h1>
+        <p id="result-message"></p>
+        <a class="btn" href="/admin.html">관리 페이지로 돌아가기</a>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const status = params.get('status');
+        const message = params.get('message');
+        const code = params.get('code');
+
+        const iconEl = document.getElementById('result-icon');
+        const titleEl = document.getElementById('result-title');
+        const msgEl = document.getElementById('result-message');
+
+        if (status === 'success') {
+            iconEl.textContent = '\u2713';
+            iconEl.className = 'icon success';
+            titleEl.textContent = '\uce74\ub4dc \ub4f1\ub85d \uc644\ub8cc';
+            msgEl.textContent = '\uad6c\ub3c5 \uacb0\uc81c\uc6a9 \uce74\ub4dc\uac00 \uc815\uc0c1\uc801\uc73c\ub85c \ub4f1\ub85d\ub418\uc5c8\uc2b5\ub2c8\ub2e4.';
+        } else {
+            iconEl.textContent = '\u2717';
+            iconEl.className = 'icon fail';
+            titleEl.textContent = '\uce74\ub4dc \ub4f1\ub85d \uc2e4\ud328';
+            msgEl.textContent = message || code || '\uce74\ub4dc \ub4f1\ub85d \uc911 \uc624\ub958\uac00 \ubc1c\uc0dd\ud588\uc2b5\ub2c8\ub2e4.';
+        }
+    </script>
+</body>
+</html>

@@ -42,5 +42,9 @@ SITE_URL = os.getenv("SITE_URL", "http://localhost:8000")
 # Rate Limiting (password reset — stricter)
 RATE_LIMIT_PASSWORD_RESET = os.getenv("RATE_LIMIT_PASSWORD_RESET", "5/minute")
 
+# Toss Payments
+TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY", "")
+TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY", "")
+
 # Static files
 STATIC_CACHE_MAX_AGE = int(os.getenv("STATIC_CACHE_MAX_AGE", "86400"))

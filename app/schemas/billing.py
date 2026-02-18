@@ -1,0 +1,43 @@
+from pydantic import BaseModel
+
+
+class BillingPayRequest(BaseModel):
+    company_id: int
+    amount: int = 9900
+    order_name: str = "보듬누리 구독"
+
+
+class BillingPayResponse(BaseModel):
+    success: bool
+    message: str
+    payment_key: str | None = None
+    order_id: str | None = None
+    amount: int | None = None
+
+
+class BillingStatusResponse(BaseModel):
+    success: bool
+    has_billing_key: bool = False
+    card_company: str | None = None
+    card_number: str | None = None
+    subscription_plan: str | None = None
+
+
+class BillingKeyDeactivateResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class PaymentHistoryItem(BaseModel):
+    order_id: str
+    order_name: str
+    amount: int
+    status: str
+    payment_key: str | None = None
+    failure_reason: str | None = None
+    paid_at: str
+
+
+class PaymentHistoryResponse(BaseModel):
+    success: bool
+    payments: list[PaymentHistoryItem] = []
