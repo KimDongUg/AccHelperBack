@@ -17,6 +17,7 @@ class BillingPayResponse(BaseModel):
 
 class BillingStatusResponse(BaseModel):
     success: bool
+    active: bool = False
     has_billing_key: bool = False
     card_company: str | None = None
     card_number: str | None = None

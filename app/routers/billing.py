@@ -300,8 +300,17 @@ def billing_status(
     if company and company.trial_ends_at:
         trial_ends = company.trial_ends_at.isoformat() + "Z"
 
+    # active = 유료 구독 중이거나 체험 기간 내
+    is_active = False
+    if company:
+        if company.subscription_plan == "enterprise":
+            is_active = True
+        elif company.subscription_plan == "trial" and company.trial_ends_at:
+            is_active = company.trial_ends_at > datetime.utcnow()
+
     return BillingStatusResponse(
         success=True,
+        active=is_active,
         has_billing_key=bk is not None,
         card_company=bk.card_company if bk else None,
         card_number=bk.card_number if bk else None,
