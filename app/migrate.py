@@ -33,14 +33,29 @@ def _add_column_if_missing(conn, table_name: str, col_name: str, col_def: str):
         logger.info("Added column %s.%s", table_name, col_name)
 
 
-def run_migration(engine: Engine):
-    """Run idempotent migration before create_all.
+def _pg_add_column_if_missing(conn, table_name: str, col_name: str, col_def: str):
+    """PostgreSQL: add column if it doesn't exist."""
+    result = conn.execute(text(
+        "SELECT 1 FROM information_schema.columns "
+        "WHERE table_name = :table AND column_name = :col"
+    ), {"table": table_name, "col": col_name})
+    if result.fetchone() is None:
+        conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_def}"))
+        logger.info("PG: Added column %s.%s", table_name, col_name)
 
-    This migration uses SQLite-specific syntax (PRAGMA, sqlite_master).
-    On PostgreSQL, create_all handles schema creation, so we skip.
-    """
+
+def _run_pg_migration(engine: Engine):
+    """PostgreSQL column migrations for existing tables."""
+    with engine.connect() as conn:
+        _pg_add_column_if_missing(conn, "companies", "trial_ends_at", "TIMESTAMP")
+        conn.commit()
+    logger.info("PostgreSQL migration completed")
+
+
+def run_migration(engine: Engine):
+    """Run idempotent migration before create_all."""
     if engine.url.get_backend_name() != "sqlite":
-        logger.info("Non-SQLite backend detected — skipping SQLite migration")
+        _run_pg_migration(engine)
         return
 
     with engine.connect() as conn:
