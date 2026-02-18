@@ -19,7 +19,7 @@ from app.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware, 
 from app.migrate import run_migration
 from app.models import AdminActivityLog, AdminUser, BillingKey, ChatLog, Company, PaymentHistory, QaKnowledge
 from app.rate_limit import limiter
-from app.routers import activity_logs, admins, auth, billing, chat, companies, qa, stats
+from app.routers import activity_logs, admin_dashboard, admins, auth, billing, chat, companies, qa, stats
 from app.seed import seed_data
 
 logger = logging.getLogger("acchelper")
@@ -112,6 +112,7 @@ app.include_router(companies.router)
 app.include_router(admins.router)
 app.include_router(activity_logs.router)
 app.include_router(billing.router)
+app.include_router(admin_dashboard.router)
 
 if (STATIC_DIR / "css").exists():
     app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")
