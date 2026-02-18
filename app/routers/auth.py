@@ -76,6 +76,57 @@ def get_current_user(session_token: str | None = Cookie(None)) -> dict | None:
 def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
     _cleanup_expired()
 
+    # super_admin direct login with company_id=0
+    if req.company_id == 0:
+        user = (
+            db.query(AdminUser)
+            .filter(AdminUser.company_id == 0, AdminUser.email == req.email)
+            .first()
+        )
+        if not user or not user.is_active:
+            return LoginResponse(success=False, message="사용자를 찾을 수 없습니다.")
+        if not verify_password(req.password, user.password_hash):
+            return LoginResponse(success=False, message="비밀번호가 올바르지 않습니다.")
+
+        user.last_login = datetime.utcnow()
+        db.commit()
+
+        now = datetime.utcnow()
+        expire_hours = SESSION_EXPIRE_HOURS * 7 if req.remember else SESSION_EXPIRE_HOURS
+        expiry = now + timedelta(hours=expire_hours)
+
+        token = str(uuid.uuid4())
+        sessions[token] = {
+            "user_id": user.user_id,
+            "username": user.username,
+            "company_id": 0,
+            "company_code": "SYSTEM",
+            "company_name": "시스템 관리",
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "permissions": user.permissions,
+            "subscription_plan": "enterprise",
+            "billing_active": True,
+            "login_time": now,
+            "expiry_time": expiry,
+        }
+
+        cookie_max_age = int(expire_hours * 3600)
+        response.set_cookie(
+            key="session_token",
+            value=token,
+            httponly=True,
+            samesite="lax",
+            max_age=cookie_max_age,
+        )
+
+        return LoginResponse(
+            success=True,
+            message="로그인 성공",
+            session=_make_session_data(sessions[token]),
+        )
+
     # Lookup company by ID
     company = (
         db.query(Company)
