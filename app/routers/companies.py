@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_super_admin
+from app.dependencies import require_admin, require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.schemas.company import (
@@ -99,6 +99,52 @@ def register_company(
         message=f"회사가 등록되었습니다. 회사 ID: {company.company_id}",
         company_id=company.company_id,
     )
+
+
+# --- 로그인한 admin이 자기 회사 조회/수정 ---
+
+@router.get("/me", response_model=CompanyResponse)
+def get_my_company(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """로그인한 사용자의 회사 정보 조회"""
+    company_id = user["company_id"]
+    # super_admin(company_id=0)은 전체 관리자이므로 별도 처리
+    if company_id == 0:
+        raise HTTPException(status_code=400, detail="시스템 관리자는 /api/companies/{id}를 사용하세요.")
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="회사를 찾을 수 없습니다.")
+    return company
+
+
+@router.put("/me", response_model=CompanyResponse)
+def update_my_company(
+    data: CompanyUpdate,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """로그인한 사용자의 회사 정보 수정"""
+    company_id = user["company_id"]
+    if company_id == 0:
+        raise HTTPException(status_code=400, detail="시스템 관리자는 /api/companies/{id}를 사용하세요.")
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="회사를 찾을 수 없습니다.")
+
+    # admin은 구독/한도 변경 불가
+    update_data = data.model_dump(exclude_unset=True)
+    blocked = {"subscription_plan", "max_qa_count", "max_admins", "is_active"}
+    for key in blocked:
+        update_data.pop(key, None)
+
+    for key, value in update_data.items():
+        setattr(company, key, value)
+    company.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(company)
+    return company
 
 
 # --- Admin endpoints (super_admin only) ---
