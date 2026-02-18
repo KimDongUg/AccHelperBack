@@ -51,8 +51,9 @@ async def billing_success(
     authKey: str = Query(...),
     db: Session = Depends(get_db),
 ):
-    """토스 카드 등록 성공 콜백 → billingKey 발급 및 저장 → /billing.html로 리다이렉트"""
+    """토스 카드 등록 성공 콜백 → billingKey 발급/저장 → 첫 결제 실행 → 리다이렉트"""
     try:
+        # 1) billingKey 발급
         async with httpx.AsyncClient() as client:
             resp = await client.post(
                 f"{TOSS_API_BASE}/billing/authorizations/issue",
@@ -64,7 +65,7 @@ async def billing_success(
         if resp.status_code != 200:
             logger.error("Toss billingKey issue failed: %s", resp.text)
             return RedirectResponse(
-                url=f"/billing.html?status=fail&message=토스+응답+오류:+{resp.status_code}",
+                url=f"/billing.html?status=fail&message=billingKey+발급+실패",
                 status_code=302,
             )
 
@@ -75,7 +76,7 @@ async def billing_success(
         # customerKey 형식: company_{company_id}
         company_id = int(customerKey.split("_")[1])
 
-        # 기존 빌링키 비활성화
+        # 2) 기존 빌링키 비활성화
         existing = (
             db.query(BillingKey)
             .filter(BillingKey.company_id == company_id, BillingKey.is_active == True)
@@ -85,7 +86,7 @@ async def billing_success(
             bk.is_active = False
             bk.deactivated_at = datetime.utcnow()
 
-        # 새 빌링키 저장
+        # 3) 새 빌링키 저장
         new_bk = BillingKey(
             company_id=company_id,
             customer_key=customerKey,
@@ -95,18 +96,70 @@ async def billing_success(
             is_active=True,
         )
         db.add(new_bk)
+        db.flush()  # new_bk.id 확보
 
-        # 구독 플랜 업그레이드
-        company = db.query(Company).filter(Company.company_id == company_id).first()
-        if company and company.subscription_plan == "free":
-            company.subscription_plan = "enterprise"
-            company.max_qa_count = 1000
-            company.max_admins = 50
+        # 4) 첫 결제 즉시 실행
+        order_id = f"order_{company_id}_{int(time.time())}"
+        pay_amount = 24500
+        pay_order_name = "보듬누리 구독"
 
-        db.commit()
+        async with httpx.AsyncClient() as client:
+            pay_resp = await client.post(
+                f"{TOSS_API_BASE}/billing/{billing_key}",
+                json={
+                    "customerKey": customerKey,
+                    "amount": pay_amount,
+                    "orderId": order_id,
+                    "orderName": pay_order_name,
+                },
+                headers=_toss_auth_header(),
+                timeout=30.0,
+            )
 
-        logger.info("BillingKey saved for company_id=%d", company_id)
-        return RedirectResponse(url="/billing.html?status=success", status_code=302)
+        pay_result = pay_resp.json()
+
+        if pay_resp.status_code == 200:
+            # 결제 성공 → DB 기록 + 구독 업그레이드
+            history = PaymentHistory(
+                company_id=company_id,
+                billing_key_id=new_bk.id,
+                order_id=order_id,
+                order_name=pay_order_name,
+                amount=pay_amount,
+                status="success",
+                payment_key=pay_result.get("paymentKey"),
+            )
+            db.add(history)
+
+            company = db.query(Company).filter(Company.company_id == company_id).first()
+            if company:
+                company.subscription_plan = "enterprise"
+                company.max_qa_count = 1000
+                company.max_admins = 50
+
+            db.commit()
+            logger.info("BillingKey saved + first payment success: company_id=%d, order_id=%s", company_id, order_id)
+            return RedirectResponse(url="/billing.html?status=success", status_code=302)
+        else:
+            # 결제 실패 → 빌링키는 저장하되 결제 실패 기록
+            failure_msg = pay_result.get("message", "결제 실패")
+            history = PaymentHistory(
+                company_id=company_id,
+                billing_key_id=new_bk.id,
+                order_id=order_id,
+                order_name=pay_order_name,
+                amount=pay_amount,
+                status="failed",
+                failure_reason=failure_msg,
+            )
+            db.add(history)
+            db.commit()
+
+            logger.warning("BillingKey saved but payment failed: company_id=%d, reason=%s", company_id, failure_msg)
+            return RedirectResponse(
+                url=f"/billing.html?status=fail&message=결제+실패:+{failure_msg}",
+                status_code=302,
+            )
 
     except Exception as exc:
         logger.error("billing_success error: %s", exc)
