@@ -20,6 +20,7 @@ class Company(Base):
     subscription_plan: Mapped[str] = mapped_column(String(20), default="free")
     max_qa_count: Mapped[int] = mapped_column(Integer, default=100)
     max_admins: Mapped[int] = mapped_column(Integer, default=5)
+    qa_customized: Mapped[bool] = mapped_column(Boolean, default=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(

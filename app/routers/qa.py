@@ -159,6 +159,13 @@ def create_qa(
         created_by=user["user_id"],
     )
     db.add(qa)
+
+    # QA 커스터마이즈 플래그
+    if target_company_id != 0:
+        comp = db.query(Company).filter(Company.company_id == target_company_id).first()
+        if comp and not comp.qa_customized:
+            comp.qa_customized = True
+
     db.commit()
     db.refresh(qa)
 
@@ -192,6 +199,14 @@ def update_qa(
         setattr(qa, key, value)
     qa.updated_at = datetime.utcnow()
     qa.updated_by = user["user_id"]
+
+    # QA 커스터마이즈 플래그
+    cid = qa.company_id
+    if cid != 0:
+        comp = db.query(Company).filter(Company.company_id == cid).first()
+        if comp and not comp.qa_customized:
+            comp.qa_customized = True
+
     db.commit()
     db.refresh(qa)
 
@@ -216,10 +231,18 @@ def delete_qa(
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
+    cid = qa.company_id
     db.query(ChatLog).filter(ChatLog.qa_id == qa_id).update(
         {ChatLog.qa_id: None}, synchronize_session="fetch"
     )
     db.delete(qa)
+
+    # QA 커스터마이즈 플래그
+    if cid != 0:
+        comp = db.query(Company).filter(Company.company_id == cid).first()
+        if comp and not comp.qa_customized:
+            comp.qa_customized = True
+
     db.commit()
     return {"success": True, "message": "삭제되었습니다."}
 

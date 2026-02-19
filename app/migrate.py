@@ -56,6 +56,7 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "logo_url", "VARCHAR(500)")
         _pg_add_column_if_missing(conn, "companies", "trial_ends_at", "TIMESTAMP")
         _pg_add_column_if_missing(conn, "companies", "deleted_at", "TIMESTAMP")
+        _pg_add_column_if_missing(conn, "companies", "qa_customized", "BOOLEAN DEFAULT FALSE")
         conn.commit()
     logger.info("PostgreSQL migration completed")
 
@@ -101,6 +102,7 @@ def run_migration(engine: Engine):
         # --- companies table ---
         if _table_exists(conn, "companies"):
             _add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
+            _add_column_if_missing(conn, "companies", "qa_customized", "BOOLEAN DEFAULT 0")
 
         # --- qa_knowledge table ---
         if _table_exists(conn, "qa_knowledge"):

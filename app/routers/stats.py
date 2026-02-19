@@ -41,12 +41,20 @@ def get_stats(
     for qa in qa_query.all():
         categories[qa.category] = categories.get(qa.category, 0) + 1
 
+    # QA 커스터마이즈 여부
+    qa_customized = True
+    if company_id != 0:
+        company = db.query(Company).filter(Company.company_id == company_id).first()
+        if company:
+            qa_customized = company.qa_customized
+
     return {
         "total_qa": total_qa,
         "active_qa": active_qa,
         "today_chats": today_chats,
         "total_chats": total_chats,
         "categories": categories,
+        "qa_customized": qa_customized,
     }
 
 

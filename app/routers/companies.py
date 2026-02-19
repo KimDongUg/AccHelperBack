@@ -8,6 +8,7 @@ from sqlalchemy import text
 from app.database import get_db
 from app.dependencies import require_admin, require_super_admin
 from app.models.admin_user import AdminUser
+from app.models.qa_knowledge import QaKnowledge
 from app.models.company import Company
 from app.schemas.company import (
     CompanyCreate,
@@ -116,6 +117,29 @@ def register_company(
         is_active=True,
     )
     db.add(admin)
+
+    # 최근 등록된 회사의 QA 데이터 복사
+    latest_company = (
+        db.query(Company)
+        .filter(Company.company_id != company.company_id, Company.deleted_at == None)
+        .order_by(Company.created_at.desc())
+        .first()
+    )
+    if latest_company:
+        source_qas = db.query(QaKnowledge).filter(
+            QaKnowledge.company_id == latest_company.company_id
+        ).all()
+        for qa in source_qas:
+            new_qa = QaKnowledge(
+                company_id=company.company_id,
+                category=qa.category,
+                question=qa.question,
+                answer=qa.answer,
+                keywords=qa.keywords,
+                is_active=qa.is_active,
+            )
+            db.add(new_qa)
+
     db.commit()
 
     return CompanyRegisterResponse(
