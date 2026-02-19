@@ -258,7 +258,7 @@ def cleanup_companies(
 ):
     """keep_id 회사와 super_admin(company_id=0)만 남기고 나머지 모두 삭제 (super_admin 전용)"""
     tables = [
-        "activity_logs",
+        "admin_activity_logs",
         "chat_logs",
         "payment_history",
         "billing_keys",
