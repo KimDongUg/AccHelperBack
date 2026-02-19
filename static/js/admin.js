@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const addQaBtn = document.getElementById('addQaBtn');
             if (addQaBtn) addQaBtn.style.display = 'none';
         }
-    } catch { AuthSession.redirectToLogin(); return; }
+    } catch (e) { console.error('[ADMIN] auth error → redirect:', e); AuthSession.redirectToLogin(); return; }
 
     // Session watcher
     sessionCheckTimer = setInterval(() => {
