@@ -287,5 +287,12 @@ def cleanup_companies(
     )
     deleted["companies"] = result.rowcount
 
+    # auto-increment 시퀀스 리셋 (PostgreSQL)
+    max_id = db.execute(text("SELECT COALESCE(MAX(company_id), 0) FROM companies")).scalar()
+    try:
+        db.execute(text(f"ALTER SEQUENCE companies_company_id_seq RESTART WITH {max_id + 1}"))
+    except Exception:
+        pass  # SQLite는 시퀀스 없음
+
     db.commit()
-    return {"success": True, "message": f"회사 {keep_id}번 외 데이터 삭제 완료", "deleted": deleted}
+    return {"success": True, "message": f"회사 {keep_id}번 외 데이터 삭제 완료 (시퀀스 리셋: {max_id + 1})", "deleted": deleted}
