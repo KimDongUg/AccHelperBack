@@ -54,6 +54,7 @@ class CompanyPublicResponse(BaseModel):
     company_id: int
     company_name: str
     building_type: str | None = None
+    business_number: str | None = None
     address: str | None = None
     industry: str | None = None
     phone: str | None = None
