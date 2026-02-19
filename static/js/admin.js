@@ -12,53 +12,71 @@ let logPage = 1;
  * ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
     // Auth guard
-    console.log('[ADMIN] page loaded, checking isValid...');
-    if (!AuthSession.isValid()) { console.log('[ADMIN] isValid=false → redirect'); AuthSession.redirectToLogin(); return; }
-    console.log('[ADMIN] isValid=true, calling /auth/check...');
+    if (!AuthSession.isValid()) { AuthSession.redirectToLogin('expired'); return; }
+
+    // Use local session as fallback if server auth check fails
+    const localSess = AuthSession.get();
+    let sess = null;
+
     try {
         const auth = await apiGet('/auth/check');
-        console.log('[ADMIN] auth/check → authenticated:', auth.authenticated);
-        if (!auth.authenticated) { console.log('[ADMIN] not authenticated → redirect'); AuthSession.redirectToLogin(); return; }
+        if (!auth.authenticated) { AuthSession.redirectToLogin('unauthorized'); return; }
         if (auth.session) {
+            sess = auth.session;
             const persist = !!localStorage.getItem('acc_auth_token');
-            const existingToken = AuthSession.getToken();
-            console.log('[ADMIN] re-saving session, existingToken:', existingToken ? 'exists' : 'NULL', '| persist:', persist);
-            AuthSession.save(auth.session, existingToken, persist);
+            AuthSession.save(auth.session, AuthSession.getToken(), persist);
         }
+    } catch (err) {
+        // 401/403 → token invalid, must re-login
+        if (err.status === 401) { AuthSession.redirectToLogin('unauthorized'); return; }
+        if (err.status === 403) { AuthSession.redirectToLogin('forbidden'); return; }
+        // Other errors (500, network) → use local session as fallback
+        console.warn('[ADMIN] auth check failed:', err.message, '— using local session');
+    }
 
-        const sess = auth.session;
-        currentRole = sess.role || 'viewer';
+    // Build session — prefer server data, fallback to local storage
+    if (!sess && localSess) {
+        sess = {
+            role: localSess.role,
+            company_name: localSess.companyName,
+            full_name: localSess.fullName,
+            email: localSess.email,
+            username: localSess.username,
+        };
+    }
+    if (!sess) { AuthSession.redirectToLogin('unauthorized'); return; }
 
-        // Header display
-        document.getElementById('headerCompanyName').textContent = sess.company_name || '';
-        const displayName = sess.full_name || sess.email || sess.username || '';
-        document.getElementById('adminUsername').textContent = displayName + '님';
+    currentRole = sess.role || 'viewer';
 
-        // Role badge
-        const roleBadge = document.getElementById('roleBadge');
-        const roleLabels = { super_admin: '최고관리자', admin: '관리자', viewer: '뷰어' };
-        roleBadge.textContent = roleLabels[currentRole] || currentRole;
-        roleBadge.className = 'role-badge role-' + currentRole;
-        roleBadge.style.display = 'inline-block';
+    // Header display
+    document.getElementById('headerCompanyName').textContent = sess.company_name || '';
+    const displayName = sess.full_name || sess.email || sess.username || '';
+    document.getElementById('adminUsername').textContent = displayName + '님';
 
-        // Show admin tab for admin/super_admin
-        if (currentRole === 'admin' || currentRole === 'super_admin') {
-            document.getElementById('tabAdmins').style.display = '';
-        }
+    // Role badge
+    const roleBadge = document.getElementById('roleBadge');
+    const roleLabels = { super_admin: '최고관리자', admin: '관리자', viewer: '뷰어' };
+    roleBadge.textContent = roleLabels[currentRole] || currentRole;
+    roleBadge.className = 'role-badge role-' + currentRole;
+    roleBadge.style.display = 'inline-block';
 
-        // Hide edit buttons for viewer
-        if (currentRole === 'viewer') {
-            const addQaBtn = document.getElementById('addQaBtn');
-            if (addQaBtn) addQaBtn.style.display = 'none';
-        }
-    } catch (e) { console.error('[ADMIN] auth error → redirect:', e); AuthSession.redirectToLogin(); return; }
+    // Show admin tab for admin/super_admin
+    if (currentRole === 'admin' || currentRole === 'super_admin') {
+        document.getElementById('tabAdmins').style.display = '';
+    }
+
+    // Hide edit buttons for viewer
+    if (currentRole === 'viewer') {
+        const addQaBtn = document.getElementById('addQaBtn');
+        if (addQaBtn) addQaBtn.style.display = 'none';
+    }
 
     // Session watcher
     sessionCheckTimer = setInterval(() => {
         if (!AuthSession.isValid()) {
             clearInterval(sessionCheckTimer);
             showToast('세션이 만료되었습니다.', 'warning');
-            setTimeout(() => AuthSession.redirectToLogin(), 1500);
+            setTimeout(() => AuthSession.redirectToLogin('expired'), 1500);
         }
     }, 60_000);
 

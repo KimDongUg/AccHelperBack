@@ -80,11 +80,11 @@ const AuthSession = {
     },
 
     /** Redirect to login and clear session. */
-    redirectToLogin() {
-        console.log('[AUTH] redirectToLogin called from:', new Error().stack);
+    redirectToLogin(reason) {
         this.clear();
         if (!window.location.pathname.includes('login')) {
-            window.location.href = '/login.html';
+            const url = reason ? '/login.html?reason=' + reason : '/login.html';
+            window.location.href = url;
         }
     },
 };
@@ -110,7 +110,15 @@ async function apiFetch(path, options = {}) {
 
     try {
         const response = await fetch(url, config);
-        const data = await response.json();
+
+        let data;
+        try {
+            data = await response.json();
+        } catch {
+            const err = new Error('서버 응답을 처리할 수 없습니다. (status ' + response.status + ')');
+            err.status = response.status;
+            throw err;
+        }
 
         if (!response.ok) {
             const detail = Array.isArray(data.detail)

@@ -29,6 +29,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         errorDiv.classList.remove('show');
     }
 
+    // Show reason banner when redirected from another page
+    const urlParams = new URLSearchParams(window.location.search);
+    const reason = urlParams.get('reason');
+    if (reason === 'expired') showError('세션이 만료되었습니다. 다시 로그인해 주세요.');
+    else if (reason === 'unauthorized') showError('인증에 실패했습니다. 다시 로그인해 주세요.');
+    else if (reason === 'forbidden') showError('권한이 없습니다. 다시 로그인해 주세요.');
+
     function setLoading(loading) {
         loginBtn.disabled = loading;
         loginBtn.classList.toggle('loading', loading);

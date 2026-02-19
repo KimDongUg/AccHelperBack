@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from app.config import JWT_EXPIRE_HOURS, RATE_LIMIT_AUTH, RATE_LIMIT_PASSWORD_RESET
+from app.config import APP_ENV, JWT_EXPIRE_HOURS, RATE_LIMIT_AUTH, RATE_LIMIT_PASSWORD_RESET
 from app.database import get_db
 from app.dependencies import require_auth
 from app.models.admin_user import AdminUser
@@ -31,6 +31,8 @@ from app.services.email_service import send_temp_password_email
 from app.services.jwt_service import create_access_token
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_COOKIE_SECURE = APP_ENV == "production"
 
 
 def _build_session_data(user_row, company_name: str, plan: str, billing_active: bool, expiry_time: str) -> SessionData:
@@ -92,6 +94,7 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         response.set_cookie(
             key="session_token", value=token,
             max_age=expire_hours * 3600, httponly=True, samesite="lax",
+            secure=_COOKIE_SECURE,
         )
         return resp_data
 
