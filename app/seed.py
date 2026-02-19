@@ -57,17 +57,6 @@ def seed_data(db: Session):
         )
         db.add(demo_admin)
 
-        # Demo company viewer
-        demo_viewer = AdminUser(
-            company_id=2,
-            username="demo_viewer",
-            password_hash=hash_password("demo123"),
-            email="viewer@demo.com",
-            full_name="데모 뷰어",
-            role="viewer",
-            is_active=True,
-        )
-        db.add(demo_viewer)
         db.commit()
 
     # --- Seed QA for default company (company_id=1) ---
