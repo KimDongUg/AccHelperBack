@@ -33,13 +33,6 @@ def _add_column_if_missing(conn, table_name: str, col_name: str, col_def: str):
         logger.info("Added column %s.%s", table_name, col_name)
 
 
-def _drop_column_if_exists(conn, table_name: str, col_name: str):
-    cols = _get_columns(conn, table_name)
-    if col_name in cols:
-        conn.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {col_name}"))
-        logger.info("Dropped column %s.%s", table_name, col_name)
-
-
 def _pg_add_column_if_missing(conn, table_name: str, col_name: str, col_def: str):
     """PostgreSQL: add column if it doesn't exist."""
     result = conn.execute(text(
@@ -51,22 +44,10 @@ def _pg_add_column_if_missing(conn, table_name: str, col_name: str, col_def: str
         logger.info("PG: Added column %s.%s", table_name, col_name)
 
 
-def _pg_drop_column_if_exists(conn, table_name: str, col_name: str):
-    """PostgreSQL: drop column if it exists."""
-    result = conn.execute(text(
-        "SELECT 1 FROM information_schema.columns "
-        "WHERE table_name = :table AND column_name = :col"
-    ), {"table": table_name, "col": col_name})
-    if result.fetchone() is not None:
-        conn.execute(text(f"ALTER TABLE {table_name} DROP COLUMN {col_name}"))
-        logger.info("PG: Dropped column %s.%s", table_name, col_name)
-
-
 def _run_pg_migration(engine: Engine):
     """PostgreSQL column migrations for existing tables."""
     with engine.connect() as conn:
         # companies table
-        _pg_drop_column_if_exists(conn, "companies", "company_code")
         _pg_add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
         _pg_add_column_if_missing(conn, "companies", "business_number", "VARCHAR(20)")
         _pg_add_column_if_missing(conn, "companies", "industry", "VARCHAR(50)")
@@ -119,7 +100,6 @@ def run_migration(engine: Engine):
 
         # --- companies table ---
         if _table_exists(conn, "companies"):
-            _drop_column_if_exists(conn, "companies", "company_code")
             _add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
 
         # --- qa_knowledge table ---
