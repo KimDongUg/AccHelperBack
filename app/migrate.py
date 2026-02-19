@@ -44,9 +44,23 @@ def _pg_add_column_if_missing(conn, table_name: str, col_name: str, col_def: str
         logger.info("PG: Added column %s.%s", table_name, col_name)
 
 
+def _pg_table_exists(conn, table_name: str) -> bool:
+    result = conn.execute(text(
+        "SELECT 1 FROM information_schema.tables WHERE table_name = :t"
+    ), {"t": table_name})
+    return result.fetchone() is not None
+
+
 def _run_pg_migration(engine: Engine):
     """PostgreSQL column migrations for existing tables."""
     with engine.connect() as conn:
+        # Enable pgvector extension
+        try:
+            conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            logger.info("PG: pgvector extension ensured")
+        except Exception as e:
+            logger.warning("PG: Could not create pgvector extension: %s", e)
+
         # companies table
         _pg_add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
         _pg_add_column_if_missing(conn, "companies", "business_number", "VARCHAR(20)")
@@ -57,6 +71,18 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "trial_ends_at", "TIMESTAMP")
         _pg_add_column_if_missing(conn, "companies", "deleted_at", "TIMESTAMP")
         _pg_add_column_if_missing(conn, "companies", "qa_customized", "BOOLEAN DEFAULT FALSE")
+        _pg_add_column_if_missing(conn, "companies", "status", "VARCHAR(20) DEFAULT 'active'")
+
+        # qa_knowledge table — new RAG columns
+        if _pg_table_exists(conn, "qa_knowledge"):
+            _pg_add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
+            _pg_add_column_if_missing(conn, "qa_knowledge", "tags", "TEXT DEFAULT ''")
+
+        # chat_logs table — RAG columns
+        if _pg_table_exists(conn, "chat_logs"):
+            _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
+            _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
+
         conn.commit()
     logger.info("PostgreSQL migration completed")
 
@@ -77,9 +103,6 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "admin_users", "position", "VARCHAR(50)")
             _add_column_if_missing(conn, "admin_users", "role", "VARCHAR(20) DEFAULT 'admin'")
             _add_column_if_missing(conn, "admin_users", "permissions", "TEXT")
-
-            # Make username nullable (SQLite can't ALTER NOT NULL, but new rows can have NULL)
-            # Make email NOT NULL for new rows — existing NULLs will be backfilled below
 
             # Backfill: set email from username if email is null
             conn.execute(text(
@@ -103,6 +126,7 @@ def run_migration(engine: Engine):
         if _table_exists(conn, "companies"):
             _add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
             _add_column_if_missing(conn, "companies", "qa_customized", "BOOLEAN DEFAULT 0")
+            _add_column_if_missing(conn, "companies", "status", "VARCHAR(20) DEFAULT 'active'")
 
         # --- qa_knowledge table ---
         if _table_exists(conn, "qa_knowledge"):
@@ -111,6 +135,8 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "qa_knowledge", "updated_by", "INTEGER")
             _add_column_if_missing(conn, "qa_knowledge", "view_count", "INTEGER DEFAULT 0")
             _add_column_if_missing(conn, "qa_knowledge", "used_count", "INTEGER DEFAULT 0")
+            _add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
+            _add_column_if_missing(conn, "qa_knowledge", "tags", "TEXT DEFAULT ''")
 
             # Backfill company_id
             conn.execute(text(
@@ -125,6 +151,8 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "chat_logs", "user_feedback", "VARCHAR(20)")
             _add_column_if_missing(conn, "chat_logs", "ip_address", "VARCHAR(45)")
             _add_column_if_missing(conn, "chat_logs", "user_agent", "VARCHAR(500)")
+            _add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT 0")
+            _add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
             # Backfill company_id
             conn.execute(text(

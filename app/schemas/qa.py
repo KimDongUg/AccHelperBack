@@ -9,6 +9,8 @@ class QaCreate(BaseModel):
     question: str
     answer: str
     keywords: str = ""
+    aliases: str = ""
+    tags: str = ""
     is_active: bool = True
 
 
@@ -18,6 +20,8 @@ class QaUpdate(BaseModel):
     question: str | None = None
     answer: str | None = None
     keywords: str | None = None
+    aliases: str | None = None
+    tags: str | None = None
     is_active: bool | None = None
 
 
@@ -28,6 +32,8 @@ class QaResponse(BaseModel):
     question: str
     answer: str
     keywords: str
+    aliases: str = ""
+    tags: str = ""
     is_active: bool
     created_by: int | None = None
     updated_by: int | None = None

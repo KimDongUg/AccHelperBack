@@ -70,6 +70,8 @@
         <div class="tab-nav" role="tablist" aria-label="관리 탭">
             <button class="tab-btn active" role="tab" aria-selected="true" data-tab="qa" id="tabQa">Q&A 관리</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="admins" id="tabAdmins" style="display:none">관리자 관리</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback" id="tabFeedback">피드백</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="unmatched" id="tabUnmatched">미등록 질문</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
         </div>
 
@@ -161,6 +163,66 @@
             </div>
         </div>
 
+        <!-- Tab: Feedback -->
+        <div class="tab-content" id="tabContentFeedback" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">피드백 목록</h3>
+                <select id="feedbackFilter" class="form-control" style="width:auto" onchange="loadFeedbackList()">
+                    <option value="">전체</option>
+                    <option value="like">좋아요</option>
+                    <option value="dislike">싫어요</option>
+                </select>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="피드백 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col">질문</th>
+                                <th scope="col">답변</th>
+                                <th scope="col" style="width:80px">평가</th>
+                                <th scope="col">코멘트</th>
+                                <th scope="col" style="width:140px">날짜</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedbackTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="feedbackEmptyState" class="empty-state" style="display:none">
+                    <p>피드백이 없습니다.</p>
+                </div>
+                <nav class="pagination" id="feedbackPagination" aria-label="피드백 페이지"></nav>
+            </div>
+        </div>
+
+        <!-- Tab: Unmatched Questions -->
+        <div class="tab-content" id="tabContentUnmatched" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">미등록 질문 (답변 미매칭)</h3>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="미등록 질문">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col">사용자 질문</th>
+                                <th scope="col">봇 답변</th>
+                                <th scope="col" style="width:140px">날짜</th>
+                                <th scope="col" style="width:100px">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unmatchedTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="unmatchedEmptyState" class="empty-state" style="display:none">
+                    <p>미등록 질문이 없습니다.</p>
+                </div>
+                <nav class="pagination" id="unmatchedPagination" aria-label="미등록 질문 페이지"></nav>
+            </div>
+        </div>
+
         <!-- Tab: Activity Logs -->
         <div class="tab-content" id="tabContentLogs" role="tabpanel" style="display:none">
             <div class="toolbar">
@@ -222,6 +284,14 @@
                 <div class="form-group">
                     <label for="modalKeywords">키워드 (쉼표로 구분)</label>
                     <input type="text" id="modalKeywords" class="form-control" placeholder="예: 부가세,신고,기한">
+                </div>
+                <div class="form-group">
+                    <label for="modalAliases">동의어 (쉼표로 구분)</label>
+                    <input type="text" id="modalAliases" class="form-control" placeholder="예: 관리비,아파트비용,공과금">
+                </div>
+                <div class="form-group">
+                    <label for="modalTags">태그 (쉼표로 구분)</label>
+                    <input type="text" id="modalTags" class="form-control" placeholder="예: 중요,자주묻는질문">
                 </div>
                 <div class="form-group form-check">
                     <input type="checkbox" id="modalActive" checked>

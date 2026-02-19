@@ -46,5 +46,17 @@ RATE_LIMIT_PASSWORD_RESET = os.getenv("RATE_LIMIT_PASSWORD_RESET", "5/minute")
 TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY", "")
 TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY", "")
 
+# OpenAI / RAG
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
+RAG_TOP_K = int(os.getenv("RAG_TOP_K", "6"))
+RAG_MIN_SCORE = float(os.getenv("RAG_MIN_SCORE", "0.25"))
+
+# JWT
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
+
 # Static files
 STATIC_CACHE_MAX_AGE = int(os.getenv("STATIC_CACHE_MAX_AGE", "86400"))

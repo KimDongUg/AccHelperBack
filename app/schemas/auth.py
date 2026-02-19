@@ -28,6 +28,7 @@ class SessionData(BaseModel):
 class LoginResponse(BaseModel):
     success: bool
     message: str
+    token: str | None = None
     session: SessionData | None = None
 
 

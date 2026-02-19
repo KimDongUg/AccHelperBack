@@ -17,9 +17,20 @@ from app.config import APP_ENV, CORS_ORIGINS, DATABASE_URL, LOG_LEVEL, TRUSTED_H
 from app.database import Base, SessionLocal, engine
 from app.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware, setup_logging
 from app.migrate import run_migration
-from app.models import AdminActivityLog, AdminUser, BillingKey, ChatLog, Company, PaymentHistory, QaKnowledge
+from app.models import (
+    AdminActivityLog, AdminUser, BillingKey, ChatLog, Company,
+    Feedback, PaymentHistory, PromptTemplate, QaEmbedding, QaKnowledge,
+    TenantQuota, TenantUsageMonthly,
+)
 from app.rate_limit import limiter
-from app.routers import activity_logs, admin_dashboard, admins, auth, billing, chat, companies, qa, stats
+from app.routers import (
+    activity_logs, admin_dashboard, admins, auth, billing, chat,
+    companies, qa, stats,
+)
+from app.routers import feedback as feedback_router
+from app.routers import prompts as prompts_router
+from app.routers import super_admin as super_admin_router
+from app.rls import setup_rls
 from app.seed import seed_data
 
 logger = logging.getLogger("acchelper")
@@ -71,6 +82,9 @@ async def lifespan(app: FastAPI):
                 conn.commit()
             logger.info("SQLite indexes ensured")
 
+        # Setup RLS for PostgreSQL
+        setup_rls(engine)
+
         db = SessionLocal()
         try:
             seed_data(db)
@@ -113,6 +127,9 @@ app.include_router(admins.router)
 app.include_router(activity_logs.router)
 app.include_router(billing.router)
 app.include_router(admin_dashboard.router)
+app.include_router(feedback_router.router)
+app.include_router(prompts_router.router)
+app.include_router(super_admin_router.router)
 
 if (STATIC_DIR / "css").exists():
     app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")

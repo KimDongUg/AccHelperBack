@@ -67,8 +67,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             if (result.success && result.session) {
-                // Persist session client-side
-                AuthSession.save(result.session, remember);
+                // Persist session and JWT token client-side
+                AuthSession.save(result.session, result.token, remember);
                 loginCard.classList.add('success');
                 setTimeout(() => {
                     window.location.href = '/admin.html';

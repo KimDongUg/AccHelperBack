@@ -1,11 +1,11 @@
-import uuid
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Cookie, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from app.config import RATE_LIMIT_AUTH, RATE_LIMIT_PASSWORD_RESET, SESSION_EXPIRE_HOURS
+from app.config import JWT_EXPIRE_HOURS, RATE_LIMIT_AUTH, RATE_LIMIT_PASSWORD_RESET
 from app.database import get_db
+from app.dependencies import require_auth
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.rate_limit import limiter
@@ -28,52 +28,35 @@ from app.services.auth_service import (
     verify_password,
 )
 from app.services.email_service import send_temp_password_email
+from app.services.jwt_service import create_access_token
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-# In-memory session store
-sessions: dict[str, dict] = {}
 
-
-def _cleanup_expired():
-    """Remove expired sessions."""
-    now = datetime.utcnow()
-    expired = [k for k, v in sessions.items() if v["expiry_time"] <= now]
-    for k in expired:
-        del sessions[k]
-
-
-def _make_session_data(sess: dict) -> SessionData:
+def _build_session_data(user_row, company_name: str, plan: str, billing_active: bool, expiry_time: str) -> SessionData:
     return SessionData(
-        user_id=sess["user_id"],
-        username=sess.get("username"),
-        company_id=sess["company_id"],
-        company_name=sess["company_name"],
-        email=sess["email"],
-        full_name=sess.get("full_name"),
-        role=sess["role"],
-        permissions=sess.get("permissions"),
-        subscription_plan=sess.get("subscription_plan"),
-        billing_active=sess.get("billing_active", False),
-        login_time=sess["login_time"].isoformat() + "Z",
-        expiry_time=sess["expiry_time"].isoformat() + "Z",
+        user_id=user_row.user_id,
+        username=user_row.username,
+        company_id=user_row.company_id if user_row.company_id != 0 else 0,
+        company_name=company_name,
+        email=user_row.email,
+        full_name=user_row.full_name,
+        role=user_row.role,
+        permissions=user_row.permissions,
+        subscription_plan=plan,
+        billing_active=billing_active,
+        login_time=datetime.utcnow().isoformat() + "Z",
+        expiry_time=expiry_time,
     )
-
-
-def get_current_user(session_token: str | None = Cookie(None)) -> dict | None:
-    if not session_token or session_token not in sessions:
-        return None
-    sess = sessions[session_token]
-    if sess["expiry_time"] <= datetime.utcnow():
-        del sessions[session_token]
-        return None
-    return sess
 
 
 @router.post("/login", response_model=LoginResponse)
 @limiter.limit(RATE_LIMIT_AUTH)
 def login(req: LoginRequest, request: Request, response: Response, db: Session = Depends(get_db)):
-    _cleanup_expired()
+    now = datetime.utcnow()
+    expire_hours = JWT_EXPIRE_HOURS * 7 if req.remember else JWT_EXPIRE_HOURS
+    expiry = now + timedelta(hours=expire_hours)
+    expiry_str = expiry.isoformat() + "Z"
 
     # super_admin direct login with company_id=0
     if req.company_id == 0:
@@ -87,43 +70,25 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         if not verify_password(req.password, user.password_hash):
             return LoginResponse(success=False, message="비밀번호가 올바르지 않습니다.")
 
-        user.last_login = datetime.utcnow()
+        user.last_login = now
         db.commit()
 
-        now = datetime.utcnow()
-        expire_hours = SESSION_EXPIRE_HOURS * 7 if req.remember else SESSION_EXPIRE_HOURS
-        expiry = now + timedelta(hours=expire_hours)
-
-        token = str(uuid.uuid4())
-        sessions[token] = {
-            "user_id": user.user_id,
-            "username": user.username,
-            "company_id": 0,
-            "company_name": "시스템 관리",
-            "email": user.email,
-            "full_name": user.full_name,
-            "role": user.role,
-            "permissions": user.permissions,
-            "subscription_plan": "enterprise",
-            "billing_active": True,
-            "login_time": now,
-            "expiry_time": expiry,
-        }
-
-        cookie_max_age = int(expire_hours * 3600)
-        response.set_cookie(
-            key="session_token",
-            value=token,
-            httponly=True,
-            samesite="lax",
-            max_age=cookie_max_age,
+        token = create_access_token(
+            {
+                "user_id": user.user_id,
+                "company_id": 0,
+                "company_name": "시스템 관리",
+                "email": user.email,
+                "full_name": user.full_name,
+                "role": user.role,
+                "subscription_plan": "enterprise",
+                "billing_active": True,
+            },
+            expire_hours=expire_hours,
         )
 
-        return LoginResponse(
-            success=True,
-            message="로그인 성공",
-            session=_make_session_data(sessions[token]),
-        )
+        session = _build_session_data(user, "시스템 관리", "enterprise", True, expiry_str)
+        return LoginResponse(success=True, message="로그인 성공", token=token, session=session)
 
     # Lookup company by ID
     company = (
@@ -133,6 +98,10 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     )
     if not company:
         return LoginResponse(success=False, message="회사 ID를 찾을 수 없습니다.")
+
+    # Check company status
+    if hasattr(company, "status") and company.status not in ("active", None):
+        return LoginResponse(success=False, message="이용이 중지된 회사입니다.")
 
     # Try normal company-scoped lookup first
     user = (
@@ -155,17 +124,12 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     if not verify_password(req.password, user.password_hash):
         return LoginResponse(success=False, message="비밀번호가 올바르지 않습니다.")
 
-    user.last_login = datetime.utcnow()
+    user.last_login = now
     db.commit()
 
-    now = datetime.utcnow()
-    expire_hours = SESSION_EXPIRE_HOURS * 7 if req.remember else SESSION_EXPIRE_HOURS
-    expiry = now + timedelta(hours=expire_hours)
-
-    # super_admin (company_id=0) keeps company_id=0 in session
+    # super_admin (company_id=0) keeps company_id=0 in token
     session_company_id = user.company_id if user.company_id == 0 else company.company_id
 
-    # 구독 상태 확인
     plan = company.subscription_plan or "free"
     billing_active = False
     if plan == "enterprise":
@@ -173,36 +137,25 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     elif plan == "trial" and company.trial_ends_at:
         billing_active = company.trial_ends_at > now
 
-    token = str(uuid.uuid4())
-    sessions[token] = {
-        "user_id": user.user_id,
-        "username": user.username,
-        "company_id": session_company_id,
-        "company_name": company.company_name,
-        "email": user.email,
-        "full_name": user.full_name,
-        "role": user.role,
-        "permissions": user.permissions,
-        "subscription_plan": plan,
-        "billing_active": billing_active,
-        "login_time": now,
-        "expiry_time": expiry,
-    }
-
-    cookie_max_age = int(expire_hours * 3600)
-    response.set_cookie(
-        key="session_token",
-        value=token,
-        httponly=True,
-        samesite="lax",
-        max_age=cookie_max_age,
+    token = create_access_token(
+        {
+            "user_id": user.user_id,
+            "company_id": session_company_id,
+            "company_name": company.company_name,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role,
+            "subscription_plan": plan,
+            "billing_active": billing_active,
+        },
+        expire_hours=expire_hours,
     )
 
-    return LoginResponse(
-        success=True,
-        message="로그인 성공",
-        session=_make_session_data(sessions[token]),
-    )
+    session = _build_session_data(user, company.company_name, plan, billing_active, expiry_str)
+    # Override company_id for super_admin accessing a company
+    session.company_id = session_company_id
+
+    return LoginResponse(success=True, message="로그인 성공", token=token, session=session)
 
 
 @router.post("/register", response_model=RegisterResponse)
@@ -251,23 +204,18 @@ def register(req: RegisterRequest, request: Request, db: Session = Depends(get_d
 
 
 @router.post("/logout")
-def logout(response: Response, session_token: str | None = Cookie(None)):
-    if session_token and session_token in sessions:
-        del sessions[session_token]
+def logout(response: Response):
     response.delete_cookie("session_token")
     return {"success": True, "message": "로그아웃 되었습니다."}
 
 
 @router.get("/check", response_model=AuthCheckResponse)
-def check_auth(session_token: str | None = Cookie(None), db: Session = Depends(get_db)):
-    user = get_current_user(session_token)
-    if user:
-        # DB에서 최신 구독 상태 갱신
-        company = (
-            db.query(Company)
-            .filter(Company.company_id == user["company_id"])
-            .first()
-        )
+def check_auth(request: Request, user: dict = Depends(require_auth), db: Session = Depends(get_db)):
+    company_id = user.get("company_id", 0)
+
+    # Refresh subscription status from DB
+    if company_id and company_id != 0:
+        company = db.query(Company).filter(Company.company_id == company_id).first()
         if company:
             plan = company.subscription_plan or "free"
             now = datetime.utcnow()
@@ -279,11 +227,21 @@ def check_auth(session_token: str | None = Cookie(None), db: Session = Depends(g
             user["subscription_plan"] = plan
             user["billing_active"] = billing_active
 
-        return AuthCheckResponse(
-            authenticated=True,
-            session=_make_session_data(user),
-        )
-    return AuthCheckResponse(authenticated=False)
+    session = SessionData(
+        user_id=user.get("user_id", 0),
+        username=user.get("username"),
+        company_id=company_id,
+        company_name=user.get("company_name", ""),
+        email=user.get("email", ""),
+        full_name=user.get("full_name"),
+        role=user.get("role", "viewer"),
+        permissions=user.get("permissions"),
+        subscription_plan=user.get("subscription_plan"),
+        billing_active=user.get("billing_active", False),
+        login_time=user.get("iat", ""),
+        expiry_time=user.get("exp", ""),
+    )
+    return AuthCheckResponse(authenticated=True, session=session)
 
 
 @router.post("/find-email", response_model=FindEmailResponse)
@@ -339,7 +297,6 @@ def reset_password(req: ResetPasswordRequest, request: Request, db: Session = De
         .first()
     )
     if not company:
-        # Generic message to avoid user enumeration
         return ResetPasswordResponse(success=True, message="등록된 이메일이라면 임시 비밀번호가 발송됩니다.")
 
     user = (

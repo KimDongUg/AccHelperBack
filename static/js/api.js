@@ -2,18 +2,20 @@ const API_BASE = '/api';
 
 /* ──────────────────────────────────────────────
  *  AuthSession — client-side session manager
- *  Stores session data in sessionStorage (default)
+ *  Stores session data + JWT token in sessionStorage (default)
  *  or localStorage ("로그인 유지" checked).
  * ────────────────────────────────────────────── */
 const AUTH_KEY = 'acc_auth_session';
+const TOKEN_KEY = 'acc_auth_token';
 
 const AuthSession = {
     /**
-     * Save session data returned from server.
+     * Save session data and JWT token returned from server.
      * @param {object} session  - {user_id, company_id, company_name, email, full_name, role, ...}
+     * @param {string} token    - JWT access token
      * @param {boolean} persist - true = localStorage (remember me)
      */
-    save(session, persist) {
+    save(session, token, persist) {
         const data = {
             isLoggedIn: true,
             userId: session.user_id,
@@ -24,6 +26,8 @@ const AuthSession = {
             fullName: session.full_name,
             role: session.role,
             permissions: session.permissions,
+            subscriptionPlan: session.subscription_plan,
+            billingActive: session.billing_active,
             loginTime: session.login_time,
             expiryTime: session.expiry_time,
         };
@@ -31,7 +35,12 @@ const AuthSession = {
         // Clear the other store to avoid stale data
         localStorage.removeItem(AUTH_KEY);
         sessionStorage.removeItem(AUTH_KEY);
+        localStorage.removeItem(TOKEN_KEY);
+        sessionStorage.removeItem(TOKEN_KEY);
         store.setItem(AUTH_KEY, JSON.stringify(data));
+        if (token) {
+            store.setItem(TOKEN_KEY, token);
+        }
     },
 
     /** Return parsed session object or null. */
@@ -45,20 +54,24 @@ const AuthSession = {
         }
     },
 
-    /** Remove session from both stores. */
+    /** Return stored JWT token or null. */
+    getToken() {
+        return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+    },
+
+    /** Remove session and token from both stores. */
     clear() {
         sessionStorage.removeItem(AUTH_KEY);
         localStorage.removeItem(AUTH_KEY);
+        sessionStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(TOKEN_KEY);
     },
 
-    /** True if a session exists and has not expired client-side. */
+    /** True if a session and token exist. */
     isValid() {
         const s = this.get();
-        if (!s || !s.isLoggedIn) return false;
-        if (new Date(s.expiryTime) <= new Date()) {
-            this.clear();
-            return false;
-        }
+        const t = this.getToken();
+        if (!s || !s.isLoggedIn || !t) return false;
         return true;
     },
 
@@ -72,26 +85,22 @@ const AuthSession = {
 };
 
 /* ──────────────────────────────────────────────
- *  API fetch wrapper
+ *  API fetch wrapper (JWT Bearer auth)
  * ────────────────────────────────────────────── */
 async function apiFetch(path, options = {}) {
-    // Client-side expiry guard (skip for auth endpoints)
-    if (!path.startsWith('/auth/')) {
-        const sess = AuthSession.get();
-        if (sess && sess.expiryTime && new Date(sess.expiryTime) <= new Date()) {
-            AuthSession.clear();
-            if (!window.location.pathname.includes('login')) {
-                window.location.href = '/login.html';
-            }
-            throw new Error('세션이 만료되었습니다. 다시 로그인해 주세요.');
-        }
+    const url = `${API_BASE}${path}`;
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+
+    // Attach JWT token as Authorization header
+    const token = AuthSession.getToken();
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
     }
 
-    const url = `${API_BASE}${path}`;
     const config = {
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
         ...options,
+        headers,
+        credentials: 'same-origin',
     };
 
     try {

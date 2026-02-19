@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
+from app.models.tenant_quota import TenantQuota
 from app.services.auth_service import hash_password
 
 
@@ -29,6 +30,28 @@ def seed_data(db: Session):
         )
         db.add(default_company)
         db.add(demo_company)
+        db.commit()
+
+    # --- Seed tenant quotas ---
+    if db.query(TenantQuota).count() == 0:
+        companies = db.query(Company).all()
+        for comp in companies:
+            plan = getattr(comp, "subscription_plan", "free")
+            if plan == "enterprise":
+                quota = TenantQuota(
+                    company_id=comp.company_id,
+                    monthly_chat_cnt=500,
+                    monthly_tokens=200000,
+                    monthly_embed_cnt=1000,
+                )
+            else:
+                quota = TenantQuota(
+                    company_id=comp.company_id,
+                    monthly_chat_cnt=50,
+                    monthly_tokens=20000,
+                    monthly_embed_cnt=100,
+                )
+            db.add(quota)
         db.commit()
 
     # --- Seed admin users ---

@@ -17,8 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const auth = await apiGet('/auth/check');
         if (!auth.authenticated) { AuthSession.redirectToLogin(); return; }
         if (auth.session) {
-            const persist = !!localStorage.getItem('acc_auth_session');
-            AuthSession.save(auth.session, persist);
+            const persist = !!localStorage.getItem('acc_auth_token');
+            const existingToken = AuthSession.getToken();
+            AuthSession.save(auth.session, existingToken, persist);
         }
 
         const sess = auth.session;
@@ -115,6 +116,8 @@ function switchTab(tab) {
     }
 
     if (tab === 'admins') loadAdminList();
+    if (tab === 'feedback') { feedbackPage = 1; loadFeedbackList(); }
+    if (tab === 'unmatched') { unmatchedPage = 1; loadUnmatchedList(); }
     if (tab === 'logs') { logPage = 1; loadActivityLogs(); }
 }
 
@@ -329,6 +332,10 @@ function openCreateModal() {
     document.getElementById('modalQuestion').value = '';
     document.getElementById('modalAnswer').value = '';
     document.getElementById('modalKeywords').value = '';
+    const aliasesEl = document.getElementById('modalAliases');
+    const tagsEl = document.getElementById('modalTags');
+    if (aliasesEl) aliasesEl.value = '';
+    if (tagsEl) tagsEl.value = '';
     document.getElementById('modalActive').checked = true;
     resetModalHints();
     document.getElementById('qaModal').classList.add('show');
@@ -343,6 +350,10 @@ async function openEditModal(qaId) {
         document.getElementById('modalQuestion').value = qa.question;
         document.getElementById('modalAnswer').value = qa.answer;
         document.getElementById('modalKeywords').value = qa.keywords;
+        const aliasesEl = document.getElementById('modalAliases');
+        const tagsEl = document.getElementById('modalTags');
+        if (aliasesEl) aliasesEl.value = qa.aliases || '';
+        if (tagsEl) tagsEl.value = qa.tags || '';
         document.getElementById('modalActive').checked = qa.is_active;
         resetModalHints();
         document.getElementById('qaModal').classList.add('show');
@@ -362,11 +373,15 @@ async function saveQa() {
     saveBtn.disabled = true;
 
     const qaId = document.getElementById('editQaId').value;
+    const aliasesEl = document.getElementById('modalAliases');
+    const tagsEl = document.getElementById('modalTags');
     const data = {
         category: document.getElementById('modalCategory').value,
         question: document.getElementById('modalQuestion').value.trim(),
         answer: document.getElementById('modalAnswer').value.trim(),
         keywords: document.getElementById('modalKeywords').value.trim(),
+        aliases: aliasesEl ? aliasesEl.value.trim() : '',
+        tags: tagsEl ? tagsEl.value.trim() : '',
         is_active: document.getElementById('modalActive').checked,
     };
 
@@ -601,4 +616,83 @@ function formatDateTime(dateStr) {
     const h = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${d.getFullYear()}-${m}-${day} ${h}:${min}`;
+}
+
+/* ═══════════════════════════════════════════════
+ *  FEEDBACK
+ * ═══════════════════════════════════════════════ */
+let feedbackPage = 1;
+
+async function loadFeedbackList() {
+    const rating = document.getElementById('feedbackFilter')?.value || '';
+    const params = new URLSearchParams({ page: feedbackPage, size: 20 });
+    if (rating) params.append('rating', rating);
+
+    try {
+        const data = await apiFetch(`/admin/feedback?${params}`, { method: 'GET' });
+        const tbody = document.getElementById('feedbackTableBody');
+        const empty = document.getElementById('feedbackEmptyState');
+
+        if (!data.items || data.items.length === 0) {
+            tbody.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+
+        tbody.innerHTML = data.items.map(fb => `
+            <tr>
+                <td>${fb.id}</td>
+                <td title="${escapeHtml(fb.question)}">${escapeHtml(fb.question.substring(0, 80))}</td>
+                <td title="${escapeHtml(fb.answer)}">${escapeHtml(fb.answer.substring(0, 80))}</td>
+                <td><span class="badge ${fb.rating === 'like' ? 'badge-success' : 'badge-danger'}">${fb.rating === 'like' ? '좋아요' : '싫어요'}</span></td>
+                <td>${fb.comment ? escapeHtml(fb.comment.substring(0, 60)) : '-'}</td>
+                <td>${formatDateTime(fb.created_at)}</td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error('Feedback list error:', e);
+    }
+}
+
+/* ═══════════════════════════════════════════════
+ *  UNMATCHED QUESTIONS
+ * ═══════════════════════════════════════════════ */
+let unmatchedPage = 1;
+
+async function loadUnmatchedList() {
+    const params = new URLSearchParams({ page: unmatchedPage, size: 20 });
+
+    try {
+        const data = await apiFetch(`/admin/unmatched?${params}`, { method: 'GET' });
+        const tbody = document.getElementById('unmatchedTableBody');
+        const empty = document.getElementById('unmatchedEmptyState');
+
+        if (!data.items || data.items.length === 0) {
+            tbody.innerHTML = '';
+            empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+
+        tbody.innerHTML = data.items.map(item => `
+            <tr>
+                <td>${item.log_id}</td>
+                <td title="${escapeHtml(item.user_question)}">${escapeHtml(item.user_question.substring(0, 100))}</td>
+                <td title="${escapeHtml(item.bot_answer)}">${escapeHtml(item.bot_answer.substring(0, 100))}</td>
+                <td>${formatDateTime(item.timestamp)}</td>
+                <td>
+                    <button class="btn btn-outline btn-sm" onclick="registerFromUnmatched('${escapeHtml(item.user_question).replace(/'/g, "\\'")}')">QA 등록</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (e) {
+        console.error('Unmatched list error:', e);
+    }
+}
+
+function registerFromUnmatched(question) {
+    openCreateModal();
+    document.getElementById('modalQuestion').value = question;
+    onQuestionInput();
 }

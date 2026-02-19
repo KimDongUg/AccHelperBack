@@ -218,7 +218,7 @@ function showChat() {
 
             const result = await apiPost('/chat', body);
             typingIndicator.classList.remove('show');
-            appendMessage('bot', result.answer, result.category);
+            appendMessage('bot', result.answer, result.category, text, result.evidence_ids);
         } catch (err) {
             typingIndicator.classList.remove('show');
             appendMessage('bot', '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
@@ -229,7 +229,7 @@ function showChat() {
         chatInput.focus();
     }
 
-    function appendMessage(type, text, category) {
+    function appendMessage(type, text, category, originalQuestion, evidenceIds) {
         const msg = document.createElement('div');
         msg.className = `message ${type}`;
         msg.setAttribute('role', 'article');
@@ -257,6 +257,47 @@ function showChat() {
         const textNode = document.createElement('div');
         textNode.textContent = text;
         bubble.appendChild(textNode);
+
+        // Add feedback buttons for bot messages
+        if (type === 'bot' && originalQuestion) {
+            const fbWrap = document.createElement('div');
+            fbWrap.className = 'message-feedback';
+            fbWrap.style.cssText = 'margin-top:8px;display:flex;gap:8px;';
+
+            const likeBtn = document.createElement('button');
+            likeBtn.className = 'feedback-btn';
+            likeBtn.style.cssText = 'background:none;border:1px solid #ddd;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;color:#666;';
+            likeBtn.textContent = '👍';
+            likeBtn.title = '도움이 됐어요';
+
+            const dislikeBtn = document.createElement('button');
+            dislikeBtn.className = 'feedback-btn';
+            dislikeBtn.style.cssText = 'background:none;border:1px solid #ddd;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:13px;color:#666;';
+            dislikeBtn.textContent = '👎';
+            dislikeBtn.title = '도움이 안 됐어요';
+
+            const sendFeedback = async (rating) => {
+                try {
+                    await apiPost('/feedback', {
+                        question: originalQuestion,
+                        answer: text,
+                        qa_ids: JSON.stringify(evidenceIds || []),
+                        rating: rating,
+                        company_id: currentCompanyId,
+                    });
+                    fbWrap.innerHTML = `<span style="font-size:12px;color:#999">${rating === 'like' ? '감사합니다!' : '더 나은 답변을 위해 노력하겠습니다.'}</span>`;
+                } catch (e) {
+                    fbWrap.innerHTML = '<span style="font-size:12px;color:#999">피드백 전송 실패</span>';
+                }
+            };
+
+            likeBtn.addEventListener('click', () => sendFeedback('like'));
+            dislikeBtn.addEventListener('click', () => sendFeedback('dislike'));
+
+            fbWrap.appendChild(likeBtn);
+            fbWrap.appendChild(dislikeBtn);
+            bubble.appendChild(fbWrap);
+        }
 
         msg.appendChild(avatar);
         msg.appendChild(bubble);

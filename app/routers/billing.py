@@ -4,15 +4,15 @@ from base64 import b64encode
 from datetime import datetime, timedelta
 
 import httpx
-from fastapi import APIRouter, Cookie, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.config import SITE_URL, TOSS_CLIENT_KEY, TOSS_SECRET_KEY
 from app.database import get_db
+from app.dependencies import require_admin, require_auth
 from app.models.billing import BillingKey, PaymentHistory
 from app.models.company import Company
-from app.routers.auth import get_current_user
 from app.schemas.billing import (
     BillingCancelResponse,
     BillingKeyDeactivateResponse,
@@ -217,17 +217,11 @@ async def billing_fail(
 @router.post("/pay", response_model=BillingPayResponse)
 async def billing_pay(
     req: BillingPayRequest,
-    session_token: str | None = Cookie(None),
+    request: Request,
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """저장된 billingKey로 결제 실행"""
-    user = get_current_user(session_token)
-    if not user:
-        return BillingPayResponse(success=False, message="로그인이 필요합니다.")
-
-    # admin 이상만 결제 가능
-    if user["role"] not in ("admin", "super_admin"):
-        return BillingPayResponse(success=False, message="결제 권한이 없습니다.")
 
     bk = (
         db.query(BillingKey)
@@ -316,13 +310,11 @@ async def billing_pay(
 @router.get("/status", response_model=BillingStatusResponse)
 def billing_status(
     company_id: int = Query(...),
-    session_token: str | None = Cookie(None),
+    request: Request = None,
+    user: dict = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """회사의 빌링 상태 조회"""
-    user = get_current_user(session_token)
-    if not user:
-        return BillingStatusResponse(success=False)
 
     bk = (
         db.query(BillingKey)
@@ -357,13 +349,11 @@ def billing_status(
 @router.get("/history", response_model=PaymentHistoryResponse)
 def billing_history(
     company_id: int = Query(...),
-    session_token: str | None = Cookie(None),
+    request: Request = None,
+    user: dict = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """결제 내역 조회"""
-    user = get_current_user(session_token)
-    if not user:
-        return PaymentHistoryResponse(success=False)
 
     payments = (
         db.query(PaymentHistory)
@@ -393,16 +383,11 @@ def billing_history(
 @router.post("/deactivate", response_model=BillingKeyDeactivateResponse)
 def billing_deactivate(
     company_id: int = Query(...),
-    session_token: str | None = Cookie(None),
+    request: Request = None,
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """카드 등록 해제 (구독 취소)"""
-    user = get_current_user(session_token)
-    if not user:
-        return BillingKeyDeactivateResponse(success=False, message="로그인이 필요합니다.")
-
-    if user["role"] not in ("admin", "super_admin"):
-        return BillingKeyDeactivateResponse(success=False, message="권한이 없습니다.")
 
     bk_list = (
         db.query(BillingKey)
@@ -432,13 +417,11 @@ def billing_deactivate(
 @router.post("/trial", response_model=BillingTrialResponse)
 def billing_trial(
     company_id: int = Query(...),
-    session_token: str | None = Cookie(None),
+    request: Request = None,
+    user: dict = Depends(require_auth),
     db: Session = Depends(get_db),
 ):
     """14일 무료체험 시작"""
-    user = get_current_user(session_token)
-    if not user:
-        return BillingTrialResponse(success=False, message="로그인이 필요합니다.")
 
     company = db.query(Company).filter(Company.company_id == company_id).first()
     if not company:
@@ -471,16 +454,11 @@ def billing_trial(
 @router.post("/cancel", response_model=BillingCancelResponse)
 def billing_cancel(
     company_id: int = Query(...),
-    session_token: str | None = Cookie(None),
+    request: Request = None,
+    user: dict = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
     """구독 해지 (카드 비활성화 + free 다운그레이드)"""
-    user = get_current_user(session_token)
-    if not user:
-        return BillingCancelResponse(success=False, message="로그인이 필요합니다.")
-
-    if user["role"] not in ("admin", "super_admin"):
-        return BillingCancelResponse(success=False, message="권한이 없습니다.")
 
     company = db.query(Company).filter(Company.company_id == company_id).first()
     if not company:

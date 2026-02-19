@@ -19,6 +19,8 @@ class QaKnowledge(Base):
     question: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str] = mapped_column(Text, nullable=False)
     keywords: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    aliases: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    tags: Mapped[str] = mapped_column(Text, nullable=False, default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     updated_by: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -8,7 +8,9 @@ from app.dependencies import require_admin, require_auth
 from app.models.chat_log import ChatLog
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
+from app.quota import increment_usage
 from app.schemas.qa import QaCreate, QaListResponse, QaResponse, QaUpdate
+from app.services.embedding_service import delete_qa_embedding, upsert_qa_embedding
 
 router = APIRouter(prefix="/api/qa", tags=["qa"])
 
@@ -166,6 +168,12 @@ def create_qa(
         if comp and not comp.qa_customized:
             comp.qa_customized = True
 
+    db.flush()
+
+    # Auto-generate embedding
+    if upsert_qa_embedding(db, qa):
+        increment_usage(db, target_company_id, embed_cnt=1)
+
     db.commit()
     db.refresh(qa)
 
@@ -207,6 +215,12 @@ def update_qa(
         if comp and not comp.qa_customized:
             comp.qa_customized = True
 
+    db.flush()
+
+    # Re-generate embedding
+    if upsert_qa_embedding(db, qa):
+        increment_usage(db, cid, embed_cnt=1)
+
     db.commit()
     db.refresh(qa)
 
@@ -232,6 +246,10 @@ def delete_qa(
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
 
     cid = qa.company_id
+
+    # Delete embedding
+    delete_qa_embedding(db, qa_id)
+
     db.query(ChatLog).filter(ChatLog.qa_id == qa_id).update(
         {ChatLog.qa_id: None}, synchronize_session="fetch"
     )
