@@ -56,6 +56,12 @@ def register_company(
     db: Session = Depends(get_db),
 ):
     """비로그인 회사 등록 (회사 + 관리자 동시 생성)"""
+    # company_id 중복 체크
+    if data.company_id is not None:
+        existing_id = db.query(Company).filter(Company.company_id == data.company_id).first()
+        if existing_id:
+            return CompanyRegisterResponse(success=False, message="이미 사용 중인 회사번호입니다.")
+
     # 사업자번호 중복 체크
     existing_bn = (
         db.query(Company)
@@ -74,8 +80,20 @@ def register_company(
         address=data.address,
         phone=data.phone,
     )
+    if data.company_id is not None:
+        company.company_id = data.company_id
     db.add(company)
     db.flush()  # company_id 확보
+
+    # 수동 company_id 지정 시 PostgreSQL 시퀀스 동기화
+    if data.company_id is not None:
+        try:
+            db.execute(text(
+                "SELECT setval('companies_company_id_seq', "
+                "(SELECT COALESCE(MAX(company_id), 1) FROM companies))"
+            ))
+        except Exception:
+            pass  # SQLite는 시퀀스 없음
 
     # 이메일 중복 체크
     dup_email = (

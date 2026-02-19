@@ -70,6 +70,7 @@ class CompanyListResponse(BaseModel):
 
 
 class CompanyRegisterRequest(BaseModel):
+    company_id: int | None = None
     company_name: str
     building_type: str = "오피스텔"  # "오피스텔" | "아파트" | "기타"
     business_number: str
