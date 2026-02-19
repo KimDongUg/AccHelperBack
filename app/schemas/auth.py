@@ -14,7 +14,6 @@ class SessionData(BaseModel):
     user_id: int
     username: str | None = None
     company_id: int
-    company_code: str
     company_name: str
     email: str
     full_name: str | None = None

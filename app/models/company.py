@@ -11,7 +11,7 @@ class Company(Base):
 
     company_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     company_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    company_code: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    building_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     business_number: Mapped[str | None] = mapped_column(String(20), nullable=True)
     industry: Mapped[str | None] = mapped_column(String(50), nullable=True)
     address: Mapped[str | None] = mapped_column(Text, nullable=True)

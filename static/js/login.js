@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const remember = document.getElementById('remember').checked;
 
         if (!companyCode) {
-            showError('회사 코드를 입력해 주세요.');
+            showError('회사 ID를 입력해 주세요.');
             return;
         }
         if (!email) {
@@ -60,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const result = await apiPost('/auth/login', {
-                company_code: companyCode,
+                company_id: parseInt(companyCode, 10),
                 email,
                 password,
                 remember,

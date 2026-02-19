@@ -35,12 +35,12 @@ def list_public_companies(db: Session = Depends(get_db)):
     return companies
 
 
-@router.get("/public/{company_code}", response_model=CompanyPublicResponse)
-def get_public_company(company_code: str, db: Session = Depends(get_db)):
-    """Get public company info by code."""
+@router.get("/public/{company_id}", response_model=CompanyPublicResponse)
+def get_public_company(company_id: int, db: Session = Depends(get_db)):
+    """Get public company info by ID."""
     company = (
         db.query(Company)
-        .filter(Company.company_code == company_code, Company.is_active == True, Company.deleted_at == None)
+        .filter(Company.company_id == company_id, Company.is_active == True, Company.deleted_at == None)
         .first()
     )
     if not company:
@@ -54,15 +54,19 @@ def register_company(
     db: Session = Depends(get_db),
 ):
     """비로그인 회사 등록 (회사 + 관리자 동시 생성)"""
-    # 회사 코드 중복 체크
-    existing = db.query(Company).filter(Company.company_code == data.company_code).first()
-    if existing:
-        return CompanyRegisterResponse(success=False, message="이미 사용 중인 회사 코드입니다.")
+    # 사업자번호 중복 체크
+    existing_bn = (
+        db.query(Company)
+        .filter(Company.business_number == data.business_number, Company.deleted_at == None)
+        .first()
+    )
+    if existing_bn:
+        return CompanyRegisterResponse(success=False, message="이미 등록된 회사입니다.")
 
     # 회사 생성
     company = Company(
         company_name=data.company_name,
-        company_code=data.company_code,
+        building_type=data.building_type,
         business_number=data.business_number,
         industry=data.industry,
         address=data.address,
@@ -177,11 +181,6 @@ def create_company(
     db: Session = Depends(get_db),
     user: dict = Depends(require_super_admin),
 ):
-    # Check duplicate company_code
-    existing = db.query(Company).filter(Company.company_code == data.company_code).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="이미 사용 중인 회사 코드입니다.")
-
     company = Company(**data.model_dump())
     db.add(company)
     db.commit()

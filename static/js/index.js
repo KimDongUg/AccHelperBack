@@ -32,7 +32,7 @@
 })();
 
 /* ── State ──────────────────────────────────── */
-let currentCompanyCode = null;
+let currentCompanyId = null;
 let sessionId = sessionStorage.getItem('chatSessionId');
 if (!sessionId) {
     sessionId = generateSessionId();
@@ -102,12 +102,7 @@ async function loadCompanies() {
             const name = document.createElement('h3');
             name.textContent = c.company_name;
 
-            const code = document.createElement('span');
-            code.className = 'company-card-code';
-            code.textContent = c.company_code;
-
             info.appendChild(name);
-            info.appendChild(code);
             card.appendChild(icon);
             card.appendChild(info);
 
@@ -119,7 +114,7 @@ async function loadCompanies() {
                 card.disabled = true;
             } else {
                 card.addEventListener('click', () => {
-                    window.location.href = `/?company=${encodeURIComponent(c.company_code)}`;
+                    window.location.href = `/?company=${c.company_id}`;
                 });
             }
 
@@ -139,7 +134,7 @@ async function validateAndStartChat(code) {
 
     try {
         const company = await apiGet(`/companies/public/${encodeURIComponent(code)}`);
-        currentCompanyCode = company.company_code;
+        currentCompanyId = company.company_id;
 
         // Show company name in header
         companyLabel.textContent = company.company_name;
@@ -217,8 +212,8 @@ function showChat() {
                 session_id: sessionId,
                 category: selectedCategory === '전체' ? null : selectedCategory,
             };
-            if (currentCompanyCode) {
-                body.company_code = currentCompanyCode;
+            if (currentCompanyId) {
+                body.company_id = currentCompanyId;
             }
 
             const result = await apiPost('/chat', body);
@@ -280,8 +275,8 @@ function showChat() {
     async function loadHistory() {
         try {
             let url = `/chat/history/${sessionId}`;
-            if (currentCompanyCode) {
-                url += `?company_code=${encodeURIComponent(currentCompanyCode)}`;
+            if (currentCompanyId) {
+                url += `?company_id=${currentCompanyId}`;
             }
             const history = await apiGet(url);
             history.forEach(item => {

@@ -84,7 +84,6 @@ def get_overview(
         company_stats.append({
             "company_id": c.company_id,
             "company_name": c.company_name,
-            "company_code": c.company_code,
             "is_active": c.is_active,
             "qa_count": qa_count,
             "chat_count": chat_count,

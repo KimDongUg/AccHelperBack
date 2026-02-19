@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class CompanyCreate(BaseModel):
     company_name: str
-    company_code: str
+    building_type: str | None = None
     business_number: str | None = None
     industry: str | None = None
     address: str | None = None
@@ -18,6 +18,7 @@ class CompanyCreate(BaseModel):
 
 class CompanyUpdate(BaseModel):
     company_name: str | None = None
+    building_type: str | None = None
     business_number: str | None = None
     industry: str | None = None
     address: str | None = None
@@ -32,7 +33,7 @@ class CompanyUpdate(BaseModel):
 class CompanyResponse(BaseModel):
     company_id: int
     company_name: str
-    company_code: str
+    building_type: str | None = None
     business_number: str | None = None
     industry: str | None = None
     address: str | None = None
@@ -52,7 +53,7 @@ class CompanyResponse(BaseModel):
 class CompanyPublicResponse(BaseModel):
     company_id: int
     company_name: str
-    company_code: str
+    building_type: str | None = None
     address: str | None = None
     industry: str | None = None
     phone: str | None = None
@@ -69,8 +70,8 @@ class CompanyListResponse(BaseModel):
 
 class CompanyRegisterRequest(BaseModel):
     company_name: str
-    company_code: str
-    business_number: str | None = None
+    building_type: str = "오피스텔"  # "오피스텔" | "아파트" | "기타"
+    business_number: str
     industry: str | None = None
     address: str | None = None
     phone: str | None = None

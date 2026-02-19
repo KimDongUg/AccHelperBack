@@ -48,6 +48,7 @@ def _run_pg_migration(engine: Engine):
     """PostgreSQL column migrations for existing tables."""
     with engine.connect() as conn:
         _pg_add_column_if_missing(conn, "companies", "trial_ends_at", "TIMESTAMP")
+        _pg_add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
         conn.commit()
     logger.info("PostgreSQL migration completed")
 
@@ -89,6 +90,10 @@ def run_migration(engine: Engine):
                 "WHERE user_id = (SELECT MIN(user_id) FROM admin_users) "
                 "AND NOT EXISTS (SELECT 1 FROM admin_users WHERE role = 'super_admin')"
             ))
+
+        # --- companies table ---
+        if _table_exists(conn, "companies"):
+            _add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
 
         # --- qa_knowledge table ---
         if _table_exists(conn, "qa_knowledge"):

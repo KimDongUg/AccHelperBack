@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const fullName = document.getElementById('fullName').value.trim();
         const phone = document.getElementById('phone').value.trim();
 
-        if (!companyCode) { showError('회사 코드를 입력해 주세요.'); return; }
+        if (!companyCode) { showError('회사 ID를 입력해 주세요.'); return; }
         if (!email) { showError('이메일을 입력해 주세요.'); return; }
         if (!password) { showError('비밀번호를 입력해 주세요.'); return; }
         if (password.length < 6) { showError('비밀번호는 6자 이상이어야 합니다.'); return; }
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const result = await apiPost('/auth/register', {
-                company_code: companyCode,
+                company_id: parseInt(companyCode, 10),
                 email,
                 password,
                 full_name: fullName,

@@ -10,7 +10,7 @@ const AUTH_KEY = 'acc_auth_session';
 const AuthSession = {
     /**
      * Save session data returned from server.
-     * @param {object} session  - {user_id, company_id, company_code, company_name, email, full_name, role, ...}
+     * @param {object} session  - {user_id, company_id, company_name, email, full_name, role, ...}
      * @param {boolean} persist - true = localStorage (remember me)
      */
     save(session, persist) {
@@ -19,7 +19,6 @@ const AuthSession = {
             userId: session.user_id,
             username: session.username,
             companyId: session.company_id,
-            companyCode: session.company_code,
             companyName: session.company_name,
             email: session.email,
             fullName: session.full_name,

@@ -7,7 +7,7 @@ class ChatRequest(BaseModel):
     question: str
     session_id: str
     category: str | None = None
-    company_code: str | None = None
+    company_id: int | None = None
 
 
 class ChatResponse(BaseModel):

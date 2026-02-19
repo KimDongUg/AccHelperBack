@@ -123,7 +123,7 @@ def list_subscribers(
         items.append(SubscriberItem(
             company_id=c.company_id,
             company_name=c.company_name,
-            company_code=c.company_code,
+            business_number=c.business_number,
             subscription_plan=c.subscription_plan or "free",
             billing_active=billing_active,
             has_billing_key=bk is not None,
