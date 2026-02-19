@@ -52,7 +52,12 @@ def _pg_table_exists(conn, table_name: str) -> bool:
 
 
 def _run_pg_migration(engine: Engine):
-    """PostgreSQL column migrations for existing tables."""
+    """PostgreSQL column migrations for existing tables.
+
+    Uses separate transactions for safe DDL vs risky pgvector operations
+    so that a vector index failure doesn't poison the entire migration.
+    """
+    # --- Transaction 1: pgvector extension + safe column migrations ---
     with engine.connect() as conn:
         # Enable pgvector extension
         try:
@@ -60,6 +65,7 @@ def _run_pg_migration(engine: Engine):
             logger.info("PG: pgvector extension ensured")
         except Exception as e:
             logger.warning("PG: Could not create pgvector extension: %s", e)
+            conn.rollback()
 
         # companies table
         _pg_add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
@@ -78,23 +84,46 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
             _pg_add_column_if_missing(conn, "qa_knowledge", "tags", "TEXT DEFAULT ''")
 
-        # qa_embeddings — vector index for similarity search
-        if _pg_table_exists(conn, "qa_embeddings"):
-            try:
-                conn.execute(text(
-                    "CREATE INDEX IF NOT EXISTS ix_qa_embeddings_vector_cosine "
-                    "ON qa_embeddings USING hnsw (embedding vector_cosine_ops)"
-                ))
-                logger.info("PG: HNSW vector index ensured")
-            except Exception as e:
-                logger.warning("PG: Could not create vector index: %s", e)
-
         # chat_logs table — RAG columns
         if _pg_table_exists(conn, "chat_logs"):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
         conn.commit()
+    logger.info("PG: Column migrations committed")
+
+    # --- Transaction 2: Fix embedding column type + HNSW index ---
+    # This is isolated so failure doesn't break the rest of startup.
+    with engine.connect() as conn:
+        if _pg_table_exists(conn, "qa_embeddings"):
+            try:
+                # Check current column type — if it's 'text', ALTER to vector(1536)
+                result = conn.execute(text(
+                    "SELECT data_type, udt_name FROM information_schema.columns "
+                    "WHERE table_name = 'qa_embeddings' AND column_name = 'embedding'"
+                ))
+                row = result.fetchone()
+                if row and row[1] != "vector":
+                    logger.info("PG: embedding column is '%s', converting to vector(1536)", row[1])
+                    # Drop existing data (text values can't cast to vector)
+                    conn.execute(text(
+                        "ALTER TABLE qa_embeddings "
+                        "ALTER COLUMN embedding TYPE vector(1536) "
+                        "USING NULL"
+                    ))
+                    logger.info("PG: embedding column converted to vector(1536)")
+
+                # Now create the HNSW index
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_qa_embeddings_vector_cosine "
+                    "ON qa_embeddings USING hnsw (embedding vector_cosine_ops)"
+                ))
+                logger.info("PG: HNSW vector index ensured")
+                conn.commit()
+            except Exception as e:
+                logger.warning("PG: Could not fix embedding column/index: %s", e)
+                conn.rollback()
+
     logger.info("PostgreSQL migration completed")
 
 
