@@ -3,6 +3,8 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from sqlalchemy import text
+
 from app.database import get_db
 from app.dependencies import require_admin, require_super_admin
 from app.models.admin_user import AdminUser
@@ -246,3 +248,44 @@ def restore_company(
     company.updated_at = datetime.utcnow()
     db.commit()
     return {"success": True, "message": "회사가 복원되었습니다."}
+
+
+@router.delete("/cleanup/except/{keep_id}")
+def cleanup_companies(
+    keep_id: int,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """keep_id 회사와 super_admin(company_id=0)만 남기고 나머지 모두 삭제 (super_admin 전용)"""
+    tables = [
+        "activity_logs",
+        "chat_logs",
+        "payment_history",
+        "billing_keys",
+        "qa_knowledge",
+        "admin_users",
+    ]
+    deleted = {}
+    for table in tables:
+        if table == "admin_users":
+            # super_admin(company_id=0)은 보존
+            result = db.execute(
+                text(f"DELETE FROM {table} WHERE company_id != :kid AND company_id != 0"),
+                {"kid": keep_id},
+            )
+        else:
+            result = db.execute(
+                text(f"DELETE FROM {table} WHERE company_id != :kid"),
+                {"kid": keep_id},
+            )
+        deleted[table] = result.rowcount
+
+    # 회사 테이블 삭제
+    result = db.execute(
+        text("DELETE FROM companies WHERE company_id != :kid"),
+        {"kid": keep_id},
+    )
+    deleted["companies"] = result.rowcount
+
+    db.commit()
+    return {"success": True, "message": f"회사 {keep_id}번 외 데이터 삭제 완료", "deleted": deleted}
