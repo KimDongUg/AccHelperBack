@@ -108,23 +108,12 @@ async function apiFetch(path, options = {}) {
         const data = await response.json();
 
         if (!response.ok) {
-            if (response.status === 401 || response.status === 403) {
-                // Show re-login banner once before redirect
-                if (!sessionStorage.getItem('_relogin_shown')) {
-                    sessionStorage.setItem('_relogin_shown', '1');
-                    try {
-                        const banner = document.createElement('div');
-                        banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#ef4444;color:#fff;text-align:center;padding:12px;font-size:14px;';
-                        banner.textContent = '보안 업데이트로 인해 재로그인이 필요합니다. 잠시 후 로그인 페이지로 이동합니다.';
-                        document.body.appendChild(banner);
-                    } catch (_) { /* ignore DOM errors */ }
-                    AuthSession.clear();
-                    setTimeout(() => { window.location.href = '/login.html'; }, 2000);
-                    throw new Error('재로그인이 필요합니다.');
-                }
-                AuthSession.redirectToLogin();
-            }
-            throw new Error(data.detail || '요청 처리 중 오류가 발생했습니다.');
+            const detail = Array.isArray(data.detail)
+                ? data.detail.map(e => e.msg || e).join(', ')
+                : (data.detail || '요청 처리 중 오류가 발생했습니다.');
+            const err = new Error(detail);
+            err.status = response.status;
+            throw err;
         }
         return data;
     } catch (err) {
