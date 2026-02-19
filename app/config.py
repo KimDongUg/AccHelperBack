@@ -47,14 +47,20 @@ TOSS_CLIENT_KEY = os.getenv("TOSS_CLIENT_KEY", "")
 TOSS_SECRET_KEY = os.getenv("TOSS_SECRET_KEY", "")
 
 # OpenAI / RAG
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4o-mini")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"))
+CHAT_MODEL = os.getenv("OPENAI_CHAT_MODEL", os.getenv("CHAT_MODEL", "gpt-4o-mini"))
 RAG_TOP_K = int(os.getenv("RAG_TOP_K", "6"))
 RAG_MIN_SCORE = float(os.getenv("RAG_MIN_SCORE", "0.25"))
 
-# JWT
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
+# JWT — no default; must be set via env in production
+_jwt_secret_raw = os.getenv("JWT_SECRET_KEY", "").strip()
+if not _jwt_secret_raw and APP_ENV != "development":
+    raise RuntimeError(
+        "JWT_SECRET_KEY 환경변수가 설정되지 않았습니다. "
+        "프로덕션 환경에서는 반드시 강력한 랜덤 시크릿을 설정하세요."
+    )
+JWT_SECRET_KEY = _jwt_secret_raw or SECRET_KEY  # dev-only fallback
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 

@@ -231,7 +231,7 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message},
             ],
-            temperature=0.3,
+            temperature=0.2,
             max_tokens=1000,
         )
 

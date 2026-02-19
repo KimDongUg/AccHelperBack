@@ -78,6 +78,17 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
             _pg_add_column_if_missing(conn, "qa_knowledge", "tags", "TEXT DEFAULT ''")
 
+        # qa_embeddings — vector index for similarity search
+        if _pg_table_exists(conn, "qa_embeddings"):
+            try:
+                conn.execute(text(
+                    "CREATE INDEX IF NOT EXISTS ix_qa_embeddings_vector_cosine "
+                    "ON qa_embeddings USING hnsw (embedding vector_cosine_ops)"
+                ))
+                logger.info("PG: HNSW vector index ensured")
+            except Exception as e:
+                logger.warning("PG: Could not create vector index: %s", e)
+
         # chat_logs table — RAG columns
         if _pg_table_exists(conn, "chat_logs"):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
