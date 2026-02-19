@@ -30,6 +30,22 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 TOSS_API_BASE = "https://api.tosspayments.com/v1"
 
+PRICE_DISCOUNTED = 24500   # 10개 이하: 50% 할인가
+PRICE_FULL = 49000         # 10개 초과: 정가
+MAX_DISCOUNT_COMPANIES = 10
+
+
+def _calculate_amount(db: Session) -> int:
+    """활성 구독(enterprise) 회사 수 기반 결제 금액 계산"""
+    enterprise_count = (
+        db.query(Company)
+        .filter(Company.subscription_plan == "enterprise", Company.deleted_at == None)
+        .count()
+    )
+    if enterprise_count < MAX_DISCOUNT_COMPANIES:
+        return PRICE_DISCOUNTED
+    return PRICE_FULL
+
 
 def _toss_auth_header() -> dict:
     """토스페이먼츠 Basic 인증 헤더 생성"""
@@ -100,7 +116,7 @@ async def billing_success(
 
         # 4) 첫 결제 즉시 실행
         order_id = f"order_{company_id}_{int(time.time())}"
-        pay_amount = 24500
+        pay_amount = _calculate_amount(db)
         pay_order_name = "보듬누리 구독"
 
         # 회사명 조회 (토스 구매자명에 표시)
@@ -217,6 +233,9 @@ async def billing_pay(
 
     order_id = f"order_{req.company_id}_{int(time.time())}"
 
+    # 금액: 프론트에서 전달하지 않으면 서버에서 자동 계산
+    pay_amount = req.amount if req.amount is not None else _calculate_amount(db)
+
     # 회사명 조회 (토스 구매자명에 표시)
     company = db.query(Company).filter(Company.company_id == req.company_id).first()
     customer_name = company.company_name if company else f"company_{req.company_id}"
@@ -227,7 +246,7 @@ async def billing_pay(
                 f"{TOSS_API_BASE}/billing/{bk.billing_key}",
                 json={
                     "customerKey": bk.customer_key,
-                    "amount": req.amount,
+                    "amount": pay_amount,
                     "orderId": order_id,
                     "orderName": req.order_name,
                     "customerName": customer_name,
@@ -245,7 +264,7 @@ async def billing_pay(
                 billing_key_id=bk.id,
                 order_id=order_id,
                 order_name=req.order_name,
-                amount=req.amount,
+                amount=pay_amount,
                 status="success",
                 payment_key=result.get("paymentKey"),
             )
@@ -258,7 +277,7 @@ async def billing_pay(
                 message="결제가 완료되었습니다.",
                 payment_key=result.get("paymentKey"),
                 order_id=order_id,
-                amount=req.amount,
+                amount=pay_amount,
             )
         else:
             # 결제 실패
@@ -268,7 +287,7 @@ async def billing_pay(
                 billing_key_id=bk.id,
                 order_id=order_id,
                 order_name=req.order_name,
-                amount=req.amount,
+                amount=pay_amount,
                 status="failed",
                 failure_reason=failure_msg,
             )

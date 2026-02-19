@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class BillingPayRequest(BaseModel):
     company_id: int
-    amount: int = 9900
+    amount: int | None = None  # None이면 서버에서 업체 수 기반 자동 계산
     order_name: str = "보듬누리 구독"
 
 
