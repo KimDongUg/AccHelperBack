@@ -289,10 +289,17 @@ def cleanup_companies(
 
     # auto-increment 시퀀스 리셋 (PostgreSQL)
     max_id = db.execute(text("SELECT COALESCE(MAX(company_id), 0) FROM companies")).scalar()
+    seq_reset = None
     try:
-        db.execute(text(f"ALTER SEQUENCE companies_company_id_seq RESTART WITH {max_id + 1}"))
-    except Exception:
-        pass  # SQLite는 시퀀스 없음
+        # 실제 시퀀스 이름 조회
+        seq_row = db.execute(text(
+            "SELECT pg_get_serial_sequence('companies', 'company_id')"
+        )).scalar()
+        if seq_row:
+            db.execute(text(f"SELECT setval('{seq_row}', :val)"), {"val": max_id})
+            seq_reset = max_id
+    except Exception as e:
+        seq_reset = f"error: {e}"
 
     db.commit()
-    return {"success": True, "message": f"회사 {keep_id}번 외 데이터 삭제 완료 (시퀀스 리셋: {max_id + 1})", "deleted": deleted}
+    return {"success": True, "message": f"회사 {keep_id}번 외 데이터 삭제 완료", "deleted": deleted, "sequence_reset_to": seq_reset}
