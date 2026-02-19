@@ -8,7 +8,7 @@ from fastapi import APIRouter, Cookie, Depends, Query, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
-from app.config import SITE_URL, TOSS_SECRET_KEY
+from app.config import SITE_URL, TOSS_CLIENT_KEY, TOSS_SECRET_KEY
 from app.database import get_db
 from app.models.billing import BillingKey, PaymentHistory
 from app.models.company import Company
@@ -29,6 +29,12 @@ logger = logging.getLogger("acchelper")
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 TOSS_API_BASE = "https://api.tosspayments.com/v1"
+
+
+@router.get("/client-key")
+def get_toss_client_key():
+    """프론트엔드에 토스 Client Key 전달"""
+    return {"clientKey": TOSS_CLIENT_KEY}
 
 PRICE_DISCOUNTED = 100     # TODO: 테스트 후 24500으로 복원
 PRICE_FULL = 49000         # 10개 초과: 정가
