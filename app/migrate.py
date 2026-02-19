@@ -47,8 +47,15 @@ def _pg_add_column_if_missing(conn, table_name: str, col_name: str, col_def: str
 def _run_pg_migration(engine: Engine):
     """PostgreSQL column migrations for existing tables."""
     with engine.connect() as conn:
-        _pg_add_column_if_missing(conn, "companies", "trial_ends_at", "TIMESTAMP")
+        # companies table
         _pg_add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
+        _pg_add_column_if_missing(conn, "companies", "business_number", "VARCHAR(20)")
+        _pg_add_column_if_missing(conn, "companies", "industry", "VARCHAR(50)")
+        _pg_add_column_if_missing(conn, "companies", "address", "TEXT")
+        _pg_add_column_if_missing(conn, "companies", "phone", "VARCHAR(20)")
+        _pg_add_column_if_missing(conn, "companies", "logo_url", "VARCHAR(500)")
+        _pg_add_column_if_missing(conn, "companies", "trial_ends_at", "TIMESTAMP")
+        _pg_add_column_if_missing(conn, "companies", "deleted_at", "TIMESTAMP")
         conn.commit()
     logger.info("PostgreSQL migration completed")
 
