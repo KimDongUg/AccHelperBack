@@ -88,7 +88,12 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
         )
 
         session = _build_session_data(user, "시스템 관리", "enterprise", True, expiry_str)
-        return LoginResponse(success=True, message="로그인 성공", token=token, session=session)
+        resp_data = LoginResponse(success=True, message="로그인 성공", token=token, session=session)
+        response.set_cookie(
+            key="session_token", value=token,
+            max_age=expire_hours * 3600, httponly=True, samesite="lax",
+        )
+        return resp_data
 
     # Lookup company by ID
     company = (
@@ -155,6 +160,10 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     # Override company_id for super_admin accessing a company
     session.company_id = session_company_id
 
+    response.set_cookie(
+        key="session_token", value=token,
+        max_age=expire_hours * 3600, httponly=True, samesite="lax",
+    )
     return LoginResponse(success=True, message="로그인 성공", token=token, session=session)
 
 
