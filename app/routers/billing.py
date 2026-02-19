@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/billing", tags=["billing"])
 
 TOSS_API_BASE = "https://api.tosspayments.com/v1"
 
-PRICE_DISCOUNTED = 24500   # 10개 이하: 50% 할인가
+PRICE_DISCOUNTED = 100     # TODO: 테스트 후 24500으로 복원
 PRICE_FULL = 49000         # 10개 초과: 정가
 MAX_DISCOUNT_COMPANIES = 10
 
