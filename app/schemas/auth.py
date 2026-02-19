@@ -21,8 +21,8 @@ class SessionData(BaseModel):
     permissions: str | None = None
     subscription_plan: str | None = None
     billing_active: bool = False
-    login_time: str
-    expiry_time: str
+    login_time: str | int
+    expiry_time: str | int
 
 
 class LoginResponse(BaseModel):
