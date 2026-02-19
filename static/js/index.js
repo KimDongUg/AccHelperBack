@@ -221,7 +221,11 @@ function showChat() {
             appendMessage('bot', result.answer, result.category, text, result.evidence_ids);
         } catch (err) {
             typingIndicator.classList.remove('show');
-            appendMessage('bot', '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+            const detail = err.message || '';
+            const msg = detail && detail !== '재로그인이 필요합니다.'
+                ? '죄송합니다. 오류가 발생했습니다: ' + detail
+                : '죄송합니다. 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+            appendMessage('bot', msg);
         }
 
         chatInput.disabled = false;
