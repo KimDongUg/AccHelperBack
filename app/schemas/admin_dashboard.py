@@ -5,6 +5,7 @@ class SubscriberItem(BaseModel):
     company_id: int
     company_name: str
     business_number: str | None = None
+    address: str | None = None
     subscription_plan: str
     billing_active: bool
     has_billing_key: bool

@@ -124,6 +124,7 @@ def list_subscribers(
             company_id=c.company_id,
             company_name=c.company_name,
             business_number=c.business_number,
+            address=c.address,
             subscription_plan=c.subscription_plan or "free",
             billing_active=billing_active,
             has_billing_key=bk is not None,
