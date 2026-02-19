@@ -31,14 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         hideError();
 
-        const companyCode = document.getElementById('companyCode').value.trim();
+        const companyId = document.getElementById('companyId').value.trim();
         const email = document.getElementById('email').value.trim();
         const password = document.getElementById('password').value;
         const passwordConfirm = document.getElementById('passwordConfirm').value;
         const fullName = document.getElementById('fullName').value.trim();
         const phone = document.getElementById('phone').value.trim();
 
-        if (!companyCode) { showError('회사 ID를 입력해 주세요.'); return; }
+        if (!companyId) { showError('회사 ID를 입력해 주세요.'); return; }
         if (!email) { showError('이메일을 입력해 주세요.'); return; }
         if (!password) { showError('비밀번호를 입력해 주세요.'); return; }
         if (password.length < 6) { showError('비밀번호는 6자 이상이어야 합니다.'); return; }
@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const result = await apiPost('/auth/register', {
-                company_id: parseInt(companyCode, 10),
+                company_id: parseInt(companyId),
                 email,
                 password,
                 full_name: fullName,
@@ -72,5 +72,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    document.getElementById('companyCode').focus();
+    document.getElementById('companyId').focus();
 });

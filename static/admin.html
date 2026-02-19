@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 - 경리 도우미</title>
+    <title>관리자 - 보태미 경리도우미</title>
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
     <link rel="stylesheet" href="/css/common.css">
     <link rel="stylesheet" href="/css/admin.css">
 </head>
@@ -12,15 +13,17 @@
 
     <header class="header" role="banner">
         <div class="header-left">
-            <a href="/" class="header-logo" aria-label="경리 도우미 홈으로 이동">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>경리 도우미</span>
+            <a href="/" class="header-logo" aria-label="보태미 경리도우미 홈으로 이동">
+                <img src="/assets/images/logo.png" alt="보태미 로고" aria-hidden="true">
+                <span>경리언니들 제가 도와드릴께요~ 힘내세요!</span>
             </a>
         </div>
         <div class="header-right">
             <span id="headerCompanyName" style="font-size:var(--text-sm);color:var(--primary);font-weight:600"></span>
             <span id="adminUsername" style="font-size:var(--text-sm);color:var(--gray-600)"></span>
             <span id="roleBadge" class="role-badge" style="display:none"></span>
+            <button id="profileBtn" class="btn btn-outline btn-sm" aria-label="내 정보">내 정보</button>
+            <a href="/super-admin.html" id="superAdminLink" class="btn btn-outline btn-sm" style="display:none">수퍼관리</a>
             <a href="/" class="btn btn-outline btn-sm">챗봇</a>
             <button id="logoutBtn" class="btn btn-sm" style="color:var(--gray-600)" aria-label="로그아웃">로그아웃</button>
         </div>
@@ -64,14 +67,23 @@
                     </div>
                 </div>
             </div>
+            <div class="stat-card" id="subscriptionCard">
+                <div class="stat-icon purple" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>구독 상태</h4>
+                    <div class="stat-value" id="statSubscription" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Tab Navigation -->
         <div class="tab-nav" role="tablist" aria-label="관리 탭">
             <button class="tab-btn active" role="tab" aria-selected="true" data-tab="qa" id="tabQa">Q&A 관리</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="admins" id="tabAdmins" style="display:none">관리자 관리</button>
-            <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback" id="tabFeedback">피드백</button>
-            <button class="tab-btn" role="tab" aria-selected="false" data-tab="unmatched" id="tabUnmatched">미등록 질문</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
         </div>
 
@@ -98,6 +110,10 @@
                     <option value="active">활성</option>
                     <option value="inactive">비활성</option>
                 </select>
+                <label for="companyFilter" class="sr-only">회사 필터</label>
+                <select id="companyFilter" class="form-control" aria-label="회사 필터" style="display:none">
+                    <option value="">전체 회사</option>
+                </select>
                 <button class="btn btn-primary" id="addQaBtn" onclick="openCreateModal()" aria-label="새 Q&A 추가">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     새 Q&A 추가
@@ -115,6 +131,7 @@
                             <tr>
                                 <th scope="col" style="width:50px">ID</th>
                                 <th scope="col" style="width:80px">카테고리</th>
+                                <th scope="col" style="width:120px;display:none" id="companyColHeader">회사</th>
                                 <th scope="col" class="col-question">질문</th>
                                 <th scope="col" class="col-answer">답변 미리보기</th>
                                 <th scope="col" style="width:60px">상태</th>
@@ -163,66 +180,6 @@
             </div>
         </div>
 
-        <!-- Tab: Feedback -->
-        <div class="tab-content" id="tabContentFeedback" role="tabpanel" style="display:none">
-            <div class="toolbar">
-                <h3 style="margin:0;font-size:var(--text-base)">피드백 목록</h3>
-                <select id="feedbackFilter" class="form-control" style="width:auto" onchange="loadFeedbackList()">
-                    <option value="">전체</option>
-                    <option value="like">좋아요</option>
-                    <option value="dislike">싫어요</option>
-                </select>
-            </div>
-            <div class="qa-table-wrap">
-                <div class="table-wrap">
-                    <table class="qa-table" aria-label="피드백 목록">
-                        <thead>
-                            <tr>
-                                <th scope="col" style="width:50px">ID</th>
-                                <th scope="col">질문</th>
-                                <th scope="col">답변</th>
-                                <th scope="col" style="width:80px">평가</th>
-                                <th scope="col">코멘트</th>
-                                <th scope="col" style="width:140px">날짜</th>
-                            </tr>
-                        </thead>
-                        <tbody id="feedbackTableBody"></tbody>
-                    </table>
-                </div>
-                <div id="feedbackEmptyState" class="empty-state" style="display:none">
-                    <p>피드백이 없습니다.</p>
-                </div>
-                <nav class="pagination" id="feedbackPagination" aria-label="피드백 페이지"></nav>
-            </div>
-        </div>
-
-        <!-- Tab: Unmatched Questions -->
-        <div class="tab-content" id="tabContentUnmatched" role="tabpanel" style="display:none">
-            <div class="toolbar">
-                <h3 style="margin:0;font-size:var(--text-base)">미등록 질문 (답변 미매칭)</h3>
-            </div>
-            <div class="qa-table-wrap">
-                <div class="table-wrap">
-                    <table class="qa-table" aria-label="미등록 질문">
-                        <thead>
-                            <tr>
-                                <th scope="col" style="width:50px">ID</th>
-                                <th scope="col">사용자 질문</th>
-                                <th scope="col">봇 답변</th>
-                                <th scope="col" style="width:140px">날짜</th>
-                                <th scope="col" style="width:100px">작업</th>
-                            </tr>
-                        </thead>
-                        <tbody id="unmatchedTableBody"></tbody>
-                    </table>
-                </div>
-                <div id="unmatchedEmptyState" class="empty-state" style="display:none">
-                    <p>미등록 질문이 없습니다.</p>
-                </div>
-                <nav class="pagination" id="unmatchedPagination" aria-label="미등록 질문 페이지"></nav>
-            </div>
-        </div>
-
         <!-- Tab: Activity Logs -->
         <div class="tab-content" id="tabContentLogs" role="tabpanel" style="display:none">
             <div class="toolbar">
@@ -261,6 +218,10 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editQaId">
+                <div class="form-group" id="modalCompanyGroup" style="display:none">
+                    <label for="modalCompany">회사 <span class="required" aria-hidden="true">*</span></label>
+                    <select id="modalCompany" class="form-control" aria-required="true"></select>
+                </div>
                 <div class="form-group">
                     <label for="modalCategory">카테고리 <span class="required" aria-hidden="true">*</span></label>
                     <select id="modalCategory" class="form-control" aria-required="true">
@@ -284,14 +245,6 @@
                 <div class="form-group">
                     <label for="modalKeywords">키워드 (쉼표로 구분)</label>
                     <input type="text" id="modalKeywords" class="form-control" placeholder="예: 부가세,신고,기한">
-                </div>
-                <div class="form-group">
-                    <label for="modalAliases">동의어 (쉼표로 구분)</label>
-                    <input type="text" id="modalAliases" class="form-control" placeholder="예: 관리비,아파트비용,공과금">
-                </div>
-                <div class="form-group">
-                    <label for="modalTags">태그 (쉼표로 구분)</label>
-                    <input type="text" id="modalTags" class="form-control" placeholder="예: 중요,자주묻는질문">
                 </div>
                 <div class="form-group form-check">
                     <input type="checkbox" id="modalActive" checked>
@@ -341,13 +294,7 @@
                     <label for="adminPosition">직급</label>
                     <input type="text" id="adminPosition" class="form-control" placeholder="직급을 입력하세요">
                 </div>
-                <div class="form-group">
-                    <label for="adminRole">역할</label>
-                    <select id="adminRole" class="form-control">
-                        <option value="admin">관리자</option>
-                        <option value="viewer">뷰어 (읽기 전용)</option>
-                    </select>
-                </div>
+                <input type="hidden" id="adminRole" value="admin">
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeAdminModal()">취소</button>
@@ -371,6 +318,59 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="profileModalTitle">내 정보 수정</h3>
+                <button class="modal-close" onclick="closeProfileModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size:var(--text-sm);color:var(--gray-500);margin-bottom:0.75rem;font-weight:600">회사 정보</p>
+                <div class="form-group">
+                    <label for="profileCompanyName">회사명</label>
+                    <input type="text" id="profileCompanyName" class="form-control" placeholder="회사명을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="profileCompanyAddress">회사 주소</label>
+                    <input type="text" id="profileCompanyAddress" class="form-control" placeholder="회사 주소를 입력하세요">
+                </div>
+                <hr style="margin:1.25rem 0;border:0;border-top:1px solid var(--gray-200)">
+                <p style="font-size:var(--text-sm);color:var(--gray-500);margin-bottom:0.75rem;font-weight:600">내 정보</p>
+                <div class="form-group">
+                    <label for="profileEmail">이메일</label>
+                    <input type="email" id="profileEmail" class="form-control" disabled style="background:var(--gray-100)">
+                </div>
+                <div class="form-group">
+                    <label for="profileFullName">이름</label>
+                    <input type="text" id="profileFullName" class="form-control" placeholder="이름을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="profilePhone">전화번호</label>
+                    <input type="text" id="profilePhone" class="form-control" placeholder="전화번호를 입력하세요">
+                </div>
+                <hr style="margin:1.25rem 0;border:0;border-top:1px solid var(--gray-200)">
+                <p style="font-size:var(--text-sm);color:var(--gray-500);margin-bottom:0.75rem">비밀번호를 변경하려면 아래를 입력하세요.</p>
+                <div class="form-group">
+                    <label for="profileCurrentPw">현재 비밀번호</label>
+                    <input type="password" id="profileCurrentPw" class="form-control" placeholder="현재 비밀번호" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label for="profileNewPw">새 비밀번호</label>
+                    <input type="password" id="profileNewPw" class="form-control" placeholder="새 비밀번호 (8자 이상)" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="profileNewPwConfirm">새 비밀번호 확인</label>
+                    <input type="password" id="profileNewPwConfirm" class="form-control" placeholder="새 비밀번호 확인" autocomplete="new-password">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeProfileModal()">취소</button>
+                <button class="btn btn-primary" id="profileSaveBtn" onclick="saveProfile()">저장</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
@@ -380,14 +380,16 @@
                 <a href="/privacy.html">개인정보처리방침</a>
                 <a href="/terms.html">이용약관</a>
                 <a href="/copyright.html">저작권 정책</a>
+                <a href="/refund-policy.html">환불 정책</a>
                 <a href="/contact.html">문의하기</a>
             </nav>
-            <p class="footer-copyright">&copy; 2026 경리 도우미(Accounting Helper). All rights reserved.</p>
+            <p class="footer-copyright">&copy; 2026 보태미 - 경리도우미(Accounting Helper). All rights reserved.</p>
             <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
+            <p class="footer-business-info">보듬누리 | 통신판매업 신고 제 2026-세종-0130 호 | 세종시 다정남로 22, 122-1203</p>
         </div>
     </footer>
 
-    <script src="/js/api.js?v=6"></script>
-    <script src="/js/admin.js?v=6"></script>
+    <script src="/js/api.js"></script>
+    <script src="/js/admin.js"></script>
 </body>
 </html>

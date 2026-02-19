@@ -1,49 +1,54 @@
 const API_BASE = '/api';
 
 /* ──────────────────────────────────────────────
+ *  ApiError — structured error with HTTP status
+ * ────────────────────────────────────────────── */
+class ApiError extends Error {
+    constructor(message, status, data) {
+        super(message);
+        this.name = 'ApiError';
+        this.status = status;
+        this.data = data;
+    }
+}
+
+/* ──────────────────────────────────────────────
  *  AuthSession — client-side session manager
- *  Stores session data + JWT token in sessionStorage (default)
+ *  Stores session data in sessionStorage (default)
  *  or localStorage ("로그인 유지" checked).
  * ────────────────────────────────────────────── */
 const AUTH_KEY = 'acc_auth_session';
-const TOKEN_KEY = 'acc_auth_token';
 
 const AuthSession = {
     /**
-     * Save session data and JWT token returned from server.
+     * Save session data returned from server.
      * @param {object} session  - {user_id, company_id, company_name, email, full_name, role, ...}
-     * @param {string} token    - JWT access token
      * @param {boolean} persist - true = localStorage (remember me)
+     * @param {string} [token]  - JWT token string
      */
-    save(session, token, persist) {
+    save(session, persist, token) {
         const data = {
             isLoggedIn: true,
             userId: session.user_id,
             username: session.username,
             companyId: session.company_id,
+            companyCode: session.company_id,
             companyName: session.company_name,
             email: session.email,
             fullName: session.full_name,
             role: session.role,
             permissions: session.permissions,
-            subscriptionPlan: session.subscription_plan,
-            billingActive: session.billing_active,
             loginTime: session.login_time,
             expiryTime: session.expiry_time,
+            billingActive: session.billing_active || false,
+            subscriptionPlan: session.subscription_plan || null,
+            token: token || session.token || null,
         };
         const store = persist ? localStorage : sessionStorage;
         // Clear the other store to avoid stale data
         localStorage.removeItem(AUTH_KEY);
         sessionStorage.removeItem(AUTH_KEY);
-        localStorage.removeItem(TOKEN_KEY);
-        sessionStorage.removeItem(TOKEN_KEY);
         store.setItem(AUTH_KEY, JSON.stringify(data));
-        if (token) {
-            store.setItem(TOKEN_KEY, token);
-        }
-        console.log('[AUTH] save → store:', persist ? 'localStorage' : 'sessionStorage',
-            '| token:', token ? token.substring(0, 20) + '...' : 'NULL',
-            '| billingActive:', data.billingActive);
     },
 
     /** Return parsed session object or null. */
@@ -57,46 +62,59 @@ const AuthSession = {
         }
     },
 
-    /** Return stored JWT token or null. */
+    /** Return JWT token string or null. */
     getToken() {
-        return sessionStorage.getItem(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+        const s = this.get();
+        return s ? s.token : null;
     },
 
-    /** Remove session and token from both stores. */
+    /** Remove session from both stores. */
     clear() {
         sessionStorage.removeItem(AUTH_KEY);
         localStorage.removeItem(AUTH_KEY);
-        sessionStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(TOKEN_KEY);
     },
 
-    /** True if a session and token exist. */
+    /** True if a session exists and has not expired client-side. */
     isValid() {
         const s = this.get();
-        const t = this.getToken();
-        console.log('[AUTH] isValid → session:', !!s, '| isLoggedIn:', s && s.isLoggedIn, '| token:', t ? t.substring(0, 20) + '...' : 'NULL');
-        if (!s || !s.isLoggedIn || !t) return false;
+        if (!s || !s.isLoggedIn) return false;
+        if (new Date(s.expiryTime) <= new Date()) {
+            this.clear();
+            return false;
+        }
         return true;
     },
 
     /** Redirect to login and clear session. */
-    redirectToLogin(reason) {
+    redirectToLogin(returnUrl) {
         this.clear();
         if (!window.location.pathname.includes('login')) {
-            const url = reason ? '/login.html?reason=' + reason : '/login.html';
+            const url = returnUrl || '/login.html';
             window.location.href = url;
         }
     },
 };
 
 /* ──────────────────────────────────────────────
- *  API fetch wrapper (JWT Bearer auth)
+ *  API fetch wrapper
  * ────────────────────────────────────────────── */
 async function apiFetch(path, options = {}) {
+    // Client-side expiry guard (skip for auth endpoints)
+    if (!path.startsWith('/auth/')) {
+        const sess = AuthSession.get();
+        if (sess && sess.expiryTime && new Date(sess.expiryTime) <= new Date()) {
+            AuthSession.clear();
+            if (!window.location.pathname.includes('login')) {
+                window.location.href = '/login.html';
+            }
+            throw new ApiError('세션이 만료되었습니다. 다시 로그인해 주세요.', 401);
+        }
+    }
+
     const url = `${API_BASE}${path}`;
     const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
 
-    // Attach JWT token as Authorization header
+    // Attach JWT Authorization header if available
     const token = AuthSession.getToken();
     if (token) {
         headers['Authorization'] = `Bearer ${token}`;
@@ -115,23 +133,33 @@ async function apiFetch(path, options = {}) {
         try {
             data = await response.json();
         } catch {
-            const err = new Error('서버 응답을 처리할 수 없습니다. (status ' + response.status + ')');
-            err.status = response.status;
-            throw err;
+            if (!response.ok) {
+                throw new ApiError('서버 오류가 발생했습니다. (HTTP ' + response.status + ')', response.status);
+            }
+            throw new ApiError('서버 응답을 처리할 수 없습니다.', response.status);
         }
 
         if (!response.ok) {
-            const detail = Array.isArray(data.detail)
-                ? data.detail.map(e => e.msg || e).join(', ')
-                : (data.detail || '요청 처리 중 오류가 발생했습니다.');
-            const err = new Error(detail);
-            err.status = response.status;
-            throw err;
+            let message = '요청 처리 중 오류가 발생했습니다.';
+            if (typeof data.detail === 'string') {
+                message = data.detail;
+            } else if (Array.isArray(data.detail)) {
+                message = data.detail.map(e => e.msg || JSON.stringify(e)).join(', ');
+            } else if (typeof data.message === 'string') {
+                message = data.message;
+            }
+
+            if (response.status === 401 && !path.startsWith('/auth/')) {
+                AuthSession.redirectToLogin();
+            }
+
+            throw new ApiError(message, response.status, data);
         }
         return data;
     } catch (err) {
+        if (err instanceof ApiError) throw err;
         if (err.message === 'Failed to fetch') {
-            throw new Error('서버에 연결할 수 없습니다.');
+            throw new ApiError('서버에 연결할 수 없습니다.', 0);
         }
         throw err;
     }

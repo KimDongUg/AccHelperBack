@@ -6,69 +6,114 @@ let sessionCheckTimer = null;
 let currentSearchTerm = '';
 let currentRole = 'viewer';
 let logPage = 1;
+let companiesList = [];
+let companyMap = {};  // id → name
 
 /* ═══════════════════════════════════════════════
  *  INIT
  * ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
     // Auth guard
-    if (!AuthSession.isValid()) { AuthSession.redirectToLogin('expired'); return; }
-
-    // Use local session as fallback if server auth check fails
-    const localSess = AuthSession.get();
-    let sess = null;
-
+    if (!AuthSession.isValid()) { AuthSession.redirectToLogin(); return; }
     try {
         const auth = await apiGet('/auth/check');
-        if (!auth.authenticated) { AuthSession.redirectToLogin('unauthorized'); return; }
+        if (!auth.authenticated) { AuthSession.redirectToLogin(); return; }
         if (auth.session) {
-            sess = auth.session;
-            const persist = !!localStorage.getItem('acc_auth_token');
-            AuthSession.save(auth.session, AuthSession.getToken(), persist);
+            const persist = !!localStorage.getItem('acc_auth_session');
+            AuthSession.save(auth.session, persist, AuthSession.getToken());
+        }
+
+        const sess = auth.session;
+        currentRole = sess.role || 'viewer';
+
+        // Header display
+        document.getElementById('headerCompanyName').textContent = sess.company_name || '';
+        const displayName = sess.full_name || sess.email || sess.username || '';
+        document.getElementById('adminUsername').textContent = displayName + '님';
+
+        // Role badge
+        const roleBadge = document.getElementById('roleBadge');
+        const roleLabels = { super_admin: '최고관리자', admin: '관리자', viewer: '뷰어' };
+        roleBadge.textContent = roleLabels[currentRole] || currentRole;
+        roleBadge.className = 'role-badge role-' + currentRole;
+        roleBadge.style.display = 'inline-block';
+
+        // Show admin tab for admin/super_admin
+        if (currentRole === 'admin' || currentRole === 'super_admin') {
+            document.getElementById('tabAdmins').style.display = '';
+        }
+
+        // Show super admin link for super_admin
+        if (currentRole === 'super_admin') {
+            const saLink = document.getElementById('superAdminLink');
+            if (saLink) saLink.style.display = '';
+        }
+
+        // super_admin: load companies for filter & modal
+        if (currentRole === 'super_admin') {
+            try {
+                const companies = await apiGet('/companies/public');
+                companiesList = companies;
+                companyMap = {};
+                companies.forEach(c => { companyMap[c.company_id] = c.company_name; });
+
+                // Show company column header
+                document.getElementById('companyColHeader').style.display = '';
+
+                // Populate company filter dropdown
+                const companyFilter = document.getElementById('companyFilter');
+                companyFilter.style.display = '';
+                companies.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.company_id;
+                    opt.textContent = c.company_name;
+                    companyFilter.appendChild(opt);
+                });
+
+                // Populate modal company select
+                const modalCompany = document.getElementById('modalCompany');
+                companies.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.company_id;
+                    opt.textContent = c.company_name;
+                    modalCompany.appendChild(opt);
+                });
+            } catch (e) {
+                console.error('Companies load error:', e);
+            }
+        }
+
+        // Hide edit buttons for viewer
+        if (currentRole === 'viewer') {
+            const addQaBtn = document.getElementById('addQaBtn');
+            if (addQaBtn) addQaBtn.style.display = 'none';
         }
     } catch (err) {
-        // 401/403 → token invalid, must re-login
-        if (err.status === 401) { AuthSession.redirectToLogin('unauthorized'); return; }
-        if (err.status === 403) { AuthSession.redirectToLogin('forbidden'); return; }
-        // Other errors (500, network) → use local session as fallback
-        console.warn('[ADMIN] auth check failed:', err.message, '— using local session');
-    }
-
-    // Build session — prefer server data, fallback to local storage
-    if (!sess && localSess) {
-        sess = {
-            role: localSess.role,
-            company_name: localSess.companyName,
-            full_name: localSess.fullName,
-            email: localSess.email,
-            username: localSess.username,
-        };
-    }
-    if (!sess) { AuthSession.redirectToLogin('unauthorized'); return; }
-
-    currentRole = sess.role || 'viewer';
-
-    // Header display
-    document.getElementById('headerCompanyName').textContent = sess.company_name || '';
-    const displayName = sess.full_name || sess.email || sess.username || '';
-    document.getElementById('adminUsername').textContent = displayName + '님';
-
-    // Role badge
-    const roleBadge = document.getElementById('roleBadge');
-    const roleLabels = { super_admin: '최고관리자', admin: '관리자', viewer: '뷰어' };
-    roleBadge.textContent = roleLabels[currentRole] || currentRole;
-    roleBadge.className = 'role-badge role-' + currentRole;
-    roleBadge.style.display = 'inline-block';
-
-    // Show admin tab for admin/super_admin
-    if (currentRole === 'admin' || currentRole === 'super_admin') {
-        document.getElementById('tabAdmins').style.display = '';
-    }
-
-    // Hide edit buttons for viewer
-    if (currentRole === 'viewer') {
-        const addQaBtn = document.getElementById('addQaBtn');
-        if (addQaBtn) addQaBtn.style.display = 'none';
+        // 401/403 → 인증 실패, 로그인으로 이동
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+            AuthSession.redirectToLogin();
+            return;
+        }
+        // 500/네트워크 에러 → 로컬 세션으로 폴백 시도
+        const localSess = AuthSession.get();
+        if (localSess) {
+            currentRole = localSess.role || 'viewer';
+            document.getElementById('headerCompanyName').textContent = localSess.companyName || '';
+            const displayName = localSess.fullName || localSess.email || localSess.username || '';
+            document.getElementById('adminUsername').textContent = displayName + '님';
+            const roleBadge = document.getElementById('roleBadge');
+            const roleLabels = { super_admin: '최고관리자', admin: '관리자', viewer: '뷰어' };
+            roleBadge.textContent = roleLabels[currentRole] || currentRole;
+            roleBadge.className = 'role-badge role-' + currentRole;
+            roleBadge.style.display = 'inline-block';
+            if (currentRole === 'admin' || currentRole === 'super_admin') {
+                document.getElementById('tabAdmins').style.display = '';
+            }
+            console.warn('[ADMIN] auth check failed, using local session:', err.message);
+        } else {
+            AuthSession.redirectToLogin();
+            return;
+        }
     }
 
     // Session watcher
@@ -76,13 +121,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!AuthSession.isValid()) {
             clearInterval(sessionCheckTimer);
             showToast('세션이 만료되었습니다.', 'warning');
-            setTimeout(() => AuthSession.redirectToLogin('expired'), 1500);
+            setTimeout(() => AuthSession.redirectToLogin(), 1500);
         }
     }, 60_000);
 
     // Load data
     loadStats();
-    loadQaList();
+    loadQaList().then(checkTemplateData);
 
     // Search debounce
     let searchTimer;
@@ -93,6 +138,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     document.getElementById('categoryFilter').addEventListener('change', () => { currentPage = 1; loadQaList(); });
     document.getElementById('statusFilter').addEventListener('change', () => { currentPage = 1; loadQaList(); });
+    document.getElementById('companyFilter').addEventListener('change', () => { currentPage = 1; loadQaList(); });
+
+    // Profile button
+    document.getElementById('profileBtn').addEventListener('click', () => openProfileModal());
 
     // Logout
     document.getElementById('logoutBtn').addEventListener('click', async () => {
@@ -138,8 +187,6 @@ function switchTab(tab) {
     }
 
     if (tab === 'admins') loadAdminList();
-    if (tab === 'feedback') { feedbackPage = 1; loadFeedbackList(); }
-    if (tab === 'unmatched') { unmatchedPage = 1; loadUnmatchedList(); }
     if (tab === 'logs') { logPage = 1; loadActivityLogs(); }
 }
 
@@ -180,25 +227,52 @@ async function loadStats() {
     } catch (e) {
         console.error('Stats load error:', e);
     }
+    // 구독 상태 로드
+    try {
+        const sess = AuthSession.get();
+        const data = await apiGet('/billing/status?company_id=' + sess.companyId);
+        const el = document.getElementById('statSubscription');
+        const plan = data.subscription_plan;
+        if (plan === 'enterprise' && data.active) {
+            el.innerHTML = '<span style="color:var(--success)">유료 구독중</span>';
+        } else if (plan === 'trial' && data.active) {
+            let daysText = '';
+            if (data.trial_ends_at) {
+                const diff = Math.ceil((new Date(data.trial_ends_at) - new Date()) / 86400000);
+                daysText = ' (' + (diff > 0 ? diff : 0) + '일)';
+            }
+            el.innerHTML = '<span style="color:#FF9800">체험중' + daysText + '</span><br><a href="/billing.html" class="btn btn-primary btn-sm" style="margin-top:0.25rem;font-size:0.75rem;padding:0.2rem 0.6rem">구독하기</a>';
+        } else {
+            el.innerHTML = '<a href="/billing.html" class="btn btn-primary btn-sm" style="font-size:0.75rem;padding:0.2rem 0.6rem">구독하기</a>';
+        }
+    } catch (e) {
+        document.getElementById('statSubscription').innerHTML = '<a href="/billing.html" style="color:var(--primary);font-weight:600;text-decoration:underline">구독하기</a>';
+    }
 }
 
 /* ═══════════════════════════════════════════════
  *  QA LIST
  * ═══════════════════════════════════════════════ */
+let lastQaTotal = 0;
+
 async function loadQaList() {
     const search = document.getElementById('searchInput').value.trim();
     const category = document.getElementById('categoryFilter').value;
     const status = document.getElementById('statusFilter').value;
     currentSearchTerm = search;
 
+    const companyFilterVal = document.getElementById('companyFilter').value;
+
     const params = new URLSearchParams({ page: currentPage, size: PAGE_SIZE });
     if (search) params.append('search', search);
     if (category) params.append('category', category);
     if (status) params.append('status', status);
+    if (companyFilterVal) params.append('company_id', companyFilterVal);
 
     document.getElementById('tableLoading').classList.add('show');
     try {
         const data = await apiGet(`/qa?${params}`);
+        lastQaTotal = data.total || 0;
         renderTable(data.items);
         renderPagination(data.page, data.pages, data.total);
     } catch (e) {
@@ -206,6 +280,52 @@ async function loadQaList() {
     } finally {
         document.getElementById('tableLoading').classList.remove('show');
     }
+}
+
+/* ── 템플릿 데이터 안내 팝업 ── */
+function checkTemplateData() {
+    if (currentRole === 'super_admin') return;
+    const sess = AuthSession.get();
+    if (!sess) return;
+    const key = 'qa_modified_' + sess.companyId;
+    if (localStorage.getItem(key)) return;
+    if (lastQaTotal === 0) return;
+
+    // Q&A가 있지만 관리자가 아직 수정한 적 없으면 안내
+    showTemplatePopup();
+}
+
+function markQaModified() {
+    const sess = AuthSession.get();
+    if (sess) localStorage.setItem('qa_modified_' + sess.companyId, '1');
+}
+
+function showTemplatePopup() {
+    const overlay = document.getElementById('templatePopup');
+    if (overlay) { overlay.classList.add('show'); return; }
+
+    const popup = document.createElement('div');
+    popup.id = 'templatePopup';
+    popup.className = 'confirm-overlay show';
+    popup.innerHTML = `
+        <div class="confirm-dialog">
+            <div class="confirm-icon" style="background:#FFF3E0;color:#FF9800">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <h3>Q&A 데이터 안내</h3>
+            <p>현재 데이터는 최근 등록한 회사의 데이터입니다.<br>우리 회사에 맞게 수정이 필요합니다.</p>
+            <div class="actions">
+                <button class="btn btn-outline" onclick="closeTemplatePopup()">나중에</button>
+                <button class="btn btn-primary" onclick="closeTemplatePopup(); openCreateModal();">+ 새 Q&A 추가</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(popup);
+}
+
+function closeTemplatePopup() {
+    const popup = document.getElementById('templatePopup');
+    if (popup) popup.classList.remove('show');
 }
 
 function highlightText(text, maxLen) {
@@ -222,6 +342,7 @@ function renderTable(items) {
     const tbody = document.getElementById('qaTableBody');
     const empty = document.getElementById('emptyState');
     const isViewer = currentRole === 'viewer';
+    const isSuperAdmin = currentRole === 'super_admin';
 
     if (items.length === 0) {
         tbody.innerHTML = '';
@@ -234,8 +355,9 @@ function renderTable(items) {
         <tr>
             <td>${qa.qa_id}</td>
             <td><span class="badge badge-category">${qa.category}</span></td>
-            <td class="question-cell" title="${escapeHtml(qa.question)}">${highlightText(qa.question, 100)}</td>
-            <td class="answer-cell" title="${escapeHtml(qa.answer)}">${highlightText(qa.answer, 150)}</td>
+            ${isSuperAdmin ? `<td>${escapeHtml(qa.company_name || '-')}</td>` : ''}
+            <td class="question-cell" title="${escapeHtml(qa.question)}"><a href="#" class="cell-link" onclick="openEditModal(${qa.qa_id});return false">${highlightText(qa.question, 100)}</a></td>
+            <td class="answer-cell" title="${escapeHtml(qa.answer)}"><a href="#" class="cell-link" onclick="openEditModal(${qa.qa_id});return false">${highlightText(qa.answer, 150)}</a></td>
             <td>
                 <button class="toggle-btn ${qa.is_active ? 'active' : ''}" onclick="toggleActive(${qa.qa_id})" role="switch" aria-checked="${qa.is_active}" ${isViewer ? 'disabled' : ''} title="${qa.is_active ? '활성' : '비활성'}"></button>
             </td>
@@ -280,6 +402,7 @@ async function toggleActive(qaId) {
     try {
         const qa = await apiPatch(`/qa/${qaId}/toggle`);
         showToast(qa.is_active ? 'Q&A가 활성화되었습니다.' : 'Q&A가 비활성화되었습니다.', 'success');
+        markQaModified();
         loadQaList();
         loadStats();
     } catch (e) {
@@ -354,12 +477,18 @@ function openCreateModal() {
     document.getElementById('modalQuestion').value = '';
     document.getElementById('modalAnswer').value = '';
     document.getElementById('modalKeywords').value = '';
-    const aliasesEl = document.getElementById('modalAliases');
-    const tagsEl = document.getElementById('modalTags');
-    if (aliasesEl) aliasesEl.value = '';
-    if (tagsEl) tagsEl.value = '';
     document.getElementById('modalActive').checked = true;
     resetModalHints();
+
+    // super_admin: show company selector
+    const companyGroup = document.getElementById('modalCompanyGroup');
+    if (currentRole === 'super_admin' && companiesList.length > 0) {
+        companyGroup.style.display = '';
+        document.getElementById('modalCompany').value = companiesList[0].company_id;
+    } else {
+        companyGroup.style.display = 'none';
+    }
+
     document.getElementById('qaModal').classList.add('show');
 }
 
@@ -372,12 +501,18 @@ async function openEditModal(qaId) {
         document.getElementById('modalQuestion').value = qa.question;
         document.getElementById('modalAnswer').value = qa.answer;
         document.getElementById('modalKeywords').value = qa.keywords;
-        const aliasesEl = document.getElementById('modalAliases');
-        const tagsEl = document.getElementById('modalTags');
-        if (aliasesEl) aliasesEl.value = qa.aliases || '';
-        if (tagsEl) tagsEl.value = qa.tags || '';
         document.getElementById('modalActive').checked = qa.is_active;
         resetModalHints();
+
+        // super_admin: show company selector with current value
+        const companyGroup = document.getElementById('modalCompanyGroup');
+        if (currentRole === 'super_admin' && companiesList.length > 0) {
+            companyGroup.style.display = '';
+            document.getElementById('modalCompany').value = qa.company_id;
+        } else {
+            companyGroup.style.display = 'none';
+        }
+
         document.getElementById('qaModal').classList.add('show');
     } catch (e) { showToast('Q&A를 불러올 수 없습니다.', 'error'); }
 }
@@ -395,25 +530,28 @@ async function saveQa() {
     saveBtn.disabled = true;
 
     const qaId = document.getElementById('editQaId').value;
-    const aliasesEl = document.getElementById('modalAliases');
-    const tagsEl = document.getElementById('modalTags');
     const data = {
         category: document.getElementById('modalCategory').value,
         question: document.getElementById('modalQuestion').value.trim(),
         answer: document.getElementById('modalAnswer').value.trim(),
         keywords: document.getElementById('modalKeywords').value.trim(),
-        aliases: aliasesEl ? aliasesEl.value.trim() : '',
-        tags: tagsEl ? tagsEl.value.trim() : '',
         is_active: document.getElementById('modalActive').checked,
     };
+
+    // super_admin: include selected company_id
+    if (currentRole === 'super_admin' && companiesList.length > 0) {
+        data.company_id = parseInt(document.getElementById('modalCompany').value, 10);
+    }
 
     try {
         if (qaId) {
             await apiPut(`/qa/${qaId}`, data);
             showToast('Q&A가 수정되었습니다.', 'success');
+            markQaModified();
         } else {
             await apiPost('/qa', data);
             showToast('새 Q&A가 등록되었습니다.', 'success');
+            markQaModified();
         }
         closeModal();
         loadQaList();
@@ -463,7 +601,6 @@ function openAdminModal() {
     document.getElementById('adminPhone').value = '';
     document.getElementById('adminDepartment').value = '';
     document.getElementById('adminPosition').value = '';
-    document.getElementById('adminRole').value = 'admin';
     document.getElementById('adminPasswordGroup').style.display = '';
     document.getElementById('adminModal').classList.add('show');
 }
@@ -479,7 +616,6 @@ async function openEditAdminModal(userId) {
         document.getElementById('adminPhone').value = admin.phone || '';
         document.getElementById('adminDepartment').value = admin.department || '';
         document.getElementById('adminPosition').value = admin.position || '';
-        document.getElementById('adminRole').value = admin.role;
         document.getElementById('adminPasswordGroup').style.display = 'none';
         document.getElementById('adminModal').classList.add('show');
     } catch (e) {
@@ -505,7 +641,7 @@ async function saveAdmin() {
                 phone: document.getElementById('adminPhone').value.trim() || null,
                 department: document.getElementById('adminDepartment').value.trim() || null,
                 position: document.getElementById('adminPosition').value.trim() || null,
-                role: document.getElementById('adminRole').value,
+                role: 'admin',
             };
             await apiPut(`/admins/${adminId}`, data);
             showToast('관리자가 수정되었습니다.', 'success');
@@ -520,7 +656,7 @@ async function saveAdmin() {
                 phone: document.getElementById('adminPhone').value.trim() || null,
                 department: document.getElementById('adminDepartment').value.trim() || null,
                 position: document.getElementById('adminPosition').value.trim() || null,
-                role: document.getElementById('adminRole').value,
+                role: 'admin',
             };
             await apiPost('/admins', data);
             showToast('관리자가 추가되었습니다.', 'success');
@@ -605,12 +741,117 @@ async function confirmDelete() {
             await apiDelete(`/qa/${deleteTargetId}`);
             closeDeleteConfirm();
             showToast('Q&A가 삭제되었습니다.', 'success');
+            markQaModified();
             loadQaList();
             loadStats();
         }
     } catch (e) {
         closeDeleteConfirm();
         showToast('삭제에 실패했습니다: ' + e.message, 'error');
+    }
+}
+
+/* ═══════════════════════════════════════════════
+ *  PROFILE MODAL
+ * ═══════════════════════════════════════════════ */
+async function openProfileModal() {
+    try {
+        const me = await apiGet('/admins/me');
+        document.getElementById('profileEmail').value = me.email || '';
+        document.getElementById('profileFullName').value = me.full_name || '';
+        document.getElementById('profilePhone').value = me.phone || '';
+        document.getElementById('profileCurrentPw').value = '';
+        document.getElementById('profileNewPw').value = '';
+        document.getElementById('profileNewPwConfirm').value = '';
+
+        // Load company info via /companies/me
+        try {
+            const company = await apiGet('/companies/me');
+            document.getElementById('profileCompanyName').value = company.company_name || '';
+            document.getElementById('profileCompanyAddress').value = company.address || '';
+        } catch (e) {
+            const sess = AuthSession.get();
+            document.getElementById('profileCompanyName').value = sess?.companyName || '';
+            document.getElementById('profileCompanyAddress').value = '';
+        }
+
+        document.getElementById('profileModal').classList.add('show');
+    } catch (e) {
+        showToast('내 정보를 불러올 수 없습니다.', 'error');
+    }
+}
+
+function closeProfileModal() {
+    document.getElementById('profileModal').classList.remove('show');
+}
+
+async function saveProfile() {
+    const companyName = document.getElementById('profileCompanyName').value.trim();
+    const companyAddress = document.getElementById('profileCompanyAddress').value.trim();
+    const fullName = document.getElementById('profileFullName').value.trim();
+    const phone = document.getElementById('profilePhone').value.trim();
+    const currentPw = document.getElementById('profileCurrentPw').value;
+    const newPw = document.getElementById('profileNewPw').value;
+    const newPwConfirm = document.getElementById('profileNewPwConfirm').value;
+
+    const saveBtn = document.getElementById('profileSaveBtn');
+    saveBtn.disabled = true;
+
+    try {
+        // Update company info via /companies/me
+        await apiPut('/companies/me', {
+            company_name: companyName || null,
+            address: companyAddress || null,
+        });
+        if (companyName) {
+            document.getElementById('headerCompanyName').textContent = companyName;
+        }
+
+        // Update profile info (name, phone)
+        await apiPatch('/admins/me', {
+            full_name: fullName || null,
+            phone: phone || null,
+        });
+
+        // Change password if fields are filled
+        if (currentPw || newPw || newPwConfirm) {
+            if (!currentPw) {
+                showToast('현재 비밀번호를 입력해 주세요.', 'error');
+                saveBtn.disabled = false;
+                return;
+            }
+            if (!newPw) {
+                showToast('새 비밀번호를 입력해 주세요.', 'error');
+                saveBtn.disabled = false;
+                return;
+            }
+            if (newPw.length < 8) {
+                showToast('새 비밀번호는 8자 이상이어야 합니다.', 'error');
+                saveBtn.disabled = false;
+                return;
+            }
+            if (newPw !== newPwConfirm) {
+                showToast('새 비밀번호가 일치하지 않습니다.', 'error');
+                saveBtn.disabled = false;
+                return;
+            }
+            await apiPatch('/admins/me/password', {
+                current_password: currentPw,
+                new_password: newPw,
+            });
+        }
+
+        // Update header display name
+        if (fullName) {
+            document.getElementById('adminUsername').textContent = fullName + '님';
+        }
+
+        showToast('내 정보가 수정되었습니다.', 'success');
+        closeProfileModal();
+    } catch (e) {
+        showToast(e.message || '저장에 실패했습니다.', 'error');
+    } finally {
+        saveBtn.disabled = false;
     }
 }
 
@@ -638,83 +879,4 @@ function formatDateTime(dateStr) {
     const h = String(d.getHours()).padStart(2, '0');
     const min = String(d.getMinutes()).padStart(2, '0');
     return `${d.getFullYear()}-${m}-${day} ${h}:${min}`;
-}
-
-/* ═══════════════════════════════════════════════
- *  FEEDBACK
- * ═══════════════════════════════════════════════ */
-let feedbackPage = 1;
-
-async function loadFeedbackList() {
-    const rating = document.getElementById('feedbackFilter')?.value || '';
-    const params = new URLSearchParams({ page: feedbackPage, size: 20 });
-    if (rating) params.append('rating', rating);
-
-    try {
-        const data = await apiFetch(`/admin/feedback?${params}`, { method: 'GET' });
-        const tbody = document.getElementById('feedbackTableBody');
-        const empty = document.getElementById('feedbackEmptyState');
-
-        if (!data.items || data.items.length === 0) {
-            tbody.innerHTML = '';
-            empty.style.display = 'block';
-            return;
-        }
-        empty.style.display = 'none';
-
-        tbody.innerHTML = data.items.map(fb => `
-            <tr>
-                <td>${fb.id}</td>
-                <td title="${escapeHtml(fb.question)}">${escapeHtml(fb.question.substring(0, 80))}</td>
-                <td title="${escapeHtml(fb.answer)}">${escapeHtml(fb.answer.substring(0, 80))}</td>
-                <td><span class="badge ${fb.rating === 'like' ? 'badge-success' : 'badge-danger'}">${fb.rating === 'like' ? '좋아요' : '싫어요'}</span></td>
-                <td>${fb.comment ? escapeHtml(fb.comment.substring(0, 60)) : '-'}</td>
-                <td>${formatDateTime(fb.created_at)}</td>
-            </tr>
-        `).join('');
-    } catch (e) {
-        console.error('Feedback list error:', e);
-    }
-}
-
-/* ═══════════════════════════════════════════════
- *  UNMATCHED QUESTIONS
- * ═══════════════════════════════════════════════ */
-let unmatchedPage = 1;
-
-async function loadUnmatchedList() {
-    const params = new URLSearchParams({ page: unmatchedPage, size: 20 });
-
-    try {
-        const data = await apiFetch(`/admin/unmatched?${params}`, { method: 'GET' });
-        const tbody = document.getElementById('unmatchedTableBody');
-        const empty = document.getElementById('unmatchedEmptyState');
-
-        if (!data.items || data.items.length === 0) {
-            tbody.innerHTML = '';
-            empty.style.display = 'block';
-            return;
-        }
-        empty.style.display = 'none';
-
-        tbody.innerHTML = data.items.map(item => `
-            <tr>
-                <td>${item.log_id}</td>
-                <td title="${escapeHtml(item.user_question)}">${escapeHtml(item.user_question.substring(0, 100))}</td>
-                <td title="${escapeHtml(item.bot_answer)}">${escapeHtml(item.bot_answer.substring(0, 100))}</td>
-                <td>${formatDateTime(item.timestamp)}</td>
-                <td>
-                    <button class="btn btn-outline btn-sm" onclick="registerFromUnmatched('${escapeHtml(item.user_question).replace(/'/g, "\\'")}')">QA 등록</button>
-                </td>
-            </tr>
-        `).join('');
-    } catch (e) {
-        console.error('Unmatched list error:', e);
-    }
-}
-
-function registerFromUnmatched(question) {
-    openCreateModal();
-    document.getElementById('modalQuestion').value = question;
-    onQuestionInput();
 }

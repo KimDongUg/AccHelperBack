@@ -166,6 +166,7 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
     response.set_cookie(
         key="session_token", value=token,
         max_age=expire_hours * 3600, httponly=True, samesite="lax",
+        secure=_COOKIE_SECURE,
     )
     return LoginResponse(success=True, message="로그인 성공", token=token, session=session)
 
