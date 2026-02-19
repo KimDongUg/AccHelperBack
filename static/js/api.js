@@ -41,6 +41,9 @@ const AuthSession = {
         if (token) {
             store.setItem(TOKEN_KEY, token);
         }
+        console.log('[AUTH] save → store:', persist ? 'localStorage' : 'sessionStorage',
+            '| token:', token ? token.substring(0, 20) + '...' : 'NULL',
+            '| billingActive:', data.billingActive);
     },
 
     /** Return parsed session object or null. */
@@ -71,12 +74,14 @@ const AuthSession = {
     isValid() {
         const s = this.get();
         const t = this.getToken();
+        console.log('[AUTH] isValid → session:', !!s, '| isLoggedIn:', s && s.isLoggedIn, '| token:', t ? t.substring(0, 20) + '...' : 'NULL');
         if (!s || !s.isLoggedIn || !t) return false;
         return true;
     },
 
     /** Redirect to login and clear session. */
     redirectToLogin() {
+        console.log('[AUTH] redirectToLogin called from:', new Error().stack);
         this.clear();
         if (!window.location.pathname.includes('login')) {
             window.location.href = '/login.html';

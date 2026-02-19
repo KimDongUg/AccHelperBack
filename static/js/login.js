@@ -68,6 +68,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (result.success && result.session) {
                 // Persist session and JWT token client-side
+                console.log('[LOGIN] success → result.token:', result.token ? 'exists(' + result.token.substring(0, 20) + ')' : 'NULL',
+                    '| remember:', remember, '| role:', result.session.role,
+                    '| billing_active:', result.session.billing_active);
                 AuthSession.save(result.session, result.token, remember);
                 loginCard.classList.add('success');
                 setTimeout(() => {
