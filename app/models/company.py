@@ -10,6 +10,7 @@ class Company(Base):
     __tablename__ = "companies"
 
     company_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company_code: Mapped[str] = mapped_column(String(20), nullable=False, default="")
     company_name: Mapped[str] = mapped_column(String(100), nullable=False)
     building_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
     business_number: Mapped[str | None] = mapped_column(String(20), nullable=True)

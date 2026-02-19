@@ -32,6 +32,7 @@ class CompanyUpdate(BaseModel):
 
 class CompanyResponse(BaseModel):
     company_id: int
+    company_code: str | None = None
     company_name: str
     building_type: str | None = None
     business_number: str | None = None
@@ -52,6 +53,7 @@ class CompanyResponse(BaseModel):
 
 class CompanyPublicResponse(BaseModel):
     company_id: int
+    company_code: str | None = None
     company_name: str
     building_type: str | None = None
     business_number: str | None = None

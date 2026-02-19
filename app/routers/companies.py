@@ -75,6 +75,9 @@ def register_company(
     db.add(company)
     db.flush()  # company_id 확보
 
+    # company_code = company_id (로그인 시 회사번호로 사용)
+    company.company_code = str(company.company_id)
+
     # 이메일 중복 체크
     dup_email = (
         db.query(AdminUser)
