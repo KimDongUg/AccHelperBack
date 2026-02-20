@@ -1,16 +1,25 @@
+import json
 from datetime import datetime
+from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class FeedbackCreate(BaseModel):
     chat_log_id: int | None = None
     question: str
     answer: str
-    qa_ids: str = ""  # JSON array of qa_ids
+    qa_ids: str = ""  # stored as JSON string
     rating: str  # "like" or "dislike"
     comment: str | None = None
     company_id: int | None = None
+
+    @field_validator("qa_ids", mode="before")
+    @classmethod
+    def coerce_qa_ids(cls, v: Any) -> str:
+        if isinstance(v, list):
+            return json.dumps(v)
+        return v or ""
 
 
 class FeedbackResponse(BaseModel):

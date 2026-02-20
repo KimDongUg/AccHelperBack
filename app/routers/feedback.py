@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Cookie, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -14,18 +14,28 @@ from app.schemas.feedback import (
     UnmatchedItem,
     UnmatchedListResponse,
 )
+from app.services.jwt_service import decode_token
 
 router = APIRouter(tags=["feedback"])
+
+
+def _optional_user(request: Request, session_token: str | None = Cookie(None)) -> dict | None:
+    """Extract user from JWT if present, return None otherwise."""
+    auth_header = request.headers.get("authorization", "")
+    token = auth_header[7:] if auth_header.startswith("Bearer ") else session_token
+    if not token:
+        return None
+    return decode_token(token)
 
 
 @router.post("/api/feedback", response_model=FeedbackResponse, status_code=201)
 def create_feedback(
     data: FeedbackCreate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict | None = Depends(_optional_user),
 ):
-    """Create a feedback entry (like/dislike)."""
-    company_id = data.company_id or user.get("company_id", 0)
+    """Create a feedback entry (like/dislike). Auth optional for public chatbot."""
+    company_id = data.company_id or (user.get("company_id", 0) if user else 0)
 
     fb = Feedback(
         company_id=company_id,
