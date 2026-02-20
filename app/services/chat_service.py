@@ -24,6 +24,26 @@ FALLBACK_MESSAGE = (
     "다른 키워드로 다시 질문해 주시거나, 관리사무소에 문의해 주세요."
 )
 
+GREETING_PATTERNS = re.compile(
+    r"^[\s]*(안녕하세요|안녕|하이|히|hello|hi|hey"
+    r"|감사합니다|감사해요|고맙습니다|고마워요|고마워|ㄱㅅ|땡큐|thank"
+    r"|수고하세요|수고하셨습니다|수고하십니다|수고요|수고"
+    r"|네|넵|넹|ㅇㅇ|ㅎㅎ|ㅋㅋ|ok|okay"
+    r"|반갑습니다|반가워요|처음 뵙겠습니다"
+    r"|좋은 하루|좋은 아침|좋은 저녁"
+    r"|알겠습니다|알겠어요|확인했습니다|잘 알겠습니다"
+    r"|도움이 됐습니다|도움이 되었습니다|도움 감사"
+    r"|잘 부탁드립니다|부탁드립니다|부탁합니다)[\s~!.♡♥^^]*$",
+    re.IGNORECASE,
+)
+
+GREETING_SYSTEM_PROMPT = (
+    "당신은 아파트 관리 도우미 챗봇입니다. "
+    "사용자가 인사, 감사, 또는 일상적인 대화를 건넸습니다. "
+    "친절하고 자연스럽게 응대하되, 추가 질문이 있으면 편하게 문의하라고 안내하세요. "
+    "답변은 1~2문장으로 간결하게 작성하세요."
+)
+
 DEFAULT_SYSTEM_PROMPT = """당신은 아파트 관리 도우미 챗봇입니다. 아래 규칙을 반드시 따르세요:
 
 1. 제공된 근거(Evidence) 내용만을 기반으로 답변하세요.
@@ -140,8 +160,45 @@ def _get_system_prompt(db: Session, company_id: int) -> str:
     return DEFAULT_SYSTEM_PROMPT
 
 
+def _handle_greeting(question: str) -> RAGResult | None:
+    """Return a friendly LLM response if the message is a greeting/thanks."""
+    if not GREETING_PATTERNS.match(question.strip()):
+        return None
+
+    if not OPENAI_API_KEY:
+        return RAGResult(answer="감사합니다! 추가 궁금한 점이 있으시면 언제든 문의해 주세요.")
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
+
+        response = client.chat.completions.create(
+            model=CHAT_MODEL,
+            messages=[
+                {"role": "system", "content": GREETING_SYSTEM_PROMPT},
+                {"role": "user", "content": question},
+            ],
+            temperature=0.7,
+            max_tokens=200,
+        )
+
+        answer = response.choices[0].message.content.strip()
+        tokens_used = response.usage.total_tokens if response.usage else 0
+
+        return RAGResult(answer=answer, used_rag=False, tokens_used=tokens_used)
+
+    except Exception as e:
+        logger.warning("Greeting LLM call failed: %s", e)
+        return RAGResult(answer="감사합니다! 추가 궁금한 점이 있으시면 언제든 문의해 주세요.")
+
+
 def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
     """RAG-based search: embed question → vector similarity → LLM generation."""
+
+    # 0. Handle greetings/thanks without RAG
+    greeting_result = _handle_greeting(question)
+    if greeting_result is not None:
+        return greeting_result
 
     # If no OpenAI key, fall back to keyword search
     if not OPENAI_API_KEY:
