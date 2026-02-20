@@ -14,3 +14,4 @@ openai>=1.0.0
 pgvector>=0.3.0
 PyJWT>=2.8.0
 numpy>=1.26.0
+openpyxl>=3.1.0

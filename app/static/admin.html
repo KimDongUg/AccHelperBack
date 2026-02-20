@@ -90,6 +90,10 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 새 Q&A 추가
             </button>
+            <button class="btn btn-outline" id="btnExcelUpload" onclick="openUploadModal()" aria-label="엑셀 업로드" style="display:none">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                엑셀 업로드
+            </button>
         </div>
 
         <!-- Table -->
@@ -183,6 +187,39 @@
             <div class="actions">
                 <button class="btn btn-outline" onclick="closeDeleteConfirm()">취소</button>
                 <button class="btn btn-danger" id="confirmDeleteBtn" aria-label="삭제 확인">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Upload Modal -->
+    <div class="modal-overlay" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+        <div class="modal" style="max-width:480px">
+            <div class="modal-header">
+                <h3 id="uploadModalTitle">엑셀 Q&A 일괄 업로드</h3>
+                <button class="modal-close" onclick="closeUploadModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="uploadCompany">대상 회사 <span class="required" aria-hidden="true">*</span></label>
+                    <select id="uploadCompany" class="form-control" aria-required="true">
+                        <option value="">회사를 선택하세요</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="uploadFile">엑셀 파일 (.xlsx) <span class="required" aria-hidden="true">*</span></label>
+                    <input type="file" id="uploadFile" class="form-control" accept=".xlsx" aria-required="true">
+                </div>
+                <p style="font-size:var(--text-sm);color:var(--gray-500);margin-top:8px">
+                    <a href="#" id="downloadTemplate" style="color:var(--primary)">양식 다운로드</a> &mdash;
+                    카테고리, 질문, 답변은 필수입니다.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeUploadModal()">취소</button>
+                <button class="btn btn-primary" id="uploadBtn" onclick="submitUpload()" aria-label="업로드">
+                    <span class="btn-text">업로드</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
             </div>
         </div>
     </div>

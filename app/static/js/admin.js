@@ -18,6 +18,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             AuthSession.save(auth.session, persist);
         }
         document.getElementById('adminUsername').textContent = auth.session.username + '님';
+        // Show upload button for super_admin
+        if (auth.session.role === 'super_admin') {
+            document.getElementById('btnExcelUpload').style.display = '';
+        }
     } catch { AuthSession.redirectToLogin(); return; }
 
     // Session watcher
@@ -401,4 +405,98 @@ function formatDate(dateStr) {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
     return `${d.getFullYear()}-${m}-${day}`;
+}
+
+/* ═══════════════════════════════════════════════
+ *  EXCEL UPLOAD (super_admin only)
+ * ═══════════════════════════════════════════════ */
+async function openUploadModal() {
+    const select = document.getElementById('uploadCompany');
+    // Reset
+    document.getElementById('uploadFile').value = '';
+    select.innerHTML = '<option value="">회사를 선택하세요</option>';
+
+    // Load company list
+    try {
+        const res = await apiGet('/super/tenants');
+        for (const t of res.tenants) {
+            const opt = document.createElement('option');
+            opt.value = t.company_id;
+            opt.textContent = `${t.company_name} (ID: ${t.company_id})`;
+            select.appendChild(opt);
+        }
+    } catch (e) {
+        showToast('회사 목록을 불러올 수 없습니다.', 'error');
+        return;
+    }
+
+    // Template download link
+    document.getElementById('downloadTemplate').onclick = (e) => {
+        e.preventDefault();
+        window.location.href = `${API_BASE}/super/qa/upload-template`;
+    };
+
+    document.getElementById('uploadModal').classList.add('show');
+}
+
+function closeUploadModal() {
+    document.getElementById('uploadModal').classList.remove('show');
+    const btn = document.getElementById('uploadBtn');
+    btn.classList.remove('loading');
+    btn.disabled = false;
+}
+
+async function submitUpload() {
+    const companyId = document.getElementById('uploadCompany').value;
+    const fileInput = document.getElementById('uploadFile');
+
+    if (!companyId) {
+        showToast('대상 회사를 선택해 주세요.', 'error');
+        return;
+    }
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showToast('엑셀 파일을 선택해 주세요.', 'error');
+        return;
+    }
+
+    const btn = document.getElementById('uploadBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    try {
+        const response = await fetch(`${API_BASE}/super/qa/upload?company_id=${companyId}`, {
+            method: 'POST',
+            credentials: 'same-origin',
+            body: formData,
+        });
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.detail || '업로드에 실패했습니다.');
+        }
+
+        closeUploadModal();
+
+        let msg = `업로드 완료: 등록 ${data.created}건`;
+        if (data.skipped > 0) msg += `, 스킵 ${data.skipped}건`;
+        if (data.failed > 0) msg += `, 실패 ${data.failed}건`;
+        showToast(msg, data.failed > 0 ? 'warning' : 'success');
+
+        if (data.errors && data.errors.length > 0) {
+            console.warn('Upload errors:', data.errors);
+            for (const err of data.errors.slice(0, 3)) {
+                showToast(err, 'error');
+            }
+        }
+
+        loadQaList();
+        loadStats();
+    } catch (e) {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        showToast('업로드 실패: ' + e.message, 'error');
+    }
 }
