@@ -7,6 +7,7 @@ class SubscriberItem(BaseModel):
     business_number: str | None = None
     address: str | None = None
     subscription_plan: str
+    approval_status: str = "pending"
     billing_active: bool
     has_billing_key: bool
     card_company: str | None = None
@@ -53,3 +54,23 @@ class DashboardOverview(BaseModel):
     free_companies: int = 0
     total_revenue: int = 0
     total_payments: int = 0
+
+
+class ApprovalRequest(BaseModel):
+    status: str  # "approved" or "rejected"
+    reason: str | None = None
+
+
+class DataWarning(BaseModel):
+    type: str
+    found_value: str
+    matched_company: str | None = None
+    matched_company_id: int | None = None
+    qa_id: int
+    context: str
+
+
+class ValidateDataResponse(BaseModel):
+    success: bool = True
+    valid: bool
+    warnings: list[DataWarning] = []

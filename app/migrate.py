@@ -78,6 +78,14 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "deleted_at", "TIMESTAMP")
         _pg_add_column_if_missing(conn, "companies", "qa_customized", "BOOLEAN DEFAULT FALSE")
         _pg_add_column_if_missing(conn, "companies", "status", "VARCHAR(20) DEFAULT 'active'")
+        _pg_add_column_if_missing(conn, "companies", "approval_status", "VARCHAR(20) DEFAULT 'pending'")
+        _pg_add_column_if_missing(conn, "companies", "approved_at", "TIMESTAMP")
+        _pg_add_column_if_missing(conn, "companies", "approved_by", "INTEGER")
+        _pg_add_column_if_missing(conn, "companies", "rejection_reason", "TEXT")
+        # Backfill: mark existing companies as approved
+        conn.execute(text(
+            "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
+        ))
 
         # qa_knowledge table — new RAG columns
         if _pg_table_exists(conn, "qa_knowledge"):
@@ -167,6 +175,14 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "companies", "building_type", "VARCHAR(20)")
             _add_column_if_missing(conn, "companies", "qa_customized", "BOOLEAN DEFAULT 0")
             _add_column_if_missing(conn, "companies", "status", "VARCHAR(20) DEFAULT 'active'")
+            _add_column_if_missing(conn, "companies", "approval_status", "VARCHAR(20) DEFAULT 'pending'")
+            _add_column_if_missing(conn, "companies", "approved_at", "DATETIME")
+            _add_column_if_missing(conn, "companies", "approved_by", "INTEGER")
+            _add_column_if_missing(conn, "companies", "rejection_reason", "TEXT")
+            # Backfill: mark existing companies as approved
+            conn.execute(text(
+                "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
+            ))
 
         # --- qa_knowledge table ---
         if _table_exists(conn, "qa_knowledge"):

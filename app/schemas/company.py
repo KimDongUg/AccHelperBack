@@ -43,6 +43,10 @@ class CompanyResponse(BaseModel):
     max_qa_count: int
     max_admins: int
     is_active: bool
+    approval_status: str = "pending"
+    approved_at: datetime | None = None
+    approved_by: int | None = None
+    rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
@@ -60,6 +64,7 @@ class CompanyPublicResponse(BaseModel):
     phone: str | None = None
     logo_url: str | None = None
     is_active: bool = True
+    approval_status: str = "pending"
 
     model_config = {"from_attributes": True}
 

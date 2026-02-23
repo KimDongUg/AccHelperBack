@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from sqlalchemy import text
@@ -20,6 +20,7 @@ from app.schemas.company import (
     CompanyUpdate,
 )
 from app.services.auth_service import hash_password
+from app.services.jwt_service import decode_token
 
 router = APIRouter(prefix="/api/companies", tags=["companies"])
 
@@ -28,10 +29,10 @@ router = APIRouter(prefix="/api/companies", tags=["companies"])
 
 @router.get("/public", response_model=list[CompanyPublicResponse])
 def list_public_companies(db: Session = Depends(get_db)):
-    """List companies for public display (chatbot company selection)."""
+    """List companies for public display (chatbot company selection). Only approved companies."""
     companies = (
         db.query(Company)
-        .filter(Company.deleted_at == None)
+        .filter(Company.deleted_at == None, Company.approval_status == "approved")
         .order_by(Company.company_id)
         .all()
     )
@@ -39,8 +40,13 @@ def list_public_companies(db: Session = Depends(get_db)):
 
 
 @router.get("/public/{company_id}", response_model=CompanyPublicResponse)
-def get_public_company(company_id: int, db: Session = Depends(get_db)):
-    """Get public company info by ID."""
+def get_public_company(
+    company_id: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    session_token: str | None = Cookie(None),
+):
+    """Get public company info by ID. Unapproved companies return 403 unless super_admin."""
     company = (
         db.query(Company)
         .filter(Company.company_id == company_id, Company.is_active == True, Company.deleted_at == None)
@@ -48,6 +54,19 @@ def get_public_company(company_id: int, db: Session = Depends(get_db)):
     )
     if not company:
         raise HTTPException(status_code=404, detail="회사를 찾을 수 없습니다.")
+
+    # 미승인 업체 접근 차단 (super_admin은 허용)
+    if company.approval_status != "approved":
+        is_super = False
+        auth_header = request.headers.get("authorization", "")
+        token = auth_header[7:] if auth_header.startswith("Bearer ") else session_token
+        if token:
+            payload = decode_token(token)
+            if payload and payload.get("role") == "super_admin":
+                is_super = True
+        if not is_super:
+            raise HTTPException(status_code=403, detail="승인되지 않은 업체입니다.")
+
     return company
 
 

@@ -36,7 +36,7 @@ def get_toss_client_key():
     """프론트엔드에 토스 Client Key 전달"""
     return {"clientKey": TOSS_CLIENT_KEY}
 
-PRICE_DISCOUNTED = 100     # TODO: 테스트 후 24500으로 복원
+PRICE_DISCOUNTED = 24500
 PRICE_FULL = 49000         # 10개 초과: 정가
 MAX_DISCOUNT_COMPANIES = 10
 
