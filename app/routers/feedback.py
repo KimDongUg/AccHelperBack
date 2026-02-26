@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Cookie, Depends, Query, Request
+from datetime import datetime
+
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -8,9 +10,12 @@ from app.models.feedback import Feedback
 from app.schemas.feedback import (
     ChatLogItem,
     ChatLogListResponse,
+    FeedbackCountResponse,
     FeedbackCreate,
     FeedbackListResponse,
     FeedbackResponse,
+    FeedbackStatusResponse,
+    FeedbackStatusUpdate,
     UnmatchedItem,
     UnmatchedListResponse,
 )
@@ -45,6 +50,7 @@ def create_feedback(
         qa_ids=data.qa_ids,
         rating=data.rating,
         comment=data.comment,
+        session_id=data.session_id,
     )
     db.add(fb)
 
@@ -85,6 +91,79 @@ def list_feedback(
     )
 
     return FeedbackListResponse(items=items, total=total, page=page, pages=pages)
+
+
+# --- New /api/feedback endpoints for frontend dashboard ---
+
+@router.get("/api/feedback/count", response_model=FeedbackCountResponse)
+def feedback_dislike_count(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """미처리 불만족(dislike) 건수"""
+    company_id = user["company_id"]
+    query = db.query(Feedback).filter(
+        Feedback.rating == "dislike",
+        Feedback.status == "pending",
+    )
+    if company_id != 0:
+        query = query.filter(Feedback.company_id == company_id)
+    return FeedbackCountResponse(count=query.count())
+
+
+@router.get("/api/feedback", response_model=FeedbackListResponse)
+def list_feedback_api(
+    rating: str | None = Query(None),
+    status: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    size: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """피드백 목록 조회 (관리자). rating/status 필터 가능."""
+    company_id = user["company_id"]
+    query = db.query(Feedback)
+    if company_id != 0:
+        query = query.filter(Feedback.company_id == company_id)
+    if rating:
+        query = query.filter(Feedback.rating == rating)
+    if status:
+        query = query.filter(Feedback.status == status)
+
+    total = query.count()
+    pages = max(1, (total + size - 1) // size)
+    items = (
+        query.order_by(Feedback.created_at.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+    return FeedbackListResponse(items=items, total=total, page=page, pages=pages)
+
+
+@router.patch("/api/feedback/{feedback_id}", response_model=FeedbackStatusResponse)
+def update_feedback_status(
+    feedback_id: int,
+    data: FeedbackStatusUpdate,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    """피드백 처리 상태 변경 (관리자)"""
+    if data.status not in ("resolved", "dismissed"):
+        raise HTTPException(status_code=400, detail="status는 'resolved' 또는 'dismissed'만 가능합니다.")
+
+    company_id = user["company_id"]
+    query = db.query(Feedback).filter(Feedback.id == feedback_id)
+    if company_id != 0:
+        query = query.filter(Feedback.company_id == company_id)
+
+    fb = query.first()
+    if not fb:
+        raise HTTPException(status_code=404, detail="피드백을 찾을 수 없습니다.")
+
+    fb.status = data.status
+    db.commit()
+    return FeedbackStatusResponse(id=fb.id, status=fb.status)
 
 
 @router.get("/admin/unmatched", response_model=UnmatchedListResponse)

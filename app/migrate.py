@@ -100,6 +100,11 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
+        # feedbacks table — status + session_id
+        if _pg_table_exists(conn, "feedbacks"):
+            _pg_add_column_if_missing(conn, "feedbacks", "session_id", "VARCHAR(100)")
+            _pg_add_column_if_missing(conn, "feedbacks", "status", "VARCHAR(20) DEFAULT 'pending'")
+
         conn.commit()
     logger.info("PG: Column migrations committed")
 
@@ -220,6 +225,11 @@ def run_migration(engine: Engine):
             conn.execute(text(
                 "UPDATE chat_logs SET company_id = 1 WHERE company_id IS NULL"
             ))
+
+        # --- feedbacks table ---
+        if _table_exists(conn, "feedbacks"):
+            _add_column_if_missing(conn, "feedbacks", "session_id", "VARCHAR(100)")
+            _add_column_if_missing(conn, "feedbacks", "status", "VARCHAR(20) DEFAULT 'pending'")
 
         conn.commit()
         logger.info("Migration completed successfully")

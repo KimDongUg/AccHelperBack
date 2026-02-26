@@ -17,4 +17,6 @@ class Feedback(Base):
     qa_ids: Mapped[str] = mapped_column(Text, default="")
     rating: Mapped[str] = mapped_column(String(10), nullable=False)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

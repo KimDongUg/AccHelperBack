@@ -13,6 +13,7 @@ class FeedbackCreate(BaseModel):
     rating: str  # "like" or "dislike"
     comment: str | None = None
     company_id: int | None = None
+    session_id: str | None = None
 
     @field_validator("qa_ids", mode="before")
     @classmethod
@@ -31,6 +32,8 @@ class FeedbackResponse(BaseModel):
     qa_ids: str = ""
     rating: str
     comment: str | None = None
+    session_id: str | None = None
+    status: str = "pending"
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -41,6 +44,19 @@ class FeedbackListResponse(BaseModel):
     total: int
     page: int
     pages: int
+
+
+class FeedbackCountResponse(BaseModel):
+    count: int
+
+
+class FeedbackStatusUpdate(BaseModel):
+    status: str  # "resolved"
+
+
+class FeedbackStatusResponse(BaseModel):
+    id: int
+    status: str
 
 
 class UnmatchedItem(BaseModel):
