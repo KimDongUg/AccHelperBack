@@ -27,6 +27,9 @@ class Company(Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     approved_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    hero_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    greeting_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    categories: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON string
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

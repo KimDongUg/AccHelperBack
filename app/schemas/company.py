@@ -1,6 +1,12 @@
+import json
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+
+class CategoryItem(BaseModel):
+    label: str
+    question: str
 
 
 class CompanyCreate(BaseModel):
@@ -28,6 +34,9 @@ class CompanyUpdate(BaseModel):
     max_qa_count: int | None = None
     max_admins: int | None = None
     is_active: bool | None = None
+    hero_text: str | None = None
+    greeting_text: str | None = None
+    categories: list[CategoryItem] | None = None
 
 
 class CompanyResponse(BaseModel):
@@ -47,11 +56,21 @@ class CompanyResponse(BaseModel):
     approved_at: datetime | None = None
     approved_by: int | None = None
     rejection_reason: str | None = None
+    hero_text: str | None = None
+    greeting_text: str | None = None
+    categories: list[CategoryItem] | None = None
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def parse_categories(cls, v):
+        if isinstance(v, str):
+            return json.loads(v) if v else None
+        return v
 
 
 class CompanyPublicResponse(BaseModel):
@@ -65,8 +84,18 @@ class CompanyPublicResponse(BaseModel):
     logo_url: str | None = None
     is_active: bool = True
     approval_status: str = "pending"
+    hero_text: str | None = None
+    greeting_text: str | None = None
+    categories: list[CategoryItem] | None = None
 
     model_config = {"from_attributes": True}
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def parse_categories(cls, v):
+        if isinstance(v, str):
+            return json.loads(v) if v else None
+        return v
 
 
 class CompanyListResponse(BaseModel):

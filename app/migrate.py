@@ -82,6 +82,9 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "approved_at", "TIMESTAMP")
         _pg_add_column_if_missing(conn, "companies", "approved_by", "INTEGER")
         _pg_add_column_if_missing(conn, "companies", "rejection_reason", "TEXT")
+        _pg_add_column_if_missing(conn, "companies", "hero_text", "TEXT")
+        _pg_add_column_if_missing(conn, "companies", "greeting_text", "TEXT")
+        _pg_add_column_if_missing(conn, "companies", "categories", "TEXT")
         # Backfill: mark existing companies as approved
         conn.execute(text(
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
@@ -179,6 +182,9 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "companies", "approved_at", "DATETIME")
             _add_column_if_missing(conn, "companies", "approved_by", "INTEGER")
             _add_column_if_missing(conn, "companies", "rejection_reason", "TEXT")
+            _add_column_if_missing(conn, "companies", "hero_text", "TEXT")
+            _add_column_if_missing(conn, "companies", "greeting_text", "TEXT")
+            _add_column_if_missing(conn, "companies", "categories", "TEXT")
             # Backfill: mark existing companies as approved
             conn.execute(text(
                 "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"

@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
@@ -23,6 +24,16 @@ from app.services.auth_service import hash_password
 from app.services.jwt_service import decode_token
 
 router = APIRouter(prefix="/api/companies", tags=["companies"])
+
+
+def _serialize_categories(update_data: dict) -> dict:
+    """Convert categories list[dict] to JSON string for DB storage."""
+    if "categories" in update_data and update_data["categories"] is not None:
+        update_data["categories"] = json.dumps(
+            [item.model_dump() if hasattr(item, "model_dump") else item for item in update_data["categories"]],
+            ensure_ascii=False,
+        )
+    return update_data
 
 
 # --- Public endpoints (no auth) ---
@@ -202,6 +213,7 @@ def update_my_company(
 
     # admin은 구독/한도 변경 불가
     update_data = data.model_dump(exclude_unset=True)
+    _serialize_categories(update_data)
     blocked = {"subscription_plan", "max_qa_count", "max_admins", "is_active"}
     for key in blocked:
         update_data.pop(key, None)
@@ -263,6 +275,7 @@ def update_company(
         raise HTTPException(status_code=404, detail="회사를 찾을 수 없습니다.")
 
     update_data = data.model_dump(exclude_unset=True)
+    _serialize_categories(update_data)
     for key, value in update_data.items():
         setattr(company, key, value)
     company.updated_at = datetime.utcnow()
