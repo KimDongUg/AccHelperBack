@@ -64,5 +64,10 @@ JWT_SECRET_KEY = _jwt_secret_raw or SECRET_KEY  # dev-only fallback
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 
+# Supabase Storage
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")  # service_role key
+SUPABASE_BUCKET = os.getenv("SUPABASE_BUCKET", "images")
+
 # Static files
 STATIC_CACHE_MAX_AGE = int(os.getenv("STATIC_CACHE_MAX_AGE", "86400"))

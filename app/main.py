@@ -31,6 +31,7 @@ from app.routers import feedback as feedback_router
 from app.routers import prompts as prompts_router
 from app.routers import super_admin as super_admin_router
 from app.routers import unanswered_questions as unanswered_questions_router
+from app.routers import upload as upload_router
 from app.rls import setup_rls
 from app.seed import seed_data
 
@@ -132,6 +133,7 @@ app.include_router(feedback_router.router)
 app.include_router(prompts_router.router)
 app.include_router(super_admin_router.router)
 app.include_router(unanswered_questions_router.router)
+app.include_router(upload_router.router)
 
 if (STATIC_DIR / "css").exists():
     app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")
