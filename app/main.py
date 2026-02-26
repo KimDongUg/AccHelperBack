@@ -135,6 +135,9 @@ app.include_router(super_admin_router.router)
 app.include_router(unanswered_questions_router.router)
 app.include_router(upload_router.router)
 
+from app.config import UPLOAD_DIR
+app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+
 if (STATIC_DIR / "css").exists():
     app.mount("/css", StaticFiles(directory=str(STATIC_DIR / "css")), name="css")
 if (STATIC_DIR / "js").exists():
