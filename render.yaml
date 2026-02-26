@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: acchelper
+    runtime: docker
+    plan: starter
+    disk:
+      name: uploads
+      mountPath: /data/uploads
+      sizeGB: 1
+    envVars:
+      - key: UPLOAD_DIR
+        value: /data/uploads
