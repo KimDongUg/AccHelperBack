@@ -9,6 +9,7 @@ from app.models.tenant_usage import TenantUsageMonthly
 from app.models.qa_embedding import QaEmbedding
 from app.models.feedback import Feedback
 from app.models.prompt_template import PromptTemplate
+from app.models.unanswered_question import UnansweredQuestion
 
 __all__ = [
     "Company",
@@ -23,4 +24,5 @@ __all__ = [
     "QaEmbedding",
     "Feedback",
     "PromptTemplate",
+    "UnansweredQuestion",
 ]
