@@ -95,6 +95,17 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
             _pg_add_column_if_missing(conn, "qa_knowledge", "tags", "TEXT DEFAULT ''")
             _pg_add_column_if_missing(conn, "qa_knowledge", "created_by", "VARCHAR(100)")
+            _pg_add_column_if_missing(conn, "qa_knowledge", "updated_by", "INTEGER")
+            _pg_add_column_if_missing(conn, "qa_knowledge", "view_count", "INTEGER DEFAULT 0")
+            _pg_add_column_if_missing(conn, "qa_knowledge", "used_count", "INTEGER DEFAULT 0")
+            # Fix: created_by was INTEGER, now VARCHAR(100)
+            try:
+                conn.execute(text(
+                    "ALTER TABLE qa_knowledge "
+                    "ALTER COLUMN created_by TYPE VARCHAR(100) USING created_by::text"
+                ))
+            except Exception:
+                pass  # already VARCHAR or doesn't exist
 
         # chat_logs table — RAG columns
         if _pg_table_exists(conn, "chat_logs"):

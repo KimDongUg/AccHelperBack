@@ -158,7 +158,6 @@ def create_qa(
     qa = QaKnowledge(
         **qa_data,
         company_id=target_company_id,
-        created_by=user["user_id"],
     )
     db.add(qa)
 
