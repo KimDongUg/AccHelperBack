@@ -22,6 +22,7 @@ def list_qa(
     search: str = "",
     category: str = "",
     status: str = "",
+    created_by: str | None = Query(None),
     company_id: int | None = Query(None, alias="company_id"),
     db: Session = Depends(get_db),
     user: dict = Depends(require_auth),
@@ -47,6 +48,8 @@ def list_qa(
         query = query.filter(QaKnowledge.is_active == True)
     elif status == "inactive":
         query = query.filter(QaKnowledge.is_active == False)
+    if created_by:
+        query = query.filter(QaKnowledge.created_by == created_by)
 
     total = query.count()
     pages = max(1, (total + size - 1) // size)
