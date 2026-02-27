@@ -27,6 +27,11 @@ class QaUpdate(BaseModel):
     created_by: str | None = None
 
 
+class QaMoveCategory(BaseModel):
+    from_category: str
+    to_category: str
+
+
 class QaResponse(BaseModel):
     qa_id: int
     company_id: int

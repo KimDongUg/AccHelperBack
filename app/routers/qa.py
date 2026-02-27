@@ -9,7 +9,7 @@ from app.models.chat_log import ChatLog
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
 from app.quota import increment_usage
-from app.schemas.qa import QaCreate, QaListResponse, QaResponse, QaUpdate
+from app.schemas.qa import QaCreate, QaListResponse, QaMoveCategory, QaResponse, QaUpdate
 from app.services.embedding_service import delete_qa_embedding, upsert_qa_embedding
 
 router = APIRouter(prefix="/api/qa", tags=["qa"])
@@ -107,6 +107,27 @@ def check_duplicate(
 
     results.sort(key=lambda x: x["similarity"], reverse=True)
     return {"duplicates": results[:5]}
+
+
+@router.patch("/move-category")
+def move_category(
+    data: QaMoveCategory,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_admin),
+):
+    if not data.from_category.strip():
+        raise HTTPException(status_code=400, detail="from_category는 필수입니다.")
+
+    company_id = user["company_id"]
+    query = db.query(QaKnowledge).filter(QaKnowledge.category == data.from_category)
+    if company_id != 0:
+        query = query.filter(QaKnowledge.company_id == company_id)
+
+    moved_count = query.update(
+        {QaKnowledge.category: data.to_category}, synchronize_session="fetch"
+    )
+    db.commit()
+    return {"success": True, "moved_count": moved_count}
 
 
 @router.get("/{qa_id}", response_model=QaResponse)
