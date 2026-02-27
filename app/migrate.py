@@ -90,10 +90,11 @@ def _run_pg_migration(engine: Engine):
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
         ))
 
-        # qa_knowledge table — new RAG columns
+        # qa_knowledge table — new RAG columns + created_by
         if _pg_table_exists(conn, "qa_knowledge"):
             _pg_add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
             _pg_add_column_if_missing(conn, "qa_knowledge", "tags", "TEXT DEFAULT ''")
+            _pg_add_column_if_missing(conn, "qa_knowledge", "created_by", "VARCHAR(100)")
 
         # chat_logs table — RAG columns
         if _pg_table_exists(conn, "chat_logs"):
@@ -198,7 +199,7 @@ def run_migration(engine: Engine):
         # --- qa_knowledge table ---
         if _table_exists(conn, "qa_knowledge"):
             _add_column_if_missing(conn, "qa_knowledge", "company_id", "INTEGER DEFAULT 1")
-            _add_column_if_missing(conn, "qa_knowledge", "created_by", "INTEGER")
+            _add_column_if_missing(conn, "qa_knowledge", "created_by", "VARCHAR(100)")
             _add_column_if_missing(conn, "qa_knowledge", "updated_by", "INTEGER")
             _add_column_if_missing(conn, "qa_knowledge", "view_count", "INTEGER DEFAULT 0")
             _add_column_if_missing(conn, "qa_knowledge", "used_count", "INTEGER DEFAULT 0")

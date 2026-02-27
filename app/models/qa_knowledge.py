@@ -22,7 +22,7 @@ class QaKnowledge(Base):
     aliases: Mapped[str] = mapped_column(Text, nullable=False, default="")
     tags: Mapped[str] = mapped_column(Text, nullable=False, default="")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
-    created_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_by: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
     updated_by: Mapped[int | None] = mapped_column(Integer, nullable=True)
     view_count: Mapped[int] = mapped_column(Integer, default=0)
     used_count: Mapped[int] = mapped_column(Integer, default=0)

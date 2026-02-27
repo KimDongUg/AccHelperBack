@@ -12,6 +12,7 @@ class QaCreate(BaseModel):
     aliases: str = ""
     tags: str = ""
     is_active: bool = True
+    created_by: str | None = None
 
 
 class QaUpdate(BaseModel):
@@ -23,6 +24,7 @@ class QaUpdate(BaseModel):
     aliases: str | None = None
     tags: str | None = None
     is_active: bool | None = None
+    created_by: str | None = None
 
 
 class QaResponse(BaseModel):
@@ -35,7 +37,7 @@ class QaResponse(BaseModel):
     aliases: str = ""
     tags: str = ""
     is_active: bool
-    created_by: int | None = None
+    created_by: str | None = None
     updated_by: int | None = None
     view_count: int = 0
     used_count: int = 0
