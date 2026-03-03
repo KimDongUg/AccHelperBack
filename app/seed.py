@@ -180,19 +180,30 @@ _BASE_QA_ENTRIES: list[dict] = [
 _PHONE_RE = re.compile(r"0\d{1,2}-\d{3,4}-\d{4}")
 _MOBILE_RE = re.compile(r"01[016789]-\d{3,4}-\d{4}")
 _TEL_SYMBOL_RE = re.compile(r"☎\S+")
+# 1XXX toll-free / special numbers: 1577-1385, 1588-3366, 1544-7777, etc.
+_TOLLFREE_RE = re.compile(r"\b1[3-9]\d{2}-\d{4}\b")
+# Bank account numbers (must NOT overlap phone patterns like 070-4204-7818)
+# 4-group: 355-0031-4558-73 | long-group: 915-910007-80605
+_ACCOUNT_RE = re.compile(
+    r"\b\d{3}-\d{4}-\d{4}-\d{2,6}\b"
+    r"|\b\d{3}-\d{5,6}-\d{4,6}\b"
+)
 
 
 def _anonymize_text(text: str, replacements: dict[str, str]) -> str:
-    """Apply explicit text replacements, then mask phone-number patterns."""
+    """Apply explicit text replacements, then mask phone/account patterns."""
     if not text:
         return text
     # 1. Explicit replacements (company name, address, etc.)
     for old, new in replacements.items():
         text = text.replace(old, new)
-    # 2. Remaining phone / mobile patterns
+    # 2. Bank account numbers (before phone — longer patterns first)
+    text = _ACCOUNT_RE.sub("***-****-****-**", text)
+    # 3. Phone / mobile patterns (order: specific → general)
     text = _TEL_SYMBOL_RE.sub("☎0XX-XXXX-XXXX", text)
     text = _MOBILE_RE.sub("0XX-XXXX-XXXX", text)
     text = _PHONE_RE.sub("0XX-XXXX-XXXX", text)
+    text = _TOLLFREE_RE.sub("XXXX-XXXX", text)
     return text
 
 
@@ -216,8 +227,16 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
         # --- Dynamic copy: read source company's settings & QA at runtime ---
         "copy_from_company_id": 1,
         "anonymize_map": {
+            # 관리단/회사명 변형 (긴 것부터 먼저)
+            "세종시2차푸르지오시티관리단": "샘플오피스텔관리단",
             "세종푸르지오시티 2차": "샘플오피스텔",
+            "세종푸르지오시티2차": "샘플오피스텔",
+            # 주소
             "세종 가름로 255-21": "OO시 OO구 OO로 000-00",
+            "세종시 가름로 255-21": "OO시 OO구 OO로 000-00",
+            "가름로 255-21": "OO로 000-00",
+            # 건물 코드 (자동이체용)
+            "60771": "XXXXX",
         },
         # --- Tenant quota (enterprise) ---
         "quota": {

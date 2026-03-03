@@ -90,17 +90,20 @@ def _run_pg_migration(engine: Engine):
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
         ))
 
-        # One-time reset: delete sample company (1000) old base QA entries
-        # so that seed_sample_companies() re-copies from the source company.
-        # Detects old data by checking if exactly 25 rows exist (base seed count).
-        _sample_qa_cnt = conn.execute(text(
+        # Reset sample company (1000) QA if it contains un-anonymized data
+        # (account numbers, real company names, etc.) so seed re-copies cleanly.
+        _has_raw = conn.execute(text(
             "SELECT COUNT(*) FROM qa_knowledge WHERE company_id = 1000"
+            " AND (answer LIKE '%세종%' OR answer LIKE '%355-0031%'"
+            "      OR answer LIKE '%915-910007%' OR answer LIKE '%60771%'"
+            "      OR answer LIKE '%070-%' OR answer LIKE '%044-%'"
+            "      OR answer LIKE '%1577-%' OR answer LIKE '%1588-%')"
         )).scalar()
-        if _sample_qa_cnt == 25:
+        if _has_raw and _has_raw > 0:
             conn.execute(text(
                 "DELETE FROM qa_knowledge WHERE company_id = 1000"
             ))
-            logger.info("PG: Deleted old base QA entries for sample company 1000")
+            logger.info("PG: Reset sample company 1000 QA for re-anonymization")
 
         # qa_knowledge table — new RAG columns + created_by
         if _pg_table_exists(conn, "qa_knowledge"):
