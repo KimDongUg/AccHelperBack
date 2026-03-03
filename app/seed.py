@@ -1,5 +1,7 @@
 import copy
 import json
+import logging
+import re
 
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,8 @@ from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
 from app.services.auth_service import hash_password
+
+logger = logging.getLogger("acchelper")
 
 # ---------------------------------------------------------------------------
 # Base Q&A entries (25 total) -- shared by company_id=1 seed and reused
@@ -171,6 +175,28 @@ _BASE_QA_ENTRIES: list[dict] = [
 ]
 
 # ---------------------------------------------------------------------------
+# Anonymization: mask phone numbers, addresses, names, account numbers
+# ---------------------------------------------------------------------------
+_PHONE_RE = re.compile(r"0\d{1,2}-\d{3,4}-\d{4}")
+_MOBILE_RE = re.compile(r"01[016789]-\d{3,4}-\d{4}")
+_TEL_SYMBOL_RE = re.compile(r"☎\S+")
+
+
+def _anonymize_text(text: str, replacements: dict[str, str]) -> str:
+    """Apply explicit text replacements, then mask phone-number patterns."""
+    if not text:
+        return text
+    # 1. Explicit replacements (company name, address, etc.)
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    # 2. Remaining phone / mobile patterns
+    text = _TEL_SYMBOL_RE.sub("☎0XX-XXXX-XXXX", text)
+    text = _MOBILE_RE.sub("0XX-XXXX-XXXX", text)
+    text = _PHONE_RE.sub("0XX-XXXX-XXXX", text)
+    return text
+
+
+# ---------------------------------------------------------------------------
 # Sample company configurations  (company_id 1000+)
 # To add another sample company later, just append a dict to this list.
 # ---------------------------------------------------------------------------
@@ -187,19 +213,12 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
         "max_admins": 50,
         "is_active": True,
         "approval_status": "approved",
-        "greeting_text": (
-            "안녕하세요! 샘플오피스텔 관리사무소 AI 챗봇입니다. "
-            "관리비, 이주정산, 시설 문의 등 궁금한 점을 편하게 질문해 주세요."
-        ),
-        "categories": json.dumps(
-            [
-                {"label": "이주정산", "question": "이주정산이 뭔가요?"},
-                {"label": "관리비", "question": "관리비가 궁금해요"},
-                {"label": "회계처리", "question": "회계처리 어떻게 하나요?"},
-                {"label": "기타", "question": "기타 문의사항"},
-            ],
-            ensure_ascii=False,
-        ),
+        # --- Dynamic copy: read source company's settings & QA at runtime ---
+        "copy_from_company_id": 1,
+        "anonymize_map": {
+            "세종푸르지오시티 2차": "샘플오피스텔",
+            "세종 가름로 255-21": "OO시 OO구 OO로 000-00",
+        },
         # --- Tenant quota (enterprise) ---
         "quota": {
             "monthly_chat_cnt": 500,
@@ -214,25 +233,6 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
             "full_name": "샘플 관리자",
             "role": "admin",
         },
-        # --- Q&A overrides ---
-        # Per-index answer overrides for anonymisation.
-        # Key = index into _BASE_QA_ENTRIES, value = replacement answer text.
-        "qa_answer_overrides": {
-            # index 5 – 도시가스·전기·수도 정산 (replace ☎123 → ☎0XX-XXXX-XXXX)
-            5: (
-                "퇴거일에 관리사무소 또는 해당 공급기관에서 계량기를 검침합니다. "
-                "수도: 관리사무소에서 검침 후 일할 정산. "
-                "전기: 한전에 이사정산 신청(☎0XX-XXXX-XXXX) 또는 관리사무소 통해 정산. "
-                "도시가스: 도시가스 회사에 이사정산 신청, 퇴거 당일 밸브 차단. "
-                "각 공과금은 최종 검침일 기준으로 계산되어 보증금에서 공제됩니다."
-            ),
-            # index 24 – 관리사무소 업무 시간과 연락처 (sample data)
-            24: (
-                "관리사무소 운영 시간: 평일 09:00~18:00 (점심 12:00~13:00). "
-                "전화: 02-0000-0000 | 주소: 서울시 OO구 OO동 000-0. "
-                "긴급 상황(누수, 승강기 고장 등)은 24시간 비상연락망을 통해 신고 가능합니다."
-            ),
-        },
     },
     # -----------------------------------------------------------------------
     # To add more sample companies (아파트, 상가, etc.), append here:
@@ -241,20 +241,12 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
     #     "company_id": 1001,
     #     "company_name": "샘플아파트",
     #     "building_type": "아파트",
+    #     "copy_from_company_id": 1,
+    #     "anonymize_map": { "세종푸르지오시티 2차": "샘플아파트", ... },
     #     ...
     # },
     # -----------------------------------------------------------------------
 ]
-
-
-def _build_sample_qa_entries(overrides: dict[int, str] | None = None) -> list[dict]:
-    """Return a deep-copied list of the 25 base Q&A entries with optional
-    per-index answer overrides applied."""
-    entries = copy.deepcopy(_BASE_QA_ENTRIES)
-    if overrides:
-        for idx, new_answer in overrides.items():
-            entries[idx]["answer"] = new_answer
-    return entries
 
 
 # ---------------------------------------------------------------------------
@@ -265,32 +257,61 @@ def _build_sample_qa_entries(overrides: dict[int, str] | None = None) -> list[di
 def seed_sample_companies(db: Session) -> None:
     """Seed sample/demo companies from SAMPLE_COMPANY_CONFIGS.
 
-    Designed so that adding a new sample company only requires appending a
-    config dict to SAMPLE_COMPANY_CONFIGS -- no code changes needed.
+    When ``copy_from_company_id`` is set the source company's settings
+    (greeting_text, categories, hero_text) and QA entries are dynamically
+    copied with sensitive data anonymized via ``anonymize_map`` + regex.
     """
     for cfg in SAMPLE_COMPANY_CONFIGS:
         cid = cfg["company_id"]
+        company_name = cfg["company_name"]
+        source_id = cfg.get("copy_from_company_id")
+        anon_map = cfg.get("anonymize_map", {})
+
+        # Resolve source company (if any)
+        source: Company | None = None
+        if source_id:
+            source = (
+                db.query(Company)
+                .filter(Company.company_id == source_id)
+                .first()
+            )
 
         # --- Company -------------------------------------------------------
-        if db.query(Company).filter(Company.company_id == cid).count() == 0:
+        company = (
+            db.query(Company)
+            .filter(Company.company_id == cid)
+            .first()
+        )
+        if not company:
             company = Company(
                 company_id=cid,
-                company_name=cfg["company_name"],
+                company_name=company_name,
                 building_type=cfg.get("building_type"),
                 business_number=cfg.get("business_number"),
                 industry=cfg.get("industry"),
-                address=cfg.get("address"),
-                phone=cfg.get("phone"),
                 subscription_plan=cfg.get("subscription_plan", "enterprise"),
                 max_qa_count=cfg.get("max_qa_count", 1000),
                 max_admins=cfg.get("max_admins", 50),
                 is_active=cfg.get("is_active", True),
                 approval_status=cfg.get("approval_status", "approved"),
-                greeting_text=cfg.get("greeting_text"),
-                categories=cfg.get("categories"),
             )
             db.add(company)
-            db.commit()
+            db.flush()
+
+        # Sync settings from source company (keeps sample up-to-date)
+        if source:
+            company.company_name = company_name
+            if source.greeting_text:
+                company.greeting_text = _anonymize_text(
+                    source.greeting_text, anon_map,
+                )
+            if source.categories:
+                company.categories = source.categories
+            if source.address:
+                company.address = _anonymize_text(source.address, anon_map)
+            if source.hero_text:
+                company.hero_text = _anonymize_text(source.hero_text, anon_map)
+        db.commit()
 
         # --- Tenant quota --------------------------------------------------
         if db.query(TenantQuota).filter(TenantQuota.company_id == cid).count() == 0:
@@ -328,12 +349,38 @@ def seed_sample_companies(db: Session) -> None:
                 db.add(admin)
                 db.commit()
 
-        # --- Q&A entries ---------------------------------------------------
+        # --- Q&A entries: copy from source with anonymization ---------------
         if db.query(QaKnowledge).filter(QaKnowledge.company_id == cid).count() == 0:
-            qa_entries = _build_sample_qa_entries(cfg.get("qa_answer_overrides"))
-            for entry in qa_entries:
-                qa = QaKnowledge(company_id=cid, **entry)
-                db.add(qa)
+            if source:
+                source_qas = (
+                    db.query(QaKnowledge)
+                    .filter(QaKnowledge.company_id == source_id)
+                    .all()
+                )
+                for qa in source_qas:
+                    new_qa = QaKnowledge(
+                        company_id=cid,
+                        category=qa.category,
+                        question=_anonymize_text(qa.question, anon_map),
+                        answer=_anonymize_text(qa.answer, anon_map),
+                        keywords=qa.keywords or "",
+                        aliases=qa.aliases or "",
+                        tags=qa.tags or "",
+                        is_active=qa.is_active,
+                    )
+                    db.add(new_qa)
+                logger.info(
+                    "Sample company %d: copied %d QA entries from company %d",
+                    cid, len(source_qas), source_id,
+                )
+            else:
+                # Fallback: use base entries when source company is missing
+                for entry in copy.deepcopy(_BASE_QA_ENTRIES):
+                    db.add(QaKnowledge(company_id=cid, **entry))
+                logger.info(
+                    "Sample company %d: seeded %d base QA entries (no source)",
+                    cid, len(_BASE_QA_ENTRIES),
+                )
             db.commit()
 
 

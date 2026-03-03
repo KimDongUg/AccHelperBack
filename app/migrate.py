@@ -90,13 +90,17 @@ def _run_pg_migration(engine: Engine):
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
         ))
 
-        # Fix: sample company categories format (plain array → CategoryItem objects)
-        conn.execute(text(
-            """UPDATE companies SET categories = :cats
-               WHERE company_id = 1000
-                 AND categories IS NOT NULL
-                 AND categories NOT LIKE '%"label"%'"""
-        ), {"cats": '[{"label":"이주정산","question":"이주정산이 뭔가요?"},{"label":"관리비","question":"관리비가 궁금해요"},{"label":"회계처리","question":"회계처리 어떻게 하나요?"},{"label":"기타","question":"기타 문의사항"}]'})
+        # One-time reset: delete sample company (1000) old base QA entries
+        # so that seed_sample_companies() re-copies from the source company.
+        # Detects old data by checking if exactly 25 rows exist (base seed count).
+        _sample_qa_cnt = conn.execute(text(
+            "SELECT COUNT(*) FROM qa_knowledge WHERE company_id = 1000"
+        )).scalar()
+        if _sample_qa_cnt == 25:
+            conn.execute(text(
+                "DELETE FROM qa_knowledge WHERE company_id = 1000"
+            ))
+            logger.info("PG: Deleted old base QA entries for sample company 1000")
 
         # qa_knowledge table — new RAG columns + created_by
         if _pg_table_exists(conn, "qa_knowledge"):
