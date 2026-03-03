@@ -192,7 +192,13 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
             "관리비, 이주정산, 시설 문의 등 궁금한 점을 편하게 질문해 주세요."
         ),
         "categories": json.dumps(
-            ["이주정산", "관리비", "회계처리", "기타"], ensure_ascii=False
+            [
+                {"label": "이주정산", "question": "이주정산이 뭔가요?"},
+                {"label": "관리비", "question": "관리비가 궁금해요"},
+                {"label": "회계처리", "question": "회계처리 어떻게 하나요?"},
+                {"label": "기타", "question": "기타 문의사항"},
+            ],
+            ensure_ascii=False,
         ),
         # --- Tenant quota (enterprise) ---
         "quota": {

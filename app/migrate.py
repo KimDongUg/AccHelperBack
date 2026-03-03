@@ -90,6 +90,14 @@ def _run_pg_migration(engine: Engine):
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
         ))
 
+        # Fix: sample company categories format (plain array → CategoryItem objects)
+        conn.execute(text(
+            """UPDATE companies SET categories = :cats
+               WHERE company_id = 1000
+                 AND categories IS NOT NULL
+                 AND categories NOT LIKE '%"label"%'"""
+        ), {"cats": '[{"label":"이주정산","question":"이주정산이 뭔가요?"},{"label":"관리비","question":"관리비가 궁금해요"},{"label":"회계처리","question":"회계처리 어떻게 하나요?"},{"label":"기타","question":"기타 문의사항"}]'})
+
         # qa_knowledge table — new RAG columns + created_by
         if _pg_table_exists(conn, "qa_knowledge"):
             _pg_add_column_if_missing(conn, "qa_knowledge", "aliases", "TEXT DEFAULT ''")
