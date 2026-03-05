@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
-from sqlalchemy import text
+from sqlalchemy import func, text
 
 from app.database import get_db
 from app.dependencies import require_admin, require_super_admin
@@ -37,6 +37,17 @@ def _serialize_categories(update_data: dict) -> dict:
 
 
 # --- Public endpoints (no auth) ---
+
+@router.get("/public/next-id")
+def get_next_company_id(db: Session = Depends(get_db)):
+    """Return next available company_id (excluding sample companies >= 1000)."""
+    max_id = (
+        db.query(func.max(Company.company_id))
+        .filter(Company.company_id < 1000, Company.deleted_at == None)
+        .scalar()
+    ) or 0
+    return {"next_id": max_id + 1}
+
 
 @router.get("/public", response_model=list[CompanyPublicResponse])
 def list_public_companies(db: Session = Depends(get_db)):
