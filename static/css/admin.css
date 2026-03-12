@@ -896,3 +896,123 @@
         font-size: 1.25rem;
     }
 }
+
+/* ═══════════════════════════════════════════════
+ *  SUBSCRIPTION TAB
+ * ═══════════════════════════════════════════════ */
+.subscription-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+.sub-status-card {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.sub-status-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.sub-status-icon {
+    font-size: 2rem;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: var(--gray-50);
+}
+.sub-status-header h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+.sub-detail {
+    font-size: 0.85rem;
+    color: var(--gray-500);
+    margin: 2px 0 0;
+}
+.sub-card-info {
+    margin-bottom: 1rem;
+}
+.sub-card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    color: var(--gray-700);
+}
+.sub-dates {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+    padding: 1rem;
+    background: var(--gray-50);
+    border-radius: 8px;
+}
+.sub-date-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+.sub-date-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    font-weight: 500;
+}
+.sub-date-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+.sub-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+.btn-danger-outline {
+    color: var(--danger) !important;
+    border-color: var(--danger) !important;
+}
+.btn-danger-outline:hover {
+    background: rgba(239, 68, 68, 0.08) !important;
+}
+.sub-history {
+    background: #fff;
+    border: 1px solid var(--gray-200);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+.sub-history h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin: 0 0 1rem;
+}
+.sub-history .table th {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--gray-500);
+}
+.sub-history .table td {
+    font-size: 0.85rem;
+}
+.sub-status-active {
+    color: var(--success);
+    font-weight: 600;
+}
+.sub-status-failed {
+    color: var(--danger);
+    font-weight: 600;
+}

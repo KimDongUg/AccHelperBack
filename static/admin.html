@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>관리자 - AI Helper 경리도우미</title>
     <link rel="icon" type="image/png" href="/assets/images/logo.png">
-    <link rel="stylesheet" href="/css/common.css?v=11">
-    <link rel="stylesheet" href="/css/admin.css?v=11">
+    <link rel="stylesheet" href="/css/common.css?v=13">
+    <link rel="stylesheet" href="/css/admin.css?v=13">
 </head>
 <body>
     <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
@@ -167,6 +167,7 @@
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="unanswered" id="tabUnanswered">미답변 질문</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="statistics" id="tabStatistics">통계</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
         </div>
 
         <!-- Tab: Q&A Management -->
@@ -450,6 +451,67 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab: Subscription Management -->
+        <div class="tab-content" id="tabContentSubscription" role="tabpanel" style="display:none">
+            <div class="subscription-wrap">
+                <!-- 구독 상태 카드 -->
+                <div class="sub-status-card" id="subStatusCard">
+                    <div class="sub-status-header">
+                        <div class="sub-status-icon" id="subStatusIcon">💳</div>
+                        <div>
+                            <h3 id="subPlanLabel">구독 정보 로딩 중...</h3>
+                            <p id="subPlanDetail" class="sub-detail"></p>
+                        </div>
+                    </div>
+                    <div class="sub-card-info" id="subCardInfo" style="display:none">
+                        <span class="sub-card-badge" id="subCardBadge"></span>
+                    </div>
+                    <div class="sub-dates" id="subDates" style="display:none">
+                        <div class="sub-date-item">
+                            <span class="sub-date-label">마지막 결제일</span>
+                            <span class="sub-date-value" id="subLastPaid">-</span>
+                        </div>
+                        <div class="sub-date-item">
+                            <span class="sub-date-label">다음 결제 예정일</span>
+                            <span class="sub-date-value" id="subNextPay">-</span>
+                        </div>
+                        <div class="sub-date-item">
+                            <span class="sub-date-label">월 구독료</span>
+                            <span class="sub-date-value" id="subAmount">-</span>
+                        </div>
+                    </div>
+                    <div class="sub-actions">
+                        <button class="btn btn-primary" id="subPayBtn" onclick="initSubscriptionPayment()">카드 등록 및 결제</button>
+                        <button class="btn btn-outline" id="subRePayBtn" style="display:none" onclick="executeRePayment()">재결제 (구독 갱신)</button>
+                        <button class="btn btn-outline btn-danger-outline" id="subCancelBtn" style="display:none" onclick="cancelSubscription()">구독 해지</button>
+                    </div>
+                </div>
+
+                <!-- 결제 내역 -->
+                <div class="sub-history">
+                    <h3>결제 내역</h3>
+                    <div class="table-responsive">
+                        <table class="table" id="subHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>결제일</th>
+                                    <th>주문명</th>
+                                    <th>금액</th>
+                                    <th>상태</th>
+                                    <th>비고</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subHistoryBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="subHistoryEmpty" class="empty-state" style="display:none">
+                        <p>결제 내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <!-- Create/Edit QA Modal -->
@@ -685,13 +747,14 @@
         </div>
     </footer>
 
+    <script src="https://js.tosspayments.com/v2/standard"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>if(typeof marked!=='undefined')marked.setOptions({breaks:true});</script>
-    <script src="/js/api.js?v=11"></script>
-    <script src="/js/admin.js?v=12"></script>
+    <script src="/js/api.js?v=13"></script>
+    <script src="/js/admin.js?v=13"></script>
 </body>
 </html>

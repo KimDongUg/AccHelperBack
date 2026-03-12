@@ -235,6 +235,7 @@ function switchTab(tab) {
     if (tab === 'unanswered') { unansweredPage = 1; loadUnansweredList(); }
     if (tab === 'logs') { logPage = 1; loadActivityLogs(); }
     if (tab === 'statistics') initStatistics();
+    if (tab === 'subscription') loadSubscriptionTab();
 }
 
 /* ═══════════════════════════════════════════════
@@ -295,7 +296,7 @@ async function loadStats() {
         const el = document.getElementById('statSubscription');
         const plan = data.subscription_plan;
         if (plan === 'enterprise' && data.active) {
-            el.innerHTML = '<span style="color:var(--success)">유료 구독중</span>';
+            el.innerHTML = '<span style="color:var(--success);cursor:pointer" onclick="switchTab(\'subscription\')" title="구독 관리로 이동">유료 구독중</span>';
         } else if (plan === 'trial' && data.active) {
             let daysText = '';
             if (data.trial_ends_at) {
@@ -2194,4 +2195,227 @@ function renderStatsTable(data, periodType) {
             <td style="text-align:right">${(item.answer_views || 0).toLocaleString()}</td>
         </tr>
     `).join('');
+}
+
+
+/* ═══════════════════════════════════════════════
+ *  SUBSCRIPTION MANAGEMENT
+ * ═══════════════════════════════════════════════ */
+
+let tossPayments = null;
+let subStatus = null;
+
+async function loadSubscriptionTab() {
+    const sess = AuthSession.get();
+    if (!sess) return;
+
+    try {
+        // 상태 + 내역 병렬 로드
+        const [status, history] = await Promise.all([
+            apiGet('/billing/status?company_id=' + sess.companyId),
+            apiGet('/billing/history?company_id=' + sess.companyId),
+        ]);
+
+        subStatus = status;
+        renderSubscriptionStatus(status);
+        renderPaymentHistory(history.payments || []);
+    } catch (e) {
+        document.getElementById('subPlanLabel').textContent = '구독 정보를 불러올 수 없습니다.';
+        document.getElementById('subPlanDetail').textContent = e.message || '';
+    }
+}
+
+function renderSubscriptionStatus(data) {
+    const iconEl = document.getElementById('subStatusIcon');
+    const labelEl = document.getElementById('subPlanLabel');
+    const detailEl = document.getElementById('subPlanDetail');
+    const cardInfo = document.getElementById('subCardInfo');
+    const cardBadge = document.getElementById('subCardBadge');
+    const datesEl = document.getElementById('subDates');
+    const payBtn = document.getElementById('subPayBtn');
+    const rePayBtn = document.getElementById('subRePayBtn');
+    const cancelBtn = document.getElementById('subCancelBtn');
+
+    const plan = data.subscription_plan;
+    const active = data.active;
+
+    if (plan === 'enterprise' && active) {
+        iconEl.textContent = '✅';
+        iconEl.style.background = '#f0fdf4';
+        labelEl.textContent = '유료 구독중';
+        labelEl.style.color = 'var(--success)';
+        detailEl.textContent = 'Enterprise 플랜 — Q&A 1,000건, 관리자 50명';
+        payBtn.textContent = '카드 변경';
+        payBtn.style.display = '';
+        rePayBtn.style.display = '';
+        cancelBtn.style.display = '';
+    } else if (plan === 'trial' && active) {
+        iconEl.textContent = '⏳';
+        iconEl.style.background = '#fffbeb';
+        labelEl.textContent = '무료 체험중';
+        labelEl.style.color = '#f59e0b';
+        let daysLeft = '';
+        if (data.trial_ends_at) {
+            const diff = Math.ceil((new Date(data.trial_ends_at) - new Date()) / 86400000);
+            daysLeft = ' (' + Math.max(diff, 0) + '일 남음)';
+        }
+        detailEl.textContent = 'Trial 플랜' + daysLeft + ' — 카드 등록 시 유료 전환';
+        payBtn.textContent = '카드 등록 및 결제';
+        payBtn.style.display = '';
+        rePayBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+    } else {
+        iconEl.textContent = '💳';
+        iconEl.style.background = 'var(--gray-50)';
+        labelEl.textContent = '무료 플랜';
+        labelEl.style.color = 'var(--gray-700)';
+        detailEl.textContent = 'Free 플랜 — Q&A 100건, 관리자 5명';
+        payBtn.textContent = '카드 등록 및 결제';
+        payBtn.style.display = '';
+        rePayBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+    }
+
+    // 카드 정보
+    if (data.has_billing_key && data.card_company) {
+        cardInfo.style.display = '';
+        cardBadge.textContent = '💳 ' + data.card_company + ' ' + (data.card_number || '');
+    } else {
+        cardInfo.style.display = 'none';
+    }
+
+    // 결제 날짜 정보 (결제 내역에서 가져옴 — 비동기로 업데이트)
+    loadPaymentDates();
+}
+
+async function loadPaymentDates() {
+    const sess = AuthSession.get();
+    if (!sess) return;
+
+    try {
+        const history = await apiGet('/billing/history?company_id=' + sess.companyId);
+        const payments = (history.payments || []).filter(p => p.status === 'success');
+
+        const datesEl = document.getElementById('subDates');
+        const lastPaidEl = document.getElementById('subLastPaid');
+        const nextPayEl = document.getElementById('subNextPay');
+        const amountEl = document.getElementById('subAmount');
+
+        if (payments.length > 0) {
+            datesEl.style.display = '';
+            const lastPayment = payments[0]; // most recent
+            const lastDate = new Date(lastPayment.paid_at);
+            lastPaidEl.textContent = lastDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            // 다음 결제일 = 마지막 결제일 + 30일
+            const nextDate = new Date(lastDate);
+            nextDate.setDate(nextDate.getDate() + 30);
+            nextPayEl.textContent = nextDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            amountEl.textContent = lastPayment.amount.toLocaleString() + '원';
+        } else {
+            datesEl.style.display = 'none';
+        }
+    } catch (e) {
+        // 무시
+    }
+}
+
+function renderPaymentHistory(payments) {
+    const tbody = document.getElementById('subHistoryBody');
+    const empty = document.getElementById('subHistoryEmpty');
+
+    if (!payments.length) {
+        tbody.innerHTML = '';
+        empty.style.display = '';
+        return;
+    }
+
+    empty.style.display = 'none';
+    tbody.innerHTML = payments.map(p => {
+        const date = new Date(p.paid_at).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+        const statusClass = p.status === 'success' ? 'sub-status-active' : 'sub-status-failed';
+        const statusText = p.status === 'success' ? '성공' : '실패';
+        return `<tr>
+            <td>${date}</td>
+            <td>${p.order_name || '-'}</td>
+            <td style="text-align:right">${p.amount.toLocaleString()}원</td>
+            <td><span class="${statusClass}">${statusText}</span></td>
+            <td style="font-size:0.8rem;color:var(--gray-500)">${p.failure_reason || ''}</td>
+        </tr>`;
+    }).join('');
+}
+
+async function initSubscriptionPayment() {
+    const sess = AuthSession.get();
+    if (!sess) { showToast('로그인이 필요합니다.', 'error'); return; }
+
+    try {
+        // 토스 Client Key 가져오기
+        const keyData = await apiGet('/billing/client-key');
+        if (!keyData.clientKey) {
+            showToast('결제 설정이 되어 있지 않습니다.', 'error');
+            return;
+        }
+
+        // Toss Payments SDK v2 초기화
+        tossPayments = TossPayments(keyData.clientKey);
+        const payment = tossPayments.payment();
+        const customerKey = 'company_' + sess.companyId;
+        const origin = window.location.origin;
+
+        // 카드 등록 (빌링키 발급) 페이지로 리다이렉트
+        await payment.requestBillingAuth({
+            method: 'CARD',
+            customerKey: customerKey,
+            successUrl: origin + '/api/billing/success',
+            failUrl: origin + '/api/billing/fail',
+        });
+    } catch (e) {
+        if (e.code === 'USER_CANCEL') return;
+        showToast('결제 초기화 실패: ' + (e.message || e), 'error');
+    }
+}
+
+async function executeRePayment() {
+    const sess = AuthSession.get();
+    if (!sess) return;
+
+    if (!confirm('구독을 갱신 결제하시겠습니까?\n마지막 결제일이 새 구독 기준일이 됩니다.')) return;
+
+    try {
+        const result = await apiPost('/billing/pay', {
+            company_id: sess.companyId,
+            order_name: '보듬누리 구독 갱신',
+        });
+
+        if (result.success) {
+            showToast('결제가 완료되었습니다! (' + (result.amount || 0).toLocaleString() + '원)', 'success');
+            loadSubscriptionTab(); // 새로고침
+        } else {
+            showToast('결제 실패: ' + result.message, 'error');
+        }
+    } catch (e) {
+        showToast('결제 오류: ' + (e.message || e), 'error');
+    }
+}
+
+async function cancelSubscription() {
+    const sess = AuthSession.get();
+    if (!sess) return;
+
+    if (!confirm('구독을 해지하시겠습니까?\nFree 플랜으로 전환되며, Q&A 100건 / 관리자 5명으로 제한됩니다.')) return;
+
+    try {
+        const result = await apiPost('/billing/cancel?company_id=' + sess.companyId);
+        if (result.success) {
+            showToast('구독이 해지되었습니다.', 'warning');
+            loadSubscriptionTab();
+            loadStats(); // 대시보드 구독 상태 갱신
+        } else {
+            showToast(result.message, 'error');
+        }
+    } catch (e) {
+        showToast('해지 오류: ' + (e.message || e), 'error');
+    }
 }
