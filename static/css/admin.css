@@ -1,5 +1,7 @@
 .admin-container {
     max-width: 100%;
+    min-width: 0;
+    width: 100%;
     margin: 0 auto;
     padding: var(--space-lg) var(--space-xl);
 }
@@ -73,10 +75,12 @@
 
 .tab-content {
     display: none;
+    width: 100%;
 }
 
 .tab-content.active {
     display: block;
+    width: 100%;
 }
 
 /* ── Role Badge ─────────────────────────────── */

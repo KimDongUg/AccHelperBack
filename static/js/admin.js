@@ -2391,9 +2391,14 @@ async function executeRePayment() {
 
         if (result.success) {
             showToast('결제가 완료되었습니다! (' + (result.amount || 0).toLocaleString() + '원)', 'success');
-            loadSubscriptionTab(); // 새로고침
+            loadSubscriptionTab();
         } else {
-            showToast('결제 실패: ' + result.message, 'error');
+            const msg = result.message || '';
+            if (msg.includes('빌링') || msg.includes('카드')) {
+                showToast('카드 정보가 만료되었습니다. "카드 변경"으로 새 카드를 등록해주세요.', 'warning');
+            } else {
+                showToast('결제 실패: ' + msg, 'error');
+            }
         }
     } catch (e) {
         showToast('결제 오류: ' + (e.message || e), 'error');
