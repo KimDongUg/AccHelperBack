@@ -2362,12 +2362,14 @@ async function initSubscriptionPayment() {
         tossPayments = TossPayments(keyData.clientKey);
         const customerKey = 'company_' + sess.companyId;
         const origin = window.location.origin;
+        const backendUrl = 'https://acchelperback.onrender.com';
 
         // 카드 등록 (빌링키 발급) 페이지로 리다이렉트
-        await tossPayments.requestBillingAuth('카드', {
-            customerKey: customerKey,
-            successUrl: origin + '/api/billing/success',
-            failUrl: origin + '/api/billing/fail',
+        const payment = tossPayments.payment({ customerKey: customerKey });
+        await payment.requestBillingAuth({
+            method: 'CARD',
+            successUrl: backendUrl + '/api/billing/success',
+            failUrl: backendUrl + '/api/billing/fail',
         });
     } catch (e) {
         if (e.code === 'USER_CANCEL') return;
