@@ -38,21 +38,14 @@ def get_toss_client_key():
     """프론트엔드에 토스 Client Key 전달"""
     return {"clientKey": TOSS_CLIENT_KEY}
 
-PRICE_DISCOUNTED = 24500
-PRICE_FULL = 49000         # 10개 초과: 정가
-MAX_DISCOUNT_COMPANIES = 10
+MONTHLY_PRICE = 49000      # 월 구독료 (부가세 별도)
+MONTHLY_VAT = 4900         # 부가세 10%
+MONTHLY_TOTAL = 53900      # 합계 (VAT 포함)
 
 
 def _calculate_amount(db: Session) -> int:
-    """활성 구독(enterprise) 회사 수 기반 결제 금액 계산"""
-    enterprise_count = (
-        db.query(Company)
-        .filter(Company.subscription_plan == "enterprise", Company.deleted_at == None)
-        .count()
-    )
-    if enterprise_count < MAX_DISCOUNT_COMPANIES:
-        return PRICE_DISCOUNTED
-    return PRICE_FULL
+    """월 구독 결제 금액 (VAT 포함)"""
+    return MONTHLY_TOTAL
 
 
 def _toss_auth_header() -> dict:
