@@ -285,13 +285,13 @@ def get_usage_stats(
 
 def _quarter_expr(timestamp_col):
     """Build a quarter expression like '2026-Q1' compatible with SQLite and PostgreSQL."""
-    year_part = func.substr(func.cast(timestamp_col, String(30)), 1, 4)
-    month_str = func.substr(func.cast(timestamp_col, String(30)), 6, 2)
-    # Convert month string to quarter number
+    ts_str = func.cast(timestamp_col, String(30))
+    year_part = func.substr(ts_str, 1, 4)
+    month_str = func.substr(ts_str, 6, 2)
     quarter = case(
-        (month_str.in_(["01", "02", "03"]), "Q1"),
-        (month_str.in_(["04", "05", "06"]), "Q2"),
-        (month_str.in_(["07", "08", "09"]), "Q3"),
-        else_="Q4",
+        (month_str.in_(["01", "02", "03"]), "-Q1"),
+        (month_str.in_(["04", "05", "06"]), "-Q2"),
+        (month_str.in_(["07", "08", "09"]), "-Q3"),
+        else_="-Q4",
     )
-    return year_part + literal_column("'-'") + quarter
+    return func.concat(year_part, quarter)
