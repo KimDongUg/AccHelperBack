@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import func
+from sqlalchemy import Integer as SAInteger, String, case, cast, func, literal_column
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -201,3 +202,96 @@ def get_trends(
             for row in rows
         ]
     }
+
+
+@router.get("/usage")
+def get_usage_stats(
+    period: str = Query("daily", regex="^(daily|monthly|quarterly|yearly)$"),
+    date_from: str = Query(..., alias="from"),
+    date_to: str = Query(..., alias="to"),
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """
+    Usage statistics (visitors, question views, answer views) grouped by period.
+    Data is strictly filtered by company_id from JWT.
+    super_admin can optionally pass company_id query param.
+    """
+    # Determine company filter — strict isolation
+    cid = user["company_id"]
+    role = user.get("role", "viewer")
+    if role == "super_admin" and company_id is not None:
+        cid = company_id
+    # cid == 0 means super_admin without company (show all only if no filter)
+
+    # Parse date range
+    try:
+        dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+        dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return {"items": []}
+
+    # Base query filtered by company and date range
+    base = db.query(ChatLog).filter(
+        ChatLog.timestamp >= dt_from,
+        ChatLog.timestamp <= dt_to,
+    )
+    if cid != 0:
+        base = base.filter(ChatLog.company_id == cid)
+
+    # Build period expression
+    if period == "daily":
+        period_expr = func.date(ChatLog.timestamp)
+    elif period == "monthly":
+        # Works for both PostgreSQL (to_char) and SQLite (strftime)
+        period_expr = func.substr(func.cast(ChatLog.timestamp, String(30)), 1, 7)
+    elif period == "quarterly":
+        # Extract year and quarter
+        period_expr = _quarter_expr(ChatLog.timestamp)
+    else:  # yearly
+        period_expr = func.substr(func.cast(ChatLog.timestamp, String(30)), 1, 4)
+
+    # Aggregate
+    rows = (
+        base.with_entities(
+            period_expr.label("period"),
+            func.count(func.distinct(ChatLog.session_id)).label("visitors"),
+            func.count(ChatLog.log_id).label("question_views"),
+            func.sum(
+                case(
+                    (ChatLog.qa_id != None, 1),
+                    else_=0,
+                )
+            ).label("answer_views"),
+        )
+        .group_by(period_expr)
+        .order_by(period_expr)
+        .all()
+    )
+
+    items = [
+        {
+            "period": str(row.period),
+            "visitors": row.visitors or 0,
+            "question_views": row.question_views or 0,
+            "answer_views": int(row.answer_views or 0),
+        }
+        for row in rows
+    ]
+
+    return {"items": items}
+
+
+def _quarter_expr(timestamp_col):
+    """Build a quarter expression like '2026-Q1' compatible with SQLite and PostgreSQL."""
+    year_part = func.substr(func.cast(timestamp_col, String(30)), 1, 4)
+    month_str = func.substr(func.cast(timestamp_col, String(30)), 6, 2)
+    # Convert month string to quarter number
+    quarter = case(
+        (month_str.in_(["01", "02", "03"]), "Q1"),
+        (month_str.in_(["04", "05", "06"]), "Q2"),
+        (month_str.in_(["07", "08", "09"]), "Q3"),
+        else_="Q4",
+    )
+    return year_part + literal_column("'-'") + quarter
