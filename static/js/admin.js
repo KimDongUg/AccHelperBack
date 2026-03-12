@@ -2360,13 +2360,11 @@ async function initSubscriptionPayment() {
 
         // Toss Payments SDK v2 초기화
         tossPayments = TossPayments(keyData.clientKey);
-        const payment = tossPayments.payment();
         const customerKey = 'company_' + sess.companyId;
         const origin = window.location.origin;
 
         // 카드 등록 (빌링키 발급) 페이지로 리다이렉트
-        await payment.requestBillingAuth({
-            method: 'CARD',
+        await tossPayments.requestBillingAuth('카드', {
             customerKey: customerKey,
             successUrl: origin + '/api/billing/success',
             failUrl: origin + '/api/billing/fail',
