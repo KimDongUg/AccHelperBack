@@ -167,16 +167,6 @@ def create_qa(
     if user_company_id == 0 and data.company_id is not None:
         target_company_id = data.company_id
 
-    # Check max_qa_count quota (skip for super_admin)
-    if target_company_id != 0:
-        company = db.query(Company).filter(Company.company_id == target_company_id).first()
-        if company:
-            current_count = db.query(QaKnowledge).filter(QaKnowledge.company_id == target_company_id).count()
-            if current_count >= company.max_qa_count:
-                raise HTTPException(
-                    status_code=403,
-                    detail=f"Q&A 수 한도({company.max_qa_count}개)를 초과했습니다.",
-                )
 
     qa_data = data.model_dump(exclude={"company_id"})
     qa = QaKnowledge(
