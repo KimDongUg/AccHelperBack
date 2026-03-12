@@ -1,11 +1,13 @@
 import logging
+import os
 import time
 from base64 import b64encode
 from datetime import datetime, timedelta
 
 import httpx
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import SITE_URL, TOSS_CLIENT_KEY, TOSS_SECRET_KEY
@@ -485,5 +487,123 @@ def billing_cancel(
 
     logger.info("Subscription cancelled for company_id=%d", company_id)
     return BillingCancelResponse(success=True, message="구독이 해지되었습니다.")
+
+
+# ──────────────────────────────────────────────
+# 자동 갱신 결제 (Cron에서 호출)
+# ──────────────────────────────────────────────
+
+CRON_SECRET = os.getenv("CRON_SECRET", "")
+
+
+def _verify_cron_secret(x_cron_secret: str = Header(...)):
+    if not CRON_SECRET:
+        raise HTTPException(status_code=503, detail="CRON_SECRET not configured")
+    if x_cron_secret != CRON_SECRET:
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
+
+
+@router.post("/auto-renew", dependencies=[Depends(_verify_cron_secret)])
+async def billing_auto_renew(db: Session = Depends(get_db)):
+    """매월 자동 갱신 결제.
+
+    각 enterprise 회사의 마지막 성공 결제일 기준 30일이 지나면 자동 결제 실행.
+    Cron에서 매일 호출 → 해당일 대상 회사만 결제.
+    """
+    # enterprise + 활성 빌링키가 있는 회사 목록
+    active_companies = (
+        db.query(BillingKey.company_id, BillingKey.billing_key, BillingKey.customer_key, BillingKey.id)
+        .join(Company, Company.company_id == BillingKey.company_id)
+        .filter(
+            BillingKey.is_active == True,
+            Company.subscription_plan == "enterprise",
+            Company.deleted_at == None,
+        )
+        .all()
+    )
+
+    results = {}
+    now = datetime.utcnow()
+
+    for bk_company_id, bk_billing_key, bk_customer_key, bk_id in active_companies:
+        # 마지막 성공 결제일 조회
+        last_payment = (
+            db.query(func.max(PaymentHistory.paid_at))
+            .filter(
+                PaymentHistory.company_id == bk_company_id,
+                PaymentHistory.status == "success",
+            )
+            .scalar()
+        )
+
+        if not last_payment:
+            results[bk_company_id] = "no_previous_payment"
+            continue
+
+        # 마지막 결제일로부터 30일 경과 체크
+        days_since = (now - last_payment).days
+        if days_since < 30:
+            results[bk_company_id] = f"not_due (last: {days_since} days ago)"
+            continue
+
+        # 결제 실행
+        order_id = f"auto_{bk_company_id}_{int(time.time())}"
+        pay_amount = _calculate_amount(db)
+
+        company = db.query(Company).filter(Company.company_id == bk_company_id).first()
+        customer_name = company.company_name if company else f"company_{bk_company_id}"
+
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{TOSS_API_BASE}/billing/{bk_billing_key}",
+                    json={
+                        "customerKey": bk_customer_key,
+                        "amount": pay_amount,
+                        "orderId": order_id,
+                        "orderName": "보듬누리 구독 자동갱신",
+                        "customerName": customer_name,
+                    },
+                    headers=_toss_auth_header(),
+                    timeout=30.0,
+                )
+
+            result = resp.json()
+
+            if resp.status_code == 200:
+                history = PaymentHistory(
+                    company_id=bk_company_id,
+                    billing_key_id=bk_id,
+                    order_id=order_id,
+                    order_name="보듬누리 구독 자동갱신",
+                    amount=pay_amount,
+                    status="success",
+                    payment_key=result.get("paymentKey"),
+                )
+                db.add(history)
+                db.commit()
+                results[bk_company_id] = f"success ({pay_amount}원)"
+                logger.info("Auto-renew success: company_id=%d, amount=%d", bk_company_id, pay_amount)
+            else:
+                failure_msg = result.get("message", "결제 실패")
+                history = PaymentHistory(
+                    company_id=bk_company_id,
+                    billing_key_id=bk_id,
+                    order_id=order_id,
+                    order_name="보듬누리 구독 자동갱신",
+                    amount=pay_amount,
+                    status="failed",
+                    failure_reason=failure_msg,
+                )
+                db.add(history)
+                db.commit()
+                results[bk_company_id] = f"failed: {failure_msg}"
+                logger.warning("Auto-renew failed: company_id=%d, reason=%s", bk_company_id, failure_msg)
+        except Exception as exc:
+            results[bk_company_id] = f"error: {exc}"
+            logger.error("Auto-renew error: company_id=%d, %s", bk_company_id, exc)
+
+    logger.info("Auto-renew complete: %s", results)
+    return {"status": "ok", "results": results}
 
 
