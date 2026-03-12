@@ -589,6 +589,7 @@
                 <h3 id="adminModalTitle">관리자 추가</h3>
                 <button class="modal-close" onclick="closeAdminModal()" aria-label="닫기">&times;</button>
             </div>
+            <form id="adminForm" onsubmit="event.preventDefault(); saveAdmin();">
             <div class="modal-body">
                 <input type="hidden" id="editAdminId">
                 <div class="form-group">
@@ -618,9 +619,10 @@
                 <input type="hidden" id="adminRole" value="admin">
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeAdminModal()">취소</button>
-                <button class="btn btn-primary" id="adminSaveBtn" onclick="saveAdmin()">저장</button>
+                <button class="btn btn-outline" type="button" onclick="closeAdminModal()">취소</button>
+                <button class="btn btn-primary" id="adminSaveBtn" type="submit">저장</button>
             </div>
+            </form>
         </div>
     </div>
 
@@ -646,6 +648,7 @@
                 <h3 id="profileModalTitle">내 정보 수정</h3>
                 <button class="modal-close" onclick="closeProfileModal()" aria-label="닫기">&times;</button>
             </div>
+            <form id="profileForm" onsubmit="event.preventDefault(); saveProfile();">
             <div class="modal-body">
                 <div class="form-group">
                     <label for="profileEmail">이메일</label>
@@ -675,9 +678,10 @@
                 </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeProfileModal()">취소</button>
-                <button class="btn btn-primary" id="profileSaveBtn" onclick="saveProfile()">저장</button>
+                <button class="btn btn-outline" type="button" onclick="closeProfileModal()">취소</button>
+                <button class="btn btn-primary" id="profileSaveBtn" type="submit">저장</button>
             </div>
+            </form>
         </div>
     </div>
 
