@@ -61,6 +61,11 @@ class ApprovalRequest(BaseModel):
     reason: str | None = None
 
 
+class SubscriptionUpdateRequest(BaseModel):
+    billing_active: bool
+    subscription_plan: str  # "enterprise" or "free"
+
+
 class DataWarning(BaseModel):
     type: str
     found_value: str

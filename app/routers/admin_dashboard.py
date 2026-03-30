@@ -20,6 +20,7 @@ from app.schemas.admin_dashboard import (
     PaymentListResponse,
     SubscriberItem,
     SubscriberListResponse,
+    SubscriptionUpdateRequest,
     ValidateDataResponse,
 )
 
@@ -245,6 +246,33 @@ def approve_company(
         "success": True,
         "message": f"회사가 {'승인' if body.status == 'approved' else '반려'}되었습니다.",
         "approval_status": company.approval_status,
+    }
+
+
+@router.patch("/companies/{company_id}/subscription")
+def update_subscription(
+    company_id: int,
+    body: SubscriptionUpdateRequest,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """회사 구독 상태 수동 변경 (super_admin 전용) — 오프라인 자동이체 업체용"""
+    company = db.query(Company).filter(Company.company_id == company_id).first()
+    if not company:
+        raise HTTPException(status_code=404, detail="회사를 찾을 수 없습니다.")
+
+    if body.subscription_plan not in ("enterprise", "free"):
+        raise HTTPException(status_code=400, detail="subscription_plan은 'enterprise' 또는 'free'만 가능합니다.")
+
+    company.subscription_plan = body.subscription_plan
+    company.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {
+        "success": True,
+        "message": f"구독 상태가 {'활성' if body.billing_active else '해제'}되었습니다.",
+        "subscription_plan": company.subscription_plan,
+        "billing_active": body.billing_active,
     }
 
 
