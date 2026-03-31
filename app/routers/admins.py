@@ -142,6 +142,7 @@ def create_admin(
         department=data.department,
         position=data.position,
         role=data.role,
+        receive_unanswered_alert=data.receive_unanswered_alert,
     )
     db.add(admin)
     db.commit()

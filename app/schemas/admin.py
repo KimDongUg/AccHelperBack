@@ -11,6 +11,7 @@ class AdminCreate(BaseModel):
     department: str | None = None
     position: str | None = None
     role: str = "admin"
+    receive_unanswered_alert: bool = True
 
 
 class AdminUpdate(BaseModel):
