@@ -23,10 +23,9 @@ def _make_auth_header() -> str:
     """솔라피 HMAC 인증 헤더 생성"""
     date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     salt = uuid.uuid4().hex
-    data = f"date={date}&salt={salt}"
     sig = hmac.new(
         config.SOLAPI_API_SECRET.encode(),
-        data.encode(),
+        (date + salt).encode(),
         hashlib.sha256,
     ).hexdigest()
     return (
