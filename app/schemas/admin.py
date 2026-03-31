@@ -21,6 +21,7 @@ class AdminUpdate(BaseModel):
     position: str | None = None
     role: str | None = None
     is_active: bool | None = None
+    receive_unanswered_alert: bool | None = None
 
 
 class AdminPasswordChange(BaseModel):
@@ -39,6 +40,7 @@ class AdminResponse(BaseModel):
     position: str | None = None
     role: str
     is_active: bool
+    receive_unanswered_alert: bool = True
     created_at: datetime
     last_login: datetime | None = None
 
