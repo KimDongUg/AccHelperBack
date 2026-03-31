@@ -69,5 +69,7 @@ def send_unanswered_alimtalk(
 
     with httpx.Client(timeout=10.0) as client:
         resp = client.post(SOLAPI_SEND_URL, json=payload, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("[Solapi] %s %s | payload=%s", resp.status_code, resp.text, payload)
         resp.raise_for_status()
         return True
