@@ -6,9 +6,11 @@
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from app import config
+
+KST = timezone(timedelta(hours=9))
 from app.database import SessionLocal
 from app.models.admin_user import AdminUser
 from app.models.company import Company
@@ -26,7 +28,8 @@ def _build_admin_url(company_id: int, question_id: int) -> str:
 
 
 def _format_time(dt: datetime) -> str:
-    return dt.strftime("%Y-%m-%d %H:%M")
+    kst_dt = dt.replace(tzinfo=timezone.utc).astimezone(KST)
+    return kst_dt.strftime("%Y-%m-%d %H:%M")
 
 
 def trigger_unanswered_alert(question_id: int) -> None:
