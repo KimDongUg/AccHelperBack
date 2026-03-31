@@ -18,3 +18,5 @@ class UnansweredQuestion(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
+    alert_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    alert_count: Mapped[int] = mapped_column(Integer, default=0)

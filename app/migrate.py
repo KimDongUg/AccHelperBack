@@ -132,6 +132,14 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "feedbacks", "session_id", "VARCHAR(100)")
             _pg_add_column_if_missing(conn, "feedbacks", "status", "VARCHAR(20) DEFAULT 'pending'")
 
+        # unanswered_questions table — 알림톡 발송 추적 컬럼
+        if _pg_table_exists(conn, "unanswered_questions"):
+            _pg_add_column_if_missing(conn, "unanswered_questions", "alert_sent_at", "TIMESTAMP")
+            _pg_add_column_if_missing(conn, "unanswered_questions", "alert_count", "INTEGER DEFAULT 0")
+
+        # admin_users table — 알림톡 수신 여부
+        _pg_add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT TRUE")
+
         conn.commit()
     logger.info("PG: Column migrations committed")
 
@@ -257,6 +265,15 @@ def run_migration(engine: Engine):
         if _table_exists(conn, "feedbacks"):
             _add_column_if_missing(conn, "feedbacks", "session_id", "VARCHAR(100)")
             _add_column_if_missing(conn, "feedbacks", "status", "VARCHAR(20) DEFAULT 'pending'")
+
+        # --- unanswered_questions table: 알림톡 발송 추적 ---
+        if _table_exists(conn, "unanswered_questions"):
+            _add_column_if_missing(conn, "unanswered_questions", "alert_sent_at", "DATETIME")
+            _add_column_if_missing(conn, "unanswered_questions", "alert_count", "INTEGER DEFAULT 0")
+
+        # --- admin_users table: 알림톡 수신 여부 ---
+        if _table_exists(conn, "admin_users"):
+            _add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT 1")
 
         conn.commit()
         logger.info("Migration completed successfully")

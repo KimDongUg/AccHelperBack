@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -14,6 +14,7 @@ from app.schemas.unanswered_question import (
     UnansweredQuestionStatusResponse,
     UnansweredQuestionStatusUpdate,
 )
+from app.services.alert_service import trigger_unanswered_alert
 
 router = APIRouter(prefix="/api/unanswered-questions", tags=["unanswered-questions"])
 
@@ -21,6 +22,7 @@ router = APIRouter(prefix="/api/unanswered-questions", tags=["unanswered-questio
 @router.post("", response_model=UnansweredQuestionResponse, status_code=201)
 def create_unanswered_question(
     data: UnansweredQuestionCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """미답변 질문 저장 (챗봇에서 호출, 인증 불필요)"""
@@ -32,6 +34,10 @@ def create_unanswered_question(
     db.add(uq)
     db.commit()
     db.refresh(uq)
+
+    # 알림톡 발송 (백그라운드 — 발송 실패가 질문 저장을 막지 않도록)
+    background_tasks.add_task(trigger_unanswered_alert, question_id=uq.id)
+
     return uq
 
 

@@ -64,6 +64,18 @@ JWT_SECRET_KEY = _jwt_secret_raw or SECRET_KEY  # dev-only fallback
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 JWT_EXPIRE_HOURS = int(os.getenv("JWT_EXPIRE_HOURS", "24"))
 
+# Solapi (카카오 알림톡)
+SOLAPI_API_KEY = os.getenv("SOLAPI_API_KEY", "")
+SOLAPI_API_SECRET = os.getenv("SOLAPI_API_SECRET", "")
+SOLAPI_PF_ID = os.getenv("SOLAPI_PF_ID", "")
+SOLAPI_TEMPLATE_ID = os.getenv("SOLAPI_TEMPLATE_ID", "4ZC1gnsxBT")
+
+# AI 답변 신뢰도 임계값
+CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.7"))
+
+# 관리자 페이지 베이스 URL (알림톡 링크용)
+ADMIN_BASE_URL = os.getenv("ADMIN_BASE_URL", "https://acchelper.kr")
+
 # Upload
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(DATA_DIR / "uploads")))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
