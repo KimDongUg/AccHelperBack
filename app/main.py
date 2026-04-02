@@ -22,6 +22,7 @@ from app.models import (
     Feedback, PaymentHistory, PromptTemplate, QaEmbedding, QaKnowledge,
     TenantQuota, TenantUsageMonthly, UnansweredQuestion,
 )
+from app.models.cta_click_log import CtaClickLog
 from app.rate_limit import limiter
 from app.routers import (
     activity_logs, admin_dashboard, admins, auth, billing, chat,
@@ -32,6 +33,7 @@ from app.routers import prompts as prompts_router
 from app.routers import super_admin as super_admin_router
 from app.routers import unanswered_questions as unanswered_questions_router
 from app.routers import upload as upload_router
+from app.routers import cta_logs as cta_logs_router
 from app.rls import setup_rls
 from app.seed import seed_data
 
@@ -134,6 +136,7 @@ app.include_router(prompts_router.router)
 app.include_router(super_admin_router.router)
 app.include_router(unanswered_questions_router.router)
 app.include_router(upload_router.router)
+app.include_router(cta_logs_router.router)
 
 from app.config import UPLOAD_DIR
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
