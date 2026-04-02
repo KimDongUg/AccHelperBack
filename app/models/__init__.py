@@ -10,6 +10,7 @@ from app.models.qa_embedding import QaEmbedding
 from app.models.feedback import Feedback
 from app.models.prompt_template import PromptTemplate
 from app.models.unanswered_question import UnansweredQuestion
+from app.models.cta_click_log import CtaClickLog
 
 __all__ = [
     "Company",
@@ -25,4 +26,5 @@ __all__ = [
     "Feedback",
     "PromptTemplate",
     "UnansweredQuestion",
+    "CtaClickLog",
 ]
