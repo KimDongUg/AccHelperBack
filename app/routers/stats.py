@@ -283,6 +283,104 @@ def get_usage_stats(
     return {"items": items}
 
 
+@router.get("/question-views")
+def get_question_views(
+    date_from: str = Query(..., alias="from"),
+    date_to: str = Query(..., alias="to"),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """
+    Per-question view counts grouped by date.
+    Shows which questions were viewed and how many times each day.
+    """
+    cid = user["company_id"]
+    role = user.get("role", "viewer")
+    if role == "super_admin" and company_id is not None:
+        cid = company_id
+
+    try:
+        dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+        dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return {"items": [], "total_pages": 0, "page": page, "summary": {}, "daily_totals": []}
+
+    # Base filter
+    base = db.query(ChatLog).filter(
+        ChatLog.timestamp >= dt_from,
+        ChatLog.timestamp <= dt_to,
+    )
+    if cid != 0:
+        base = base.filter(ChatLog.company_id == cid)
+
+    if search:
+        base = base.filter(ChatLog.user_question.ilike(f"%{search}%"))
+
+    # ── Daily totals for chart ──
+    daily_rows = (
+        base.with_entities(
+            func.date(ChatLog.timestamp).label("date"),
+            func.count(ChatLog.log_id).label("views"),
+        )
+        .group_by(func.date(ChatLog.timestamp))
+        .order_by(func.date(ChatLog.timestamp))
+        .all()
+    )
+    daily_totals = [{"date": str(r.date), "views": r.views or 0} for r in daily_rows]
+
+    # ── Per-question per-day breakdown ──
+    detail_query = (
+        base.with_entities(
+            func.date(ChatLog.timestamp).label("date"),
+            ChatLog.user_question.label("question"),
+            ChatLog.category.label("category"),
+            func.count(ChatLog.log_id).label("view_count"),
+        )
+        .group_by(func.date(ChatLog.timestamp), ChatLog.user_question, ChatLog.category)
+        .order_by(func.date(ChatLog.timestamp).desc(), func.count(ChatLog.log_id).desc())
+    )
+
+    total_count = detail_query.count()
+    total_pages = max(1, (total_count + size - 1) // size)
+
+    items = detail_query.offset((page - 1) * size).limit(size).all()
+
+    # ── Summary ──
+    summary_row = base.with_entities(
+        func.count(func.distinct(ChatLog.user_question)).label("unique_questions"),
+        func.count(ChatLog.log_id).label("total_views"),
+    ).first()
+
+    unique_questions = summary_row.unique_questions if summary_row else 0
+    total_views = summary_row.total_views if summary_row else 0
+    num_days = len(daily_totals) or 1
+    avg_daily_views = round(total_views / num_days)
+
+    return {
+        "summary": {
+            "unique_questions": unique_questions,
+            "total_views": total_views,
+            "avg_daily_views": avg_daily_views,
+        },
+        "daily_totals": daily_totals,
+        "items": [
+            {
+                "date": str(r.date),
+                "question": r.question or "",
+                "category": r.category or "",
+                "view_count": r.view_count or 0,
+            }
+            for r in items
+        ],
+        "page": page,
+        "total_pages": total_pages,
+    }
+
+
 def _quarter_expr(timestamp_col):
     """Build a quarter expression like '2026-Q1' compatible with SQLite and PostgreSQL."""
     ts_str = func.cast(timestamp_col, String(30))
