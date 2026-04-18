@@ -107,10 +107,10 @@ def register_company(
     if existing_bn:
         return CompanyRegisterResponse(success=False, message="이미 등록된 회사입니다.")
 
-    # 회사번호 자동 할당: 삭제된 회사·샘플(>=1000) 제외 후 max+1
+    # 회사번호 자동 할당: 샘플(>=1000) 제외, 삭제된 회사 포함하여 max+1 (PK 충돌 방지)
     max_id = (
         db.query(func.max(Company.company_id))
-        .filter(Company.company_id < 1000, Company.deleted_at == None)
+        .filter(Company.company_id < 1000)
         .scalar()
     ) or 0
     assigned_id = max_id + 1
