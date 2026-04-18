@@ -11,6 +11,15 @@ from app.dependencies import require_admin, require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.qa_knowledge import QaKnowledge
 from app.models.company import Company
+from app.models.chat_log import ChatLog
+from app.models.feedback import Feedback
+from app.models.activity_log import AdminActivityLog
+from app.models.billing import BillingKey, PaymentHistory
+from app.models.unanswered_question import UnansweredQuestion
+from app.models.qa_embedding import QaEmbedding
+from app.models.tenant_quota import TenantQuota
+from app.models.tenant_usage import TenantUsageMonthly
+from app.models.prompt_template import PromptTemplate
 from app.schemas.company import (
     CompanyCreate,
     CompanyListResponse,
@@ -118,9 +127,13 @@ def register_company(
     # 해당 ID에 soft-deleted 레코드가 있으면 hard-delete (PK 충돌 방지)
     old_company = db.query(Company).filter(Company.company_id == assigned_id).first()
     if old_company:
-        # 삭제된 회사의 관련 데이터도 정리
-        db.query(AdminUser).filter(AdminUser.company_id == assigned_id).delete()
-        db.query(QaKnowledge).filter(QaKnowledge.company_id == assigned_id).delete()
+        # 삭제된 회사의 모든 관련 데이터 정리
+        for model in [
+            ChatLog, Feedback, AdminActivityLog, BillingKey, PaymentHistory,
+            UnansweredQuestion, QaEmbedding, TenantQuota, TenantUsageMonthly,
+            PromptTemplate, QaKnowledge, AdminUser,
+        ]:
+            db.query(model).filter(model.company_id == assigned_id).delete()
         db.delete(old_company)
         db.flush()
 
