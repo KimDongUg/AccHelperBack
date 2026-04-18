@@ -98,9 +98,12 @@ def register_company(
     db: Session = Depends(get_db),
 ):
     """비로그인 회사 등록 (회사 + 관리자 동시 생성)"""
-    # company_id 중복 체크
+    # company_id 중복 체크 (삭제된 회사 제외)
     if data.company_id is not None:
-        existing_id = db.query(Company).filter(Company.company_id == data.company_id).first()
+        existing_id = db.query(Company).filter(
+            Company.company_id == data.company_id,
+            Company.deleted_at == None,
+        ).first()
         if existing_id:
             return CompanyRegisterResponse(success=False, message="이미 사용 중인 회사번호입니다.")
 
