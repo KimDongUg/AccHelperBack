@@ -107,13 +107,22 @@ def register_company(
     if existing_bn:
         return CompanyRegisterResponse(success=False, message="이미 등록된 회사입니다.")
 
-    # 회사번호 자동 할당: 샘플(>=1000) 제외, 삭제된 회사 포함하여 max+1 (PK 충돌 방지)
+    # 회사번호 자동 할당: 활성 회사 기준 max+1 (삭제된 회사 번호 재사용)
     max_id = (
         db.query(func.max(Company.company_id))
-        .filter(Company.company_id < 1000)
+        .filter(Company.company_id < 1000, Company.deleted_at == None)
         .scalar()
     ) or 0
     assigned_id = max_id + 1
+
+    # 해당 ID에 soft-deleted 레코드가 있으면 hard-delete (PK 충돌 방지)
+    old_company = db.query(Company).filter(Company.company_id == assigned_id).first()
+    if old_company:
+        # 삭제된 회사의 관련 데이터도 정리
+        db.query(AdminUser).filter(AdminUser.company_id == assigned_id).delete()
+        db.query(QaKnowledge).filter(QaKnowledge.company_id == assigned_id).delete()
+        db.delete(old_company)
+        db.flush()
 
     # 회사 생성
     company = Company(
