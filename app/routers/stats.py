@@ -283,8 +283,21 @@ def get_usage_stats(
     return {"items": items}
 
 
-def _build_qv_base(db, user, date_from, date_to, company_id):
-    """Shared base query builder for question-views endpoints."""
+@router.get("/question-views")
+def get_question_views(
+    date_from: str = Query(..., alias="from"),
+    date_to: str = Query(..., alias="to"),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    search: Optional[str] = Query(None),
+    company_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """
+    Per-question view counts grouped by date.
+    Shows which questions were viewed and how many times each day.
+    """
     cid = user["company_id"]
     role = user.get("role", "viewer")
     if role == "super_admin" and company_id is not None:
@@ -294,124 +307,41 @@ def _build_qv_base(db, user, date_from, date_to, company_id):
         dt_from = datetime.strptime(date_from, "%Y-%m-%d")
         dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
     except ValueError:
-        return None, None, None
+        return {"items": [], "total_pages": 0, "page": page, "summary": {}, "daily_totals": []}
 
+    # Base filter
     base = db.query(ChatLog).filter(
         ChatLog.timestamp >= dt_from,
         ChatLog.timestamp <= dt_to,
     )
     if cid != 0:
         base = base.filter(ChatLog.company_id == cid)
-    return base, dt_from, dt_to
 
+    if search:
+        base = base.filter(ChatLog.user_question.ilike(f"%{search}%"))
 
-def _period_expr(period, timestamp_col):
-    """Build period grouping expression."""
-    if period == "daily":
-        return func.date(timestamp_col)
-    elif period == "monthly":
-        return func.substr(func.cast(timestamp_col, String(30)), 1, 7)
-    elif period == "quarterly":
-        return _quarter_expr(timestamp_col)
-    else:  # yearly
-        return func.substr(func.cast(timestamp_col, String(30)), 1, 4)
-
-
-@router.get("/question-views")
-def get_question_views(
-    period: str = Query("daily", regex="^(daily|monthly|quarterly|yearly)$"),
-    date_from: str = Query(..., alias="from"),
-    date_to: str = Query(..., alias="to"),
-    company_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
-):
-    """
-    Question view counts grouped by period (daily/monthly/quarterly/yearly).
-    Returns per-period summary + overall summary for chart & table.
-    """
-    base, dt_from, dt_to = _build_qv_base(db, user, date_from, date_to, company_id)
-    if base is None:
-        return {"periods": [], "summary": {}}
-
-    pe = _period_expr(period, ChatLog.timestamp)
-
-    # ── Per-period aggregation ──
-    rows = (
+    # ── Daily totals for chart ──
+    daily_rows = (
         base.with_entities(
-            pe.label("period"),
-            func.count(func.distinct(ChatLog.user_question)).label("unique_questions"),
-            func.count(ChatLog.log_id).label("total_views"),
+            func.date(ChatLog.timestamp).label("date"),
+            func.count(ChatLog.log_id).label("views"),
         )
-        .group_by(pe)
-        .order_by(pe)
+        .group_by(func.date(ChatLog.timestamp))
+        .order_by(func.date(ChatLog.timestamp))
         .all()
     )
+    daily_totals = [{"date": str(r.date), "views": r.views or 0} for r in daily_rows]
 
-    periods = [
-        {
-            "period": str(r.period),
-            "unique_questions": r.unique_questions or 0,
-            "total_views": r.total_views or 0,
-        }
-        for r in rows
-    ]
-
-    # ── Overall summary ──
-    summary_row = base.with_entities(
-        func.count(func.distinct(ChatLog.user_question)).label("unique_questions"),
-        func.count(ChatLog.log_id).label("total_views"),
-    ).first()
-
-    unique_questions = summary_row.unique_questions if summary_row else 0
-    total_views = summary_row.total_views if summary_row else 0
-    num_periods = len(periods) or 1
-    avg_daily_views = round(total_views / num_periods)
-
-    return {
-        "summary": {
-            "unique_questions": unique_questions,
-            "total_views": total_views,
-            "avg_daily_views": avg_daily_views,
-        },
-        "periods": periods,
-    }
-
-
-@router.get("/question-views/detail")
-def get_question_views_detail(
-    period: str = Query("daily", regex="^(daily|monthly|quarterly|yearly)$"),
-    period_key: str = Query(...),
-    date_from: str = Query(..., alias="from"),
-    date_to: str = Query(..., alias="to"),
-    page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
-    company_id: Optional[int] = Query(None),
-    db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
-):
-    """
-    Detailed per-question breakdown for a specific period.
-    e.g. period_key='2026-04-01' for daily, '2026-04' for monthly, etc.
-    """
-    base, dt_from, dt_to = _build_qv_base(db, user, date_from, date_to, company_id)
-    if base is None:
-        return {"items": [], "total_pages": 0, "page": page}
-
-    pe = _period_expr(period, ChatLog.timestamp)
-
-    # Filter to the specific period
-    base = base.filter(pe == period_key)
-
-    # Group by question
+    # ── Per-question per-day breakdown ──
     detail_query = (
         base.with_entities(
+            func.date(ChatLog.timestamp).label("date"),
             ChatLog.user_question.label("question"),
             ChatLog.category.label("category"),
             func.count(ChatLog.log_id).label("view_count"),
         )
-        .group_by(ChatLog.user_question, ChatLog.category)
-        .order_by(func.count(ChatLog.log_id).desc())
+        .group_by(func.date(ChatLog.timestamp), ChatLog.user_question, ChatLog.category)
+        .order_by(func.date(ChatLog.timestamp).desc(), func.count(ChatLog.log_id).desc())
     )
 
     total_count = detail_query.count()
@@ -419,9 +349,27 @@ def get_question_views_detail(
 
     items = detail_query.offset((page - 1) * size).limit(size).all()
 
+    # ── Summary ──
+    summary_row = base.with_entities(
+        func.count(func.distinct(ChatLog.user_question)).label("unique_questions"),
+        func.count(ChatLog.log_id).label("total_views"),
+    ).first()
+
+    unique_questions = summary_row.unique_questions if summary_row else 0
+    total_views = summary_row.total_views if summary_row else 0
+    num_days = len(daily_totals) or 1
+    avg_daily_views = round(total_views / num_days)
+
     return {
+        "summary": {
+            "unique_questions": unique_questions,
+            "total_views": total_views,
+            "avg_daily_views": avg_daily_views,
+        },
+        "daily_totals": daily_totals,
         "items": [
             {
+                "date": str(r.date),
                 "question": r.question or "",
                 "category": r.category or "",
                 "view_count": r.view_count or 0,
