@@ -20,6 +20,11 @@ from app.services.solapi_service import send_unanswered_alimtalk
 logger = logging.getLogger(__name__)
 
 
+def is_facility_management_company(company_name: str | None) -> bool:
+    """시설관리 회사는 카카오 알림톡 기능을 지원하지 않음."""
+    return bool(company_name) and "시설관리" in company_name
+
+
 def _build_admin_url(company_id: int, question_id: int) -> str:
     return (
         f"{config.ADMIN_BASE_URL}/admin.html"
@@ -50,6 +55,14 @@ def trigger_unanswered_alert(question_id: int) -> None:
             Company.company_id == question.company_id
         ).first()
         apt_name = company.company_name if company else "관리자"
+
+        # 2-1. 시설관리 회사는 알림톡 발송 차단
+        if company and is_facility_management_company(company.company_name):
+            logger.info(
+                "[Alert] 시설관리 회사 알림톡 차단 | company_id=%s | name=%s",
+                question.company_id, company.company_name,
+            )
+            return
 
         # 3. 알림 수신 관리자 목록 조회
         admins = db.query(AdminUser).filter(

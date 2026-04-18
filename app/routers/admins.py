@@ -14,6 +14,7 @@ from app.schemas.admin import (
     AdminResponse,
     AdminUpdate,
 )
+from app.services.alert_service import is_facility_management_company
 from app.services.auth_service import hash_password, verify_password
 
 router = APIRouter(prefix="/api/admins", tags=["admins"])
@@ -133,6 +134,13 @@ def create_admin(
     if data.role == "super_admin" and user.get("role") != "super_admin":
         raise HTTPException(status_code=403, detail="최고 관리자만 최고 관리자를 생성할 수 있습니다.")
 
+    # 시설관리 회사는 카카오 알림톡 미지원 → 수신 플래그 강제 해제
+    receive_alert = data.receive_unanswered_alert
+    if company_id != 0:
+        target_company = db.query(Company).filter(Company.company_id == company_id).first()
+        if target_company and is_facility_management_company(target_company.company_name):
+            receive_alert = False
+
     admin = AdminUser(
         company_id=company_id,
         email=data.email,
@@ -142,7 +150,7 @@ def create_admin(
         department=data.department,
         position=data.position,
         role=data.role,
-        receive_unanswered_alert=data.receive_unanswered_alert,
+        receive_unanswered_alert=receive_alert,
     )
     db.add(admin)
     db.commit()
@@ -181,6 +189,12 @@ def update_admin(
         existing = dup_query.first()
         if existing:
             raise HTTPException(status_code=400, detail="이미 등록된 이메일입니다.")
+
+    # 시설관리 회사는 카카오 알림톡 미지원 → 수신 플래그 강제 해제
+    if "receive_unanswered_alert" in update_data and admin.company_id:
+        target_company = db.query(Company).filter(Company.company_id == admin.company_id).first()
+        if target_company and is_facility_management_company(target_company.company_name):
+            update_data["receive_unanswered_alert"] = False
 
     for key, value in update_data.items():
         setattr(admin, key, value)
