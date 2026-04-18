@@ -98,15 +98,6 @@ def register_company(
     db: Session = Depends(get_db),
 ):
     """비로그인 회사 등록 (회사 + 관리자 동시 생성)"""
-    # company_id 중복 체크 (삭제된 회사 제외)
-    if data.company_id is not None:
-        existing_id = db.query(Company).filter(
-            Company.company_id == data.company_id,
-            Company.deleted_at == None,
-        ).first()
-        if existing_id:
-            return CompanyRegisterResponse(success=False, message="이미 사용 중인 회사번호입니다.")
-
     # 사업자번호 중복 체크
     existing_bn = (
         db.query(Company)
@@ -115,6 +106,14 @@ def register_company(
     )
     if existing_bn:
         return CompanyRegisterResponse(success=False, message="이미 등록된 회사입니다.")
+
+    # 회사번호 자동 할당: 삭제된 회사·샘플(>=1000) 제외 후 max+1
+    max_id = (
+        db.query(func.max(Company.company_id))
+        .filter(Company.company_id < 1000, Company.deleted_at == None)
+        .scalar()
+    ) or 0
+    assigned_id = max_id + 1
 
     # 회사 생성
     company = Company(
@@ -125,20 +124,18 @@ def register_company(
         address=data.address,
         phone=data.phone,
     )
-    if data.company_id is not None:
-        company.company_id = data.company_id
+    company.company_id = assigned_id
     db.add(company)
     db.flush()  # company_id 확보
 
-    # 수동 company_id 지정 시 PostgreSQL 시퀀스 동기화
-    if data.company_id is not None:
-        try:
-            db.execute(text(
-                "SELECT setval('companies_company_id_seq', "
-                "(SELECT COALESCE(MAX(company_id), 1) FROM companies))"
-            ))
-        except Exception:
-            pass  # SQLite는 시퀀스 없음
+    # PostgreSQL 시퀀스 동기화
+    try:
+        db.execute(text(
+            "SELECT setval('companies_company_id_seq', "
+            "(SELECT COALESCE(MAX(company_id), 1) FROM companies))"
+        ))
+    except Exception:
+        pass  # SQLite는 시퀀스 없음
 
     # 이메일 중복 체크
     dup_email = (
