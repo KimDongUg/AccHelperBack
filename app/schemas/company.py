@@ -37,6 +37,11 @@ class CompanyUpdate(BaseModel):
     hero_text: str | None = None
     greeting_text: str | None = None
     categories: list[CategoryItem] | None = None
+    notice_active: bool | None = None
+    notice_text: str | None = None
+    notice_text_link: str | None = None
+    notice_image_url: str | None = None
+    notice_image_link: str | None = None
 
 
 class CompanyResponse(BaseModel):
@@ -59,6 +64,11 @@ class CompanyResponse(BaseModel):
     hero_text: str | None = None
     greeting_text: str | None = None
     categories: list[CategoryItem] | None = None
+    notice_active: bool = False
+    notice_text: str | None = None
+    notice_text_link: str | None = None
+    notice_image_url: str | None = None
+    notice_image_link: str | None = None
     created_at: datetime
     updated_at: datetime
     deleted_at: datetime | None = None
@@ -87,6 +97,11 @@ class CompanyPublicResponse(BaseModel):
     hero_text: str | None = None
     greeting_text: str | None = None
     categories: list[CategoryItem] | None = None
+    notice_active: bool = False
+    notice_text: str | None = None
+    notice_text_link: str | None = None
+    notice_image_url: str | None = None
+    notice_image_link: str | None = None
 
     model_config = {"from_attributes": True}
 

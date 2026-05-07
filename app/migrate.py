@@ -85,6 +85,11 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "hero_text", "TEXT")
         _pg_add_column_if_missing(conn, "companies", "greeting_text", "TEXT")
         _pg_add_column_if_missing(conn, "companies", "categories", "TEXT")
+        _pg_add_column_if_missing(conn, "companies", "notice_active", "BOOLEAN DEFAULT FALSE")
+        _pg_add_column_if_missing(conn, "companies", "notice_text", "TEXT")
+        _pg_add_column_if_missing(conn, "companies", "notice_text_link", "VARCHAR(500)")
+        _pg_add_column_if_missing(conn, "companies", "notice_image_url", "VARCHAR(500)")
+        _pg_add_column_if_missing(conn, "companies", "notice_image_link", "VARCHAR(500)")
         # Backfill: mark existing companies as approved
         conn.execute(text(
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"

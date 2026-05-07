@@ -30,6 +30,11 @@ class Company(Base):
     hero_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     greeting_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     categories: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON string
+    notice_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    notice_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notice_text_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    notice_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    notice_image_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
