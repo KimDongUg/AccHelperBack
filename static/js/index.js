@@ -176,10 +176,10 @@ async function validateAndStartChat(code) {
         companyLabel.textContent = company.company_name;
         companyLabel.style.display = '';
 
-        // 아파트 전용: 당근 배너 표시
-        const daangnBanner = document.getElementById('daangnBanner');
-        if (daangnBanner) {
-            daangnBanner.style.display = company.building_type === '아파트' ? '' : 'none';
+        // 아파트 전용: 헤더 당근 메뉴 표시
+        const daangnNavLink = document.getElementById('daangnNavLink');
+        if (daangnNavLink) {
+            daangnNavLink.style.display = company.building_type === '아파트' ? '' : 'none';
         }
 
         // Show chat (로그인 없이 누구나 이용 가능)
