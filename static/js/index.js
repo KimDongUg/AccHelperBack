@@ -1,4 +1,4 @@
-/* ── Site Intro (처음 방문 시에만 표시, 팝업 닫힌 후 시작) ── */
+/* ── Site Intro (처음 방문 시에만 표시) ── */
 (function () {
     const intro = document.querySelector('.site-intro');
     if (!intro) return;
@@ -9,18 +9,7 @@
         return;
     }
 
-    // 팝업이 열려있으면 숨겨두고, 닫힌 후 표시
-    var promoOverlay = document.getElementById('promoPopup');
-    if (promoOverlay && promoOverlay.classList.contains('show')) {
-        intro.style.display = 'none';
-        document.addEventListener('promoPopupClosed', function onClose() {
-            intro.style.display = '';
-            startIntroAnimation();
-            document.removeEventListener('promoPopupClosed', onClose);
-        });
-    } else {
-        startIntroAnimation();
-    }
+    startIntroAnimation();
 
     function startIntroAnimation() {
         sessionStorage.setItem('introSeen', '1');
