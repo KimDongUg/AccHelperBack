@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 - AI Helper 경리도우미</title>
+    <title>관리자 - AI Helper</title>
     <link rel="icon" type="image/png" href="/assets/images/logo.png">
     <link rel="stylesheet" href="/css/common.css?v=15">
     <link rel="stylesheet" href="/css/admin.css?v=15">
@@ -13,7 +13,7 @@
 
     <header class="header" role="banner">
         <div class="header-left">
-            <a href="/" class="header-logo" aria-label="AI Helper 경리도우미 홈으로 이동">
+            <a href="/" class="header-logo" aria-label="AI Helper 홈으로 이동">
                 <img src="/assets/images/logo.png" alt="AI Helper 로고" aria-hidden="true">
             </a>
         </div>
@@ -128,10 +128,7 @@
                 <div class="stat-info">
                     <h4>ERP 수집기</h4>
                     <div class="stat-value">
-                        <a class="btn btn-outline btn-sm"
-                           href="https://github.com/KimDongUg/AIHelperCollector/releases/download/v1.0.0/AIHelperCollector-win.zip"
-                           download
-                           style="font-size:0.75rem;padding:0.2rem 0.6rem;text-decoration:none">다운로드</a>
+                        <a class="btn btn-outline btn-sm" href="https://github.com/KimDongUg/AIHelperCollector/releases/download/v1.0.0/AIHelperCollector-win.zip" download style="font-size:0.75rem;padding:0.2rem 0.6rem;text-decoration:none">다운로드</a>
                     </div>
                     <div style="font-size:0.7rem;color:#888;margin-top:2px">v1.0.0 · Windows 10+</div>
                 </div>
@@ -159,9 +156,29 @@
                 </div>
                 <div class="form-group" style="grid-column:1/-1">
                     <label for="dashGreeting">챗봇 인사말</label>
-                    <textarea id="dashGreeting" class="form-control" rows="2" placeholder="예: 안녕하세요! OOO AI 경리입니다. 궁금한 점을 물어보세요."></textarea>
+                    <textarea id="dashGreeting" class="form-control" rows="2" placeholder="예: 안녕하세요! OOO AI Helper입니다. 궁금한 점을 물어보세요."></textarea>
                     <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.25rem">챗봇 첫 화면에 표시되는 인사말입니다.</div>
                 </div>
+                <!-- 공지사항 -->
+                <div class="form-group notice-admin-group" style="grid-column:1/-1">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+                        <label style="margin:0">공지사항</label>
+                        <label class="notice-toggle-wrap">
+                            <input type="checkbox" id="noticeActive">
+                            <span class="notice-toggle-slider"></span>
+                            <span style="font-size:var(--text-sm);color:var(--gray-600);margin-left:0.25rem" id="noticeActiveLabel">비활성</span>
+                        </label>
+                    </div>
+                    <textarea id="noticeText" class="form-control" rows="2" placeholder="공지 내용을 입력하세요. (예: 생활 소음 협조 부탁드립니다...)"></textarea>
+                    <input type="text" id="noticeTextLink" class="form-control" placeholder="텍스트 클릭 시 챗봇에 물어볼 질문 (선택, 예: 층간소음 관련 규정이 어떻게 되나요?)" style="margin-top:0.4rem">
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+                        <input type="file" id="noticeImageFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="uploadNoticeImage(this)">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('noticeImageFile').click()">이미지 선택</button>
+                        <span id="noticeImgStatus" style="font-size:var(--text-xs);color:var(--gray-400)"></span>
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.4rem">공지 활성화 시 챗봇 첫 화면의 인사말 대신 표시됩니다. 이미지는 공지 내용 안에 삽입됩니다.</div>
+                </div>
+
                 <div class="form-group" style="grid-column:1/-1">
                     <label>카테고리 버튼 설정</label>
                     <div id="categoryItemsWrap"></div>
@@ -182,6 +199,7 @@
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="unanswered" id="tabUnanswered">미답변 질문</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="statistics" id="tabStatistics">통계</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="questionViews" id="tabQuestionViews">질문 조회 상세</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
         </div>
 
@@ -197,10 +215,6 @@
                 <label for="categoryFilter" class="sr-only">카테고리 필터</label>
                 <select id="categoryFilter" class="form-control" aria-label="카테고리 필터">
                     <option value="">전체 카테고리</option>
-                    <option value="이주정산">이주정산</option>
-                    <option value="관리비">관리비</option>
-                    <option value="회계처리">회계처리</option>
-                    <option value="기타">기타</option>
                 </select>
                 <label for="statusFilter" class="sr-only">상태 필터</label>
                 <select id="statusFilter" class="form-control" aria-label="상태 필터">
@@ -467,6 +481,72 @@
             </div>
         </div>
 
+        <!-- Tab: Question Views Detail -->
+        <div class="tab-content" id="tabContentQuestionViews" role="tabpanel" style="display:none">
+            <!-- Toolbar -->
+            <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                <h3 style="margin:0;font-size:var(--text-base)">질문 조회 상세</h3>
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto;flex-wrap:wrap">
+                    <select id="qvPeriodType" class="form-control" aria-label="통계 기간 유형" style="min-width:100px">
+                        <option value="daily">일별</option>
+                        <option value="monthly">월별</option>
+                        <option value="quarterly">분기별</option>
+                        <option value="yearly">연도별</option>
+                    </select>
+                    <input type="date" id="qvDateFrom" class="form-control" style="min-width:140px">
+                    <span style="color:var(--gray-500)">~</span>
+                    <input type="date" id="qvDateTo" class="form-control" style="min-width:140px">
+                    <button class="btn btn-primary btn-sm" onclick="loadQuestionViews()">조회</button>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="stats-summary-grid" id="qvSummaryGrid" style="margin-top:1rem">
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">조회된 질문 수</div>
+                    <div class="stats-summary-value" id="qvTotalQuestions">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">총 조회 수</div>
+                    <div class="stats-summary-value" id="qvTotalViews">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">일평균 조회 수</div>
+                    <div class="stats-summary-value" id="qvAvgViews">-</div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="stats-chart-card" style="margin-top:1rem">
+                <h4 class="stats-chart-title">질문 조회 추이 <span style="font-size:var(--text-xs);color:var(--gray-400);font-weight:400">(차트 클릭 시 상세 보기)</span></h4>
+                <div class="stats-chart-wrap">
+                    <canvas id="qvDailyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Period Summary Table -->
+            <div class="qa-table-wrap" style="margin-top:1rem">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="질문 조회 기간별 요약">
+                        <thead>
+                            <tr>
+                                <th scope="col" id="qvColPeriod" style="width:140px">기간</th>
+                                <th scope="col" style="width:120px">질문 수</th>
+                                <th scope="col" style="width:120px">총 조회 수</th>
+                                <th scope="col" style="width:100px">상세</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qvTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="qvEmptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <p>해당 기간의 질문 조회 데이터가 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Subscription Management -->
         <div class="tab-content" id="tabContentSubscription" role="tabpanel" style="display:none">
             <div class="subscription-wrap">
@@ -529,6 +609,37 @@
         </div>
     </main>
 
+    <!-- Question Views Detail Modal -->
+    <div class="modal-overlay" id="qvDetailModal" role="dialog" aria-modal="true" aria-labelledby="qvDetailModalTitle">
+        <div class="modal" style="max-width:720px">
+            <div class="modal-header">
+                <h3 id="qvDetailModalTitle">질문 조회 상세</h3>
+                <button class="modal-close" onclick="closeQvDetailModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+                <div id="qvDetailLoading" style="text-align:center;padding:2rem;color:var(--gray-400)">불러오는 중...</div>
+                <table class="qa-table" id="qvDetailTable" style="display:none" aria-label="기간별 질문 상세">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width:50px">#</th>
+                            <th scope="col">질문</th>
+                            <th scope="col" style="width:100px">카테고리</th>
+                            <th scope="col" style="width:80px">조회 수</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qvDetailTableBody"></tbody>
+                </table>
+                <div id="qvDetailEmpty" class="empty-state" style="display:none">
+                    <p>해당 기간의 질문 조회 데이터가 없습니다.</p>
+                </div>
+                <nav class="pagination" id="qvDetailPagination" style="margin-top:0.75rem"></nav>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline btn-sm" onclick="closeQvDetailModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Create/Edit QA Modal -->
     <div class="modal-overlay" id="qaModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal">
@@ -545,15 +656,12 @@
                 <div class="form-group">
                     <label for="modalCategory">카테고리 <span class="required" aria-hidden="true">*</span></label>
                     <select id="modalCategory" class="form-control" aria-required="true">
-                        <option value="이주정산">이주정산</option>
-                        <option value="관리비">관리비</option>
-                        <option value="회계처리">회계처리</option>
-                        <option value="기타">기타</option>
+                        <option value="">카테고리 선택</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="modalQuestion">질문 <span class="required" aria-hidden="true">*</span></label>
-                    <textarea id="modalQuestion" class="form-control" rows="3" placeholder="질문을 입력하세요 (최소 5자)" minlength="5" aria-required="true" aria-describedby="questionHint"></textarea>
+                    <textarea id="modalQuestion" class="form-control" rows="3" placeholder="질문을 입력하세요" aria-required="true" aria-describedby="questionHint"></textarea>
                     <div class="field-hint" id="questionHint" aria-live="polite"></div>
                     <div class="duplicate-warn" id="duplicateWarn" style="display:none" role="alert"></div>
                 </div>
@@ -574,7 +682,7 @@
                             미리보기
                         </button>
                     </div>
-                    <textarea id="modalAnswer" class="form-control" rows="7" placeholder="답변을 입력하세요 (최소 10자)&#10;&#10;마크다운 지원: **굵게**, [링크텍스트](URL), ![이미지설명](이미지URL)" minlength="10" aria-required="true" aria-describedby="answerHint"></textarea>
+                    <textarea id="modalAnswer" class="form-control" rows="7" placeholder="답변을 입력하세요&#10;&#10;마크다운 지원: **굵게**, [링크텍스트](URL), ![이미지설명](이미지URL)" aria-required="true" aria-describedby="answerHint"></textarea>
                     <div class="answer-preview" id="answerPreview" style="display:none"></div>
                     <div class="field-hint" id="answerHint" aria-live="polite"></div>
                 </div>
@@ -631,6 +739,11 @@
                     <label for="adminPosition">직급</label>
                     <input type="text" id="adminPosition" class="form-control" placeholder="직급을 입력하세요">
                 </div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+                    <input type="checkbox" id="adminAlertToggle" checked>
+                    <label for="adminAlertToggle" style="margin:0;cursor:pointer;">미답변 질문 알림톡 수신</label>
+                </div>
+                <div id="adminAlertHint" style="display:none;margin-top:6px;font-size:12px;color:var(--gray-500, #888);">시설관리 회사는 카카오 알림톡 기능을 지원하지 않습니다.</div>
                 <input type="hidden" id="adminRole" value="admin">
             </div>
             <div class="modal-footer">
@@ -729,7 +842,7 @@
             </div>
             <div class="modal-body" style="text-align:center">
                 <p style="font-size:var(--text-sm);color:var(--gray-600);margin-bottom:1rem">
-                    AI 챗봇(경리도우미) 도입 안내 공고문을 다운로드하여<br>엘리베이터 등에 게시하실 수 있습니다.
+                    AI Helper 챗봇 도입 안내 공고문을 다운로드하여<br>엘리베이터 등에 게시하실 수 있습니다.
                 </p>
                 <div id="noticePreviewArea" style="border:1px solid var(--gray-200);border-radius:var(--radius-md);overflow:hidden;max-height:300px;overflow-y:auto;background:#f0f4f0">
                     <div id="noticePreviewContent" style="transform:scale(0.35);transform-origin:top center;width:210mm;margin:0 auto"></div>
@@ -760,7 +873,7 @@
                 <a href="/refund-policy.html">환불 정책</a>
                 <a href="/contact.html">문의하기</a>
             </nav>
-            <p class="footer-copyright">&copy; 2026 AI Helper - 경리도우미(Accounting Helper). All rights reserved.</p>
+            <p class="footer-copyright">&copy; 2026 AI Helper(Accounting Helper). All rights reserved.</p>
             <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
             <p class="footer-business-info">보듬누리 | 통신판매업 신고 제 2026-세종-0130 호 | 세종시 다정남로 22, 122-1203</p>
         </div>

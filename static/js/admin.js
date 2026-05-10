@@ -11,6 +11,28 @@ let feedbackPage = 1;
 let companiesList = [];
 let companyMap = {};  // id → name
 
+/* 시설관리 회사는 카카오 알림톡 기능을 지원하지 않음 */
+function isFacilityManagementCompany(name) {
+    return typeof name === 'string' && name.indexOf('시설관리') !== -1;
+}
+
+function applyAlimtalkRestriction() {
+    const sess = AuthSession.get();
+    const restricted = isFacilityManagementCompany(sess && sess.companyName);
+    const toggle = document.getElementById('adminAlertToggle');
+    const hint = document.getElementById('adminAlertHint');
+    if (!toggle) return restricted;
+    if (restricted) {
+        toggle.checked = false;
+        toggle.disabled = true;
+        if (hint) hint.style.display = '';
+    } else {
+        toggle.disabled = false;
+        if (hint) hint.style.display = 'none';
+    }
+    return restricted;
+}
+
 /* ═══════════════════════════════════════════════
  *  INIT
  * ═══════════════════════════════════════════════ */
@@ -122,7 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const targetCompany = companies.find(c => String(c.company_id) === String(targetCompanyId));
                 if (targetCompany) {
                     document.getElementById('headerCompanyName').textContent = targetCompany.company_name;
-                    document.title = targetCompany.company_name + ' 관리자 - AI Helper 경리도우미';
+                    document.title = targetCompany.company_name + ' 관리자 - AI Helper';
                 }
                 // Also pre-select in modal company select
                 modalCompany.value = targetCompanyId;
@@ -166,6 +188,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             setTimeout(() => AuthSession.redirectToLogin(), 1500);
         }
     }, 60_000);
+
+    // 알림톡 URL에서 questionId 파라미터 처리: 미답변 질문 탭으로 자동 전환
+    const urlParams2 = new URLSearchParams(window.location.search);
+    const targetQuestionId = urlParams2.get('questionId');
+    if (targetQuestionId) {
+        switchTab('unanswered');
+        // 질문 목록 로드 후 해당 질문 하이라이트
+        setTimeout(() => {
+            const targetRow = document.querySelector(`tr[data-question-id="${targetQuestionId}"]`);
+            if (targetRow) {
+                targetRow.classList.add('highlight-row');
+                targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 800);
+    }
 
     // Load data
     loadCompanySettings();
@@ -239,6 +276,7 @@ function switchTab(tab) {
     if (tab === 'unanswered') { unansweredPage = 1; loadUnansweredList(); }
     if (tab === 'logs') { logPage = 1; loadActivityLogs(); }
     if (tab === 'statistics') initStatistics();
+    if (tab === 'questionViews') initQuestionViews();
     if (tab === 'subscription') loadSubscriptionTab();
 }
 
@@ -509,7 +547,6 @@ function onQuestionInput() {
     const val = document.getElementById('modalQuestion').value.trim();
     const hint = document.getElementById('questionHint');
     if (val.length === 0) { hint.textContent = ''; hint.className = 'field-hint'; }
-    else if (val.length < 5) { hint.textContent = `${val.length}/5자 (최소 5자)`; hint.className = 'field-hint error'; }
     else { hint.textContent = `${val.length}자`; hint.className = 'field-hint ok'; checkDuplicate(val); }
 }
 
@@ -517,7 +554,6 @@ function onAnswerInput() {
     const val = document.getElementById('modalAnswer').value.trim();
     const hint = document.getElementById('answerHint');
     if (val.length === 0) { hint.textContent = ''; hint.className = 'field-hint'; }
-    else if (val.length < 10) { hint.textContent = `${val.length}/10자 (최소 10자)`; hint.className = 'field-hint error'; }
     else { hint.textContent = `${val.length}자`; hint.className = 'field-hint ok'; }
 }
 
@@ -548,8 +584,8 @@ function validateModal() {
     const question = document.getElementById('modalQuestion').value.trim();
     const answer = document.getElementById('modalAnswer').value.trim();
     const errors = [];
-    if (question.length < 5) errors.push('질문은 최소 5자 이상 입력해 주세요.');
-    if (answer.length < 10) errors.push('답변은 최소 10자 이상 입력해 주세요.');
+    if (question.length === 0) errors.push('질문을 입력해 주세요.');
+    if (answer.length === 0) errors.push('답변을 입력해 주세요.');
     if (errors.length > 0) { showToast(errors[0], 'error'); onQuestionInput(); onAnswerInput(); return false; }
     return true;
 }
@@ -702,7 +738,10 @@ function openAdminModal() {
     document.getElementById('adminPhone').value = '';
     document.getElementById('adminDepartment').value = '';
     document.getElementById('adminPosition').value = '';
+    document.getElementById('adminAlertToggle').checked = true;
     document.getElementById('adminPasswordGroup').style.display = '';
+    document.getElementById('adminPassword').setAttribute('required', '');
+    applyAlimtalkRestriction();
     document.getElementById('adminModal').classList.add('show');
 }
 
@@ -717,7 +756,10 @@ async function openEditAdminModal(userId) {
         document.getElementById('adminPhone').value = admin.phone || '';
         document.getElementById('adminDepartment').value = admin.department || '';
         document.getElementById('adminPosition').value = admin.position || '';
+        document.getElementById('adminAlertToggle').checked = admin.receive_unanswered_alert !== false;
         document.getElementById('adminPasswordGroup').style.display = 'none';
+        document.getElementById('adminPassword').removeAttribute('required');
+        applyAlimtalkRestriction();
         document.getElementById('adminModal').classList.add('show');
     } catch (e) {
         showToast('관리자 정보를 불러올 수 없습니다.', 'error');
@@ -733,6 +775,10 @@ async function saveAdmin() {
     const email = document.getElementById('adminEmail').value.trim();
     if (!email) { showToast('이메일을 입력해 주세요.', 'error'); return; }
 
+    const sess = AuthSession.get();
+    const alimtalkBlocked = isFacilityManagementCompany(sess && sess.companyName);
+    const receiveAlert = alimtalkBlocked ? false : document.getElementById('adminAlertToggle').checked;
+
     try {
         if (adminId) {
             // Update
@@ -742,6 +788,7 @@ async function saveAdmin() {
                 phone: document.getElementById('adminPhone').value.trim() || null,
                 department: document.getElementById('adminDepartment').value.trim() || null,
                 position: document.getElementById('adminPosition').value.trim() || null,
+                receive_unanswered_alert: receiveAlert,
                 role: 'admin',
             };
             await apiPut(`/admins/${adminId}`, data);
@@ -757,6 +804,7 @@ async function saveAdmin() {
                 phone: document.getElementById('adminPhone').value.trim() || null,
                 department: document.getElementById('adminDepartment').value.trim() || null,
                 position: document.getElementById('adminPosition').value.trim() || null,
+                receive_unanswered_alert: receiveAlert,
                 role: 'admin',
             };
             await apiPost('/admins', data);
@@ -974,7 +1022,7 @@ function renderUnansweredTable(items) {
             : item.status === 'resolved' ? '<span style="color:var(--success)">등록됨</span>'
             : '<span style="color:var(--gray-400)">무시</span>';
         return `
-        <tr>
+        <tr data-question-id="${item.id}">
             <td title="${escapeHtml(item.question)}">${escapeHtml(item.question)}</td>
             <td>${item.created_at ? formatDateTime(item.created_at) : '-'}</td>
             <td>${statusLabel}</td>
@@ -1254,6 +1302,13 @@ async function loadCompanySettings() {
         document.getElementById('dashChatbotUrl').value = getCompanyChatbotUrl() || '';
         document.getElementById('dashGreeting').value = company.greeting_text || '';
 
+        // Load notice
+        const noticeActive = !!company.notice_active;
+        document.getElementById('noticeActive').checked = noticeActive;
+        document.getElementById('noticeActiveLabel').textContent = noticeActive ? '활성' : '비활성';
+        document.getElementById('noticeText').value = company.notice_text || '';
+        document.getElementById('noticeTextLink').value = company.notice_text_link || '';
+
         // Load categories
         const wrap = document.getElementById('categoryItemsWrap');
         wrap.innerHTML = '';
@@ -1300,6 +1355,9 @@ async function saveCompanySettings() {
     const companyAddress = document.getElementById('dashCompanyAddress').value.trim();
     const greetingText = document.getElementById('dashGreeting').value.trim();
     const categories = getCategoryItems();
+    const noticeActive = document.getElementById('noticeActive').checked;
+    const noticeText = document.getElementById('noticeText').value.trim();
+    const noticeTextLink = document.getElementById('noticeTextLink').value.trim();
 
     const saveBtn = document.getElementById('companySettingsSaveBtn');
     saveBtn.disabled = true;
@@ -1310,6 +1368,9 @@ async function saveCompanySettings() {
             address: companyAddress || null,
             greeting_text: greetingText || null,
             categories: categories.length > 0 ? categories : null,
+            notice_active: noticeActive,
+            notice_text: noticeText || null,
+            notice_text_link: noticeTextLink || null,
         });
 
         if (companyName) {
@@ -1322,6 +1383,44 @@ async function saveCompanySettings() {
         showToast(e.message || '저장에 실패했습니다.', 'error');
     } finally {
         saveBtn.disabled = false;
+    }
+}
+
+/* ═══════════════════════════════════════════════
+ *  NOTICE — 공지사항 이미지 업로드
+ * ═══════════════════════════════════════════════ */
+document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('noticeActive');
+    if (toggle) {
+        toggle.addEventListener('change', function () {
+            document.getElementById('noticeActiveLabel').textContent = this.checked ? '활성' : '비활성';
+        });
+    }
+});
+
+async function uploadNoticeImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+        showToast('이미지는 5MB 이하만 업로드 가능합니다.', 'error');
+        input.value = '';
+        return;
+    }
+    const statusEl = document.getElementById('noticeImgStatus');
+    statusEl.textContent = '업로드 중...';
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        const result = await apiFetch('/upload/image', { method: 'POST', body: formData });
+        const alt = file.name.replace(/\.[^.]+$/, '');
+        insertAtCursor('noticeText', `![${alt}](${result.url})`);
+        statusEl.textContent = '';
+        showToast('이미지가 삽입되었습니다.', 'success');
+    } catch (e) {
+        showToast('이미지 업로드 실패: ' + e.message, 'error');
+        statusEl.textContent = '';
+    } finally {
+        input.value = '';
     }
 }
 
@@ -1346,9 +1445,11 @@ function formatDateTime(dateStr) {
     const d = new Date(dateStr);
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const day = String(d.getDate()).padStart(2, '0');
-    const h = String(d.getHours()).padStart(2, '0');
+    const hours = d.getHours();
+    const ampm = hours < 12 ? '오전' : '오후';
+    const h12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
     const min = String(d.getMinutes()).padStart(2, '0');
-    return `${d.getFullYear()}-${m}-${day} ${h}:${min}`;
+    return `${d.getFullYear()}-${m}-${day} ${ampm} ${h12}:${min}`;
 }
 
 /* ═══════════════════════════════════════════════
@@ -2203,6 +2304,263 @@ function renderStatsTable(data, periodType) {
 
 
 /* ═══════════════════════════════════════════════
+ *  QUESTION VIEWS DETAIL (질문 조회 상세)
+ * ═══════════════════════════════════════════════ */
+let qvChartInstance = null;
+let qvInitialized = false;
+let qvPeriodData = [];      // raw period data from API for chart click
+let qvDetailPage = 1;
+let qvDetailPeriod = '';     // currently opened period key
+const QV_DETAIL_SIZE = 20;
+
+function initQuestionViews() {
+    if (!qvInitialized) {
+        const today = new Date();
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+        document.getElementById('qvDateTo').value = formatDateISO(today);
+        document.getElementById('qvDateFrom').value = formatDateISO(thirtyDaysAgo);
+
+        document.getElementById('qvPeriodType').addEventListener('change', function () {
+            adjustQvDateRange(this.value);
+            loadQuestionViews();
+        });
+
+        qvInitialized = true;
+    }
+    loadQuestionViews();
+}
+
+function adjustQvDateRange(periodType) {
+    const today = new Date();
+    const toEl = document.getElementById('qvDateTo');
+    const fromEl = document.getElementById('qvDateFrom');
+    toEl.value = formatDateISO(today);
+
+    if (periodType === 'daily') {
+        const d = new Date(today); d.setDate(today.getDate() - 30);
+        fromEl.value = formatDateISO(d);
+    } else if (periodType === 'monthly') {
+        const d = new Date(today); d.setMonth(today.getMonth() - 12);
+        fromEl.value = formatDateISO(d);
+    } else if (periodType === 'quarterly') {
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 2);
+        fromEl.value = formatDateISO(d);
+    } else if (periodType === 'yearly') {
+        const d = new Date(today); d.setFullYear(today.getFullYear() - 5);
+        fromEl.value = formatDateISO(d);
+    }
+}
+
+function _qvCompanyParam() {
+    if (currentRole === 'super_admin') {
+        const f = document.getElementById('companyFilter');
+        if (f && f.value) return '&company_id=' + f.value;
+    }
+    return '';
+}
+
+async function loadQuestionViews() {
+    const periodType = document.getElementById('qvPeriodType').value;
+    const dateFrom = document.getElementById('qvDateFrom').value;
+    const dateTo = document.getElementById('qvDateTo').value;
+
+    if (!dateFrom || !dateTo) {
+        showToast('조회 기간을 선택해주세요.', 'warning');
+        return;
+    }
+
+    const query = `?period=${periodType}&from=${dateFrom}&to=${dateTo}${_qvCompanyParam()}`;
+
+    try {
+        const data = await apiGet('/stats/question-views' + query);
+        qvPeriodData = data.periods || [];
+        renderQvSummary(data);
+        renderQvChart(data, periodType);
+        renderQvTable(data, periodType);
+    } catch (e) {
+        console.error('Question views load error:', e);
+        showToast('질문 조회 데이터를 불러오는데 실패했습니다.', 'error');
+        document.getElementById('qvTableBody').innerHTML = '';
+        document.getElementById('qvEmptyState').style.display = '';
+    }
+}
+
+function renderQvSummary(data) {
+    const summary = data.summary || {};
+    document.getElementById('qvTotalQuestions').textContent = (summary.unique_questions || 0).toLocaleString();
+    document.getElementById('qvTotalViews').textContent = (summary.total_views || 0).toLocaleString();
+    document.getElementById('qvAvgViews').textContent = (summary.avg_daily_views || 0).toLocaleString();
+}
+
+function renderQvChart(data, periodType) {
+    const periods = data.periods || [];
+    if (qvChartInstance) { qvChartInstance.destroy(); qvChartInstance = null; }
+
+    const labels = periods.map(p => formatStatLabel(p.period, periodType));
+    const viewData = periods.map(p => p.total_views || 0);
+
+    const ctx = document.getElementById('qvDailyChart').getContext('2d');
+    qvChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [{
+                label: '질문 조회 수',
+                data: viewData,
+                backgroundColor: 'rgba(74, 144, 217, 0.6)',
+                borderColor: '#4A90D9',
+                borderWidth: 1,
+                borderRadius: 4,
+                maxBarThickness: 40,
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            onClick: function (_evt, elements) {
+                if (elements.length > 0) {
+                    const idx = elements[0].index;
+                    const p = qvPeriodData[idx];
+                    if (p) openQvDetailModal(p.period, periodType);
+                }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 10, cornerRadius: 8 },
+            },
+            scales: {
+                x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: 45 } },
+                y: { beginAtZero: true, grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 }, precision: 0 } },
+            },
+        },
+    });
+}
+
+function renderQvTable(data, periodType) {
+    const periods = data.periods || [];
+    const tbody = document.getElementById('qvTableBody');
+    const emptyState = document.getElementById('qvEmptyState');
+
+    const colHeader = document.getElementById('qvColPeriod');
+    const periodLabels = { daily: '날짜', monthly: '월', quarterly: '분기', yearly: '연도' };
+    colHeader.textContent = periodLabels[periodType] || '기간';
+
+    if (!periods.length) {
+        tbody.innerHTML = '';
+        emptyState.style.display = '';
+        return;
+    }
+
+    emptyState.style.display = 'none';
+    tbody.innerHTML = periods.map(p => {
+        const label = formatStatLabel(p.period, periodType);
+        const periodEsc = escapeHtml(p.period);
+        const ptEsc = escapeHtml(periodType);
+        return `
+            <tr style="cursor:pointer" onclick="openQvDetailModal('${periodEsc}','${ptEsc}')">
+                <td>${label}</td>
+                <td style="text-align:right">${(p.unique_questions || 0).toLocaleString()}</td>
+                <td style="text-align:right">${(p.total_views || 0).toLocaleString()}</td>
+                <td style="text-align:center">
+                    <button class="btn btn-outline btn-sm" style="padding:2px 10px;font-size:var(--text-xs)">보기</button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+/* ── Detail Modal ── */
+function openQvDetailModal(period, periodType) {
+    qvDetailPeriod = period;
+    qvDetailPage = 1;
+    document.getElementById('qvDetailModalTitle').textContent =
+        formatStatLabel(period, periodType) + ' 질문 조회 상세';
+    document.getElementById('qvDetailModal').classList.add('show');
+    document.getElementById('qvDetailTable').style.display = 'none';
+    document.getElementById('qvDetailEmpty').style.display = 'none';
+    document.getElementById('qvDetailLoading').style.display = '';
+    document.getElementById('qvDetailPagination').innerHTML = '';
+    loadQvDetail(period);
+}
+
+function closeQvDetailModal() {
+    document.getElementById('qvDetailModal').classList.remove('show');
+}
+
+async function loadQvDetail(period) {
+    const dateFrom = document.getElementById('qvDateFrom').value;
+    const dateTo = document.getElementById('qvDateTo').value;
+    const periodType = document.getElementById('qvPeriodType').value;
+
+    const query = `?period=${periodType}&period_key=${encodeURIComponent(period)}&from=${dateFrom}&to=${dateTo}&page=${qvDetailPage}&size=${QV_DETAIL_SIZE}${_qvCompanyParam()}`;
+
+    try {
+        const data = await apiGet('/stats/question-views/detail' + query);
+        const items = data.items || [];
+        const loading = document.getElementById('qvDetailLoading');
+        const table = document.getElementById('qvDetailTable');
+        const empty = document.getElementById('qvDetailEmpty');
+        const tbody = document.getElementById('qvDetailTableBody');
+
+        loading.style.display = 'none';
+
+        if (!items.length) {
+            table.style.display = 'none';
+            empty.style.display = '';
+            document.getElementById('qvDetailPagination').innerHTML = '';
+            return;
+        }
+
+        empty.style.display = 'none';
+        table.style.display = '';
+
+        const offset = (qvDetailPage - 1) * QV_DETAIL_SIZE;
+        tbody.innerHTML = items.map((item, i) => {
+            const cat = item.category
+                ? `<span class="badge-category">${escapeHtml(item.category)}</span>`
+                : '<span style="color:var(--gray-400)">-</span>';
+            return `
+                <tr>
+                    <td style="color:var(--gray-400)">${offset + i + 1}</td>
+                    <td>${escapeHtml(item.question || '')}</td>
+                    <td>${cat}</td>
+                    <td style="text-align:right;font-weight:600">${(item.view_count || 0).toLocaleString()}</td>
+                </tr>
+            `;
+        }).join('');
+
+        // pagination
+        const totalPages = data.total_pages || 1;
+        const nav = document.getElementById('qvDetailPagination');
+        if (totalPages <= 1) { nav.innerHTML = ''; return; }
+
+        let html = '';
+        const maxVisible = 5;
+        let start = Math.max(1, qvDetailPage - Math.floor(maxVisible / 2));
+        let end = Math.min(totalPages, start + maxVisible - 1);
+        if (end - start < maxVisible - 1) start = Math.max(1, end - maxVisible + 1);
+        if (qvDetailPage > 1) html += `<button class="page-btn" onclick="goQvDetailPage(${qvDetailPage - 1})">&laquo;</button>`;
+        for (let i = start; i <= end; i++) {
+            html += `<button class="page-btn${i === qvDetailPage ? ' active' : ''}" onclick="goQvDetailPage(${i})">${i}</button>`;
+        }
+        if (qvDetailPage < totalPages) html += `<button class="page-btn" onclick="goQvDetailPage(${qvDetailPage + 1})">&raquo;</button>`;
+        nav.innerHTML = html;
+    } catch (e) {
+        console.error('Question view detail error:', e);
+        document.getElementById('qvDetailLoading').style.display = 'none';
+        document.getElementById('qvDetailEmpty').style.display = '';
+    }
+}
+
+function goQvDetailPage(page) {
+    qvDetailPage = page;
+    document.getElementById('qvDetailLoading').style.display = '';
+    document.getElementById('qvDetailTable').style.display = 'none';
+    loadQvDetail(qvDetailPeriod);
+}
+
+/* ═══════════════════════════════════════════════
  *  SUBSCRIPTION MANAGEMENT
  * ═══════════════════════════════════════════════ */
 
@@ -2428,4 +2786,3 @@ async function cancelSubscription() {
         showToast('해지 오류: ' + (e.message || e), 'error');
     }
 }
-
