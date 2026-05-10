@@ -49,6 +49,9 @@ const AuthSession = {
         localStorage.removeItem(AUTH_KEY);
         sessionStorage.removeItem(AUTH_KEY);
         store.setItem(AUTH_KEY, JSON.stringify(data));
+        console.log('[AUTH] save → store:', persist ? 'localStorage' : 'sessionStorage',
+            'expiryTime:', data.expiryTime, '(type:', typeof data.expiryTime + ')',
+            'token:', data.token ? data.token.substring(0, 20) + '...' : 'null');
     },
 
     /** Return parsed session object or null. */
@@ -77,8 +80,24 @@ const AuthSession = {
     /** True if a session exists and has not expired client-side. */
     isValid() {
         const s = this.get();
-        if (!s || !s.isLoggedIn) return false;
-        if (new Date(s.expiryTime) <= new Date()) {
+        if (!s || !s.isLoggedIn) {
+            console.log('[AUTH] isValid → false (no session or not logged in)');
+            return false;
+        }
+        // Handle both ISO string and Unix timestamp (seconds)
+        let expiry = s.expiryTime;
+        const rawExpiry = expiry;
+        if (typeof expiry === 'number' && expiry < 4102444800) {
+            expiry = expiry * 1000; // seconds → milliseconds
+        }
+        const expiryDate = new Date(expiry);
+        const now = new Date();
+        const valid = expiryDate > now;
+        console.log('[AUTH] isValid → ' + valid,
+            '| raw:', rawExpiry, '(type:', typeof rawExpiry + ')',
+            '| parsed:', expiryDate.toISOString(),
+            '| now:', now.toISOString());
+        if (!valid) {
             this.clear();
             return false;
         }
@@ -87,6 +106,7 @@ const AuthSession = {
 
     /** Redirect to login and clear session. */
     redirectToLogin(returnUrl) {
+        console.log('[AUTH] redirectToLogin called from:', new Error().stack);
         this.clear();
         if (!window.location.pathname.includes('login')) {
             const url = returnUrl || '/login.html';
@@ -102,7 +122,9 @@ async function apiFetch(path, options = {}) {
     // Client-side expiry guard (skip for auth endpoints)
     if (!path.startsWith('/auth/')) {
         const sess = AuthSession.get();
-        if (sess && sess.expiryTime && new Date(sess.expiryTime) <= new Date()) {
+        let _exp = sess && sess.expiryTime;
+        if (typeof _exp === 'number' && _exp < 4102444800) _exp = _exp * 1000;
+        if (_exp && new Date(_exp) <= new Date()) {
             AuthSession.clear();
             if (!window.location.pathname.includes('login')) {
                 window.location.href = '/login.html';
@@ -112,7 +134,10 @@ async function apiFetch(path, options = {}) {
     }
 
     const url = `${API_BASE}${path}`;
-    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    const headers = { ...(options.headers || {}) };
+    if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
 
     // Attach JWT Authorization header if available
     const token = AuthSession.getToken();
@@ -192,6 +217,21 @@ async function apiPatch(path, body) {
         method: 'PATCH',
         body: body ? JSON.stringify(body) : undefined,
     });
+}
+
+async function apiDownload(path, filename) {
+    const token = AuthSession.getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE}${path}`, { headers, credentials: 'same-origin' });
+    if (!res.ok) throw new ApiError('다운로드 실패', res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 function generateSessionId() {
