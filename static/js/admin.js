@@ -137,7 +137,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (exportBtn) exportBtn.style.display = '';
 
         // Show ERP collector card for super_admin
-        initCollectorCard();
+        const collectorCard = document.getElementById('collectorCard');
+        if (collectorCard) collectorCard.style.display = '';
     }
 
     // Hide edit buttons for viewer
@@ -2428,80 +2429,3 @@ async function cancelSubscription() {
     }
 }
 
-// ── ERP 수집기 다운로드 ─────────────────────────────────────────────────────
-
-async function initCollectorCard() {
-    const card = document.getElementById('collectorCard');
-    const uploadBtn = document.getElementById('collectorUploadBtn');
-    const infoEl = document.getElementById('collectorInfo');
-    if (!card) return;
-
-    card.style.display = '';
-    if (uploadBtn) uploadBtn.style.display = '';
-
-    try {
-        const info = await apiGet('/super/collector/info');
-        if (infoEl) {
-            infoEl.textContent = info.exists
-                ? `v1.0 · ${info.size_mb}MB`
-                : '파일 없음 — 업로드 필요';
-        }
-    } catch (e) {
-        if (infoEl) infoEl.textContent = '';
-    }
-}
-
-async function downloadCollector() {
-    const btn = document.getElementById('collectorDownloadBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '다운로드 중...'; }
-    try {
-        const res = await fetch('/api/super/collector/download', {
-            headers: { 'Authorization': `Bearer ${AuthSession.getToken()}` },
-        });
-        if (!res.ok) {
-            const err = await res.json().catch(() => ({ detail: '파일을 찾을 수 없습니다.' }));
-            showToast(err.detail || '다운로드 실패', 'error');
-            return;
-        }
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'AIHelperCollector-win.zip';
-        a.click();
-        URL.revokeObjectURL(url);
-    } catch (e) {
-        showToast('다운로드 오류: ' + e.message, 'error');
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '다운로드'; }
-    }
-}
-
-async function uploadCollector(input) {
-    const file = input.files[0];
-    if (!file) return;
-    const btn = document.getElementById('collectorUploadBtn');
-    if (btn) { btn.disabled = true; btn.textContent = '업로드 중...'; }
-
-    try {
-        const form = new FormData();
-        form.append('file', file);
-        const res = await fetch('/api/super/collector/upload', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${AuthSession.getToken()}` },
-            body: form,
-        });
-        const result = await res.json();
-        if (res.ok) {
-            showToast(`수집기 업로드 완료 (${(result.size / 1024 / 1024).toFixed(1)}MB)`, 'success');
-            initCollectorCard();
-        } else {
-            showToast(result.detail || '업로드 실패', 'error');
-        }
-    } catch (e) {
-        showToast('업로드 오류: ' + e.message, 'error');
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = '업로드'; }
-        input.value = '';
-    }
-}

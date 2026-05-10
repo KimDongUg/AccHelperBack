@@ -127,12 +127,13 @@
                 </div>
                 <div class="stat-info">
                     <h4>ERP 수집기</h4>
-                    <div class="stat-value" style="display:flex;gap:4px;flex-wrap:wrap">
-                        <button class="btn btn-outline btn-sm" id="collectorDownloadBtn" onclick="downloadCollector()" style="font-size:0.75rem;padding:0.2rem 0.6rem">다운로드</button>
-                        <button class="btn btn-outline btn-sm" id="collectorUploadBtn" onclick="document.getElementById('collectorFileInput').click()" style="font-size:0.75rem;padding:0.2rem 0.6rem;display:none">업로드</button>
-                        <input type="file" id="collectorFileInput" accept=".zip" style="display:none" onchange="uploadCollector(this)">
+                    <div class="stat-value">
+                        <a class="btn btn-outline btn-sm"
+                           href="https://github.com/KimDongUg/AIHelperCollector/releases/download/v1.0.0/AIHelperCollector-win.zip"
+                           download
+                           style="font-size:0.75rem;padding:0.2rem 0.6rem;text-decoration:none">다운로드</a>
                     </div>
-                    <div style="font-size:0.7rem;color:#888;margin-top:2px" id="collectorInfo"></div>
+                    <div style="font-size:0.7rem;color:#888;margin-top:2px">v1.0.0 · Windows 10+</div>
                 </div>
             </div>
         </div>
