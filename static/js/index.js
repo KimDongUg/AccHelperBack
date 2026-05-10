@@ -1,4 +1,8 @@
-/* ── Site Intro (처음 방문 시에만 표시) ── */
+function escapeAttr(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ── Site Intro (처음 방문 시에만 표시, 팝업 닫힌 후 시작) ── */
 (function () {
     const intro = document.querySelector('.site-intro');
     if (!intro) return;
@@ -45,12 +49,9 @@
 /* ── State ──────────────────────────────────── */
 let currentCompanyId = null;
 let currentCompanyCode = null;
-let sessionId = sessionStorage.getItem('chatSessionId');
-if (!sessionId) {
-    sessionId = generateSessionId();
-    sessionStorage.setItem('chatSessionId', sessionId);
-}
-let selectedCategory = '전체';
+let sessionId = generateSessionId();
+sessionStorage.setItem('chatSessionId', sessionId);
+let selectedCategory = null;
 let quotaRemaining = null;
 
 /* ── DOM refs (chat section — may not exist until shown) ── */
@@ -83,10 +84,52 @@ function showToast(message, duration) {
 
 /* ── Initialization ────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
+    // 로그인 상태면 헤더 버튼 텍스트 변경
+    var sess = AuthSession.get();
+    var urlParams = new URLSearchParams(window.location.search);
+    var hasCompanyParam = urlParams.get('company');
+    if (sess && sess.isLoggedIn) {
+        var adminLoginLink = document.getElementById('adminLoginLink');
+        if (adminLoginLink) adminLoginLink.style.display = 'none';
+        var headerLoginLink = document.getElementById('headerLoginLink');
+        if (headerLoginLink) headerLoginLink.style.display = 'none';
+        var adminLink = document.getElementById('adminLink');
+        if (adminLink) {
+            var label = sess.fullName || sess.username || '';
+            adminLink.textContent = '관리자 (' + label + ')';
+            // 회사 파라미터가 있으면 샘플회사 여부 확인 후 표시 (validateAndStartChat에서 처리)
+            if (!hasCompanyParam) {
+                adminLink.style.display = '';
+            }
+        }
+    }
+
     var params = new URLSearchParams(window.location.search);
     var code = params.get('company');
 
+    // 로고 클릭 동작 설정
+    var headerLogo = document.getElementById('headerLogo');
+    if (headerLogo) {
+        headerLogo.addEventListener('click', function (e) {
+            e.preventDefault();
+            if (sess && sess.isLoggedIn && sess.role === 'super_admin') {
+                // 수퍼관리자 → 메인(회사 선택)
+                window.location.href = '/';
+            } else if (sess && sess.isLoggedIn && sess.companyId) {
+                // 일반 관리자 → 본인 업체 챗봇
+                window.location.href = '/?company=' + sess.companyId;
+            } else if (code) {
+                // 입주민(비로그인, 업체 챗봇 접속 중) → 현재 페이지 새로고침
+                window.location.reload();
+            } else {
+                // 비로그인 + 메인 → 메인
+                window.location.href = '/';
+            }
+        });
+    }
+
     if (code) {
+        sessionStorage.setItem('last_company', code);
         validateAndStartChat(code);
     } else {
         showCompanySelection();
@@ -117,10 +160,20 @@ async function loadCompanies() {
             return;
         }
 
+        // 로그인 상태 확인
+        const sess = AuthSession.get();
+        const isLoggedIn = sess && sess.isLoggedIn;
+        const isSuperAdmin = isLoggedIn && sess.role === 'super_admin';
+        const myCompanyId = isLoggedIn ? sess.companyId : null;
+
         companies.forEach(c => {
             const card = document.createElement('button');
-            card.className = 'company-card' + (c.is_active ? '' : ' company-card-disabled');
             card.setAttribute('type', 'button');
+
+            // 활성화 조건: 승인된 업체는 누구나, 미승인 업체는 super_admin 또는 해당 업체 관리자만
+            const isApproved = c.approval_status === 'approved';
+            const canAccess = c.is_active && (isApproved || isSuperAdmin || (isLoggedIn && c.company_id === myCompanyId));
+            card.className = 'company-card' + (canAccess ? '' : ' company-card-disabled');
 
             const icon = document.createElement('div');
             icon.className = 'company-card-icon';
@@ -141,12 +194,10 @@ async function loadCompanies() {
             card.appendChild(icon);
             card.appendChild(info);
 
-            if (!c.is_active) {
-                const badge = document.createElement('span');
-                badge.className = 'company-card-badge';
-                badge.textContent = '준비중';
-                card.appendChild(badge);
-                card.disabled = true;
+            if (!canAccess) {
+                card.addEventListener('click', () => {
+                    alert('해당업체 관리자만 들어가실 수 있습니다.');
+                });
             } else {
                 card.addEventListener('click', () => {
                     window.location.href = `/?company=${c.company_id}`;
@@ -176,15 +227,40 @@ async function validateAndStartChat(code) {
         companyLabel.textContent = company.company_name;
         companyLabel.style.display = '';
 
+        // Hide admin buttons for sample companies (company_id >= 1000)
+        // Show admin link for non-sample companies if logged in
+        if (currentCompanyId >= 1000) {
+            var loginLink = document.getElementById('headerLoginLink');
+            if (loginLink) loginLink.style.display = 'none';
+            var admLink = document.getElementById('adminLink');
+            if (admLink) admLink.style.display = 'none';
+        } else {
+            var sess = AuthSession.get();
+            if (sess && sess.isLoggedIn) {
+                var admLink2 = document.getElementById('adminLink');
+                if (admLink2) admLink2.style.display = '';
+            }
+        }
+
         // 아파트 전용: 헤더 당근 메뉴 표시
-        const daangnNavLink = document.getElementById('daangnNavLink');
+        var daangnNavLink = document.getElementById('daangnNavLink');
         if (daangnNavLink) {
             daangnNavLink.style.display = company.building_type === '아파트' ? '' : 'none';
         }
 
         // Show chat (로그인 없이 누구나 이용 가능)
-        showChat();
+        showChat(company);
     } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+            // 미승인 업체 접근 시 안내 메시지 표시
+            companySelection.style.display = '';
+            chatSection.style.display = 'none';
+            companyLoading.style.display = 'none';
+            companyGrid.innerHTML = '';
+            companyErrorMsg.textContent = '이 업체는 현재 서비스 준비 중입니다. 잠시 후 다시 시도해 주세요.';
+            companyError.style.display = '';
+            return;
+        }
         // Invalid company code — show selection with error
         showCompanySelection();
         companyLoading.style.display = 'none';
@@ -193,29 +269,148 @@ async function validateAndStartChat(code) {
     }
 }
 
+/* ── Image Lightbox ────────────────────────── */
+function openLightbox(src) {
+    var overlay = document.getElementById('lightboxOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'lightboxOverlay';
+        overlay.className = 'lightbox-overlay';
+        overlay.addEventListener('click', function () { overlay.classList.remove('show'); });
+        var img = document.createElement('img');
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+    }
+    overlay.querySelector('img').src = src;
+    overlay.classList.add('show');
+}
+
 /* ── Show Chat ─────────────────────────────── */
-function showChat() {
+function showChat(companyData) {
+    var companyName = typeof companyData === 'string' ? companyData : (companyData && companyData.company_name);
     chatSection.style.display = '';
     companySelection.style.display = 'none';
+
+    // 업체명 반영
+    if (companyName) {
+        const hero = document.getElementById('heroCompanyName');
+        const greeting = document.getElementById('greetingCompanyName');
+        if (hero) hero.textContent = companyName;
+        if (greeting) greeting.textContent = companyName;
+
+        // 공지사항 표시
+        var noticeActive = companyData && companyData.notice_active;
+        var heroDefault = document.getElementById('heroDefault');
+        var noticeArea = document.getElementById('noticeArea');
+        if (noticeActive && companyData.notice_text) {
+            if (heroDefault) heroDefault.style.display = 'none';
+            if (noticeArea) {
+                var noticeContent = document.getElementById('noticeContent');
+                var html = '';
+                // 텍스트 (링크 포함 가능)
+                // 마크다운 이미지 ![alt](url) → <img> 변환 후 나머지 텍스트 escape
+                var rawText = companyData.notice_text;
+                var rendered = '';
+                var imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+                var lastIndex = 0, m;
+                while ((m = imgRegex.exec(rawText)) !== null) {
+                    var before = rawText.slice(lastIndex, m.index)
+                        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                    if (before.trim()) rendered += before;
+                    rendered += '<img src="' + escapeAttr(m[2]) + '" alt="' + escapeAttr(m[1]) + '" class="notice-img">';
+                    lastIndex = m.index + m[0].length;
+                }
+                var tail = rawText.slice(lastIndex)
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                if (tail.trim()) rendered += tail;
+
+                if (companyData.notice_text_link) {
+                    html += '<button type="button" class="notice-text-link" data-question="' + escapeAttr(companyData.notice_text_link) + '">' + rendered + '</button>';
+                } else {
+                    html += '<div class="notice-text">' + rendered + '</div>';
+                }
+                noticeContent.innerHTML = html;
+                noticeArea.style.display = '';
+            }
+        } else {
+            if (heroDefault) heroDefault.style.display = '';
+            if (noticeArea) noticeArea.style.display = 'none';
+        }
+
+        // 업체별 커스텀 설정: API 응답 우선, 없으면 하드코딩 기본값
+        var apiGreeting = companyData && companyData.greeting_text;
+        var apiCategories = companyData && companyData.categories;
+
+        // 하드코딩 기본값 (하위호환)
+        var defaultCustom = {
+            '세종푸르지오시티 2차': {
+                hero: ' AI Helper입니다.<br>무엇이든 물어보세요~',
+                greeting: '안녕하세요! 세종푸르지오시티 2차 AI Helper입니다.<br>중간관리비 정산 절차, 입주신고, 각종 시설물 AS 안내 등 궁금한 점을 물어보세요.',
+                categories: [
+                    { label: '중간관리비 정산', question: '중간관리비 정산 절차가 어떻게 되나요?' },
+                    { label: '입주신고', question: '입주신고 시 필요한 서류는?' },
+                    { label: '각종 시설물 AS', question: '각종 시설물 AS 안내를 알려주세요.' },
+                    { label: '기타', question: '관리사무소 업무 시간과 연락처를 알려주세요.' }
+                ]
+            },
+            '샘플오피스텔': {
+                hero: ' AI Helper입니다.<br>무엇이든 물어보세요~',
+                greeting: '안녕하세요! 샘플오피스텔 AI Helper입니다.<br>중간관리비 정산 절차, 입주신고, 각종 시설물 AS 안내 등 궁금한 점을 물어보세요.',
+                categories: [
+                    { label: '중간관리비 정산', question: '중간관리비 정산 절차가 어떻게 되나요?' },
+                    { label: '입주신고', question: '입주신고 시 필요한 서류는?' },
+                    { label: '각종 시설물 AS', question: '각종 시설물 AS 안내를 알려주세요.' },
+                    { label: '기타', question: '관리사무소 업무 시간과 연락처를 알려주세요.' }
+                ]
+            }
+        };
+        var fallback = defaultCustom[companyName];
+
+        // 인사말 적용: API → 하드코딩 기본값
+        var greetingText = apiGreeting || (fallback && fallback.greeting);
+        if (greetingText) {
+            var bubbleEl = document.querySelector('.message.bot .message-bubble');
+            if (bubbleEl) bubbleEl.innerHTML = greetingText;
+        }
+
+        // 히어로 텍스트: API 인사말이 있으면 기본 히어로, 없으면 하드코딩
+        var heroSuffix = fallback && fallback.hero;
+        if (heroSuffix && !apiGreeting) {
+            var heroEl = document.querySelector('.chat-hero h1');
+            if (heroEl) heroEl.innerHTML = '<span id="heroCompanyName">' + companyName + '</span>' + heroSuffix;
+        }
+
+        // 카테고리 적용: API → 하드코딩 기본값
+        var categories = (apiCategories && apiCategories.length > 0) ? apiCategories : (fallback && fallback.categories);
+        if (categories && categories.length > 0) {
+            var filterEl = document.querySelector('.category-filters');
+            if (filterEl) {
+                filterEl.innerHTML = categories.map(function (c) {
+                    return '<button class="quick-btn" data-question="' + c.question + '">' + c.label + '</button>';
+                }).join('');
+            }
+        }
+    }
 
     const chatMessages   = document.getElementById('chatMessages');
     const chatInput      = document.getElementById('chatInput');
     const sendBtn        = document.getElementById('sendBtn');
     const typingIndicator = document.getElementById('typingIndicator');
-    const quickQuestions  = document.getElementById('quickQuestions');
+    const quickQuestions  = null; // removed from DOM
 
-    // Category filter handling
-    document.querySelectorAll('.category-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.category-btn').forEach(b => {
-                b.classList.remove('active');
-                b.setAttribute('aria-pressed', 'false');
-            });
-            btn.classList.add('active');
-            btn.setAttribute('aria-pressed', 'true');
-            selectedCategory = btn.dataset.category;
-        });
-    });
+    // 봇 답변 가독성 포맷팅: 문장 끝(마침표/물음표/느낌표) 뒤에 줄바꿈 삽입
+    function formatBotText(text) {
+        if (!text) return text;
+        // 한글 문장 끝(다. 요. 세요. 등) 또는 닫는 괄호) 뒤 줄바꿈
+        text = text.replace(/([가-힣\)])([.]) +/g, '$1$2\n\n');
+        text = text.replace(/([가-힣\)])([?]) +/g, '$1$2\n\n');
+        text = text.replace(/([가-힣\)])([!]) +/g, '$1$2\n\n');
+        // *로 시작하는 항목이 줄 시작이 아니면 줄바꿈 추가
+        text = text.replace(/([^\n])\s*\*([가-힣a-zA-Z])/g, '$1\n\n*$2');
+        return text;
+    }
+
+    // Category filter removed — quick-btn handles questions directly
 
     // Quick question buttons
     document.querySelectorAll('.quick-btn').forEach(btn => {
@@ -223,6 +418,14 @@ function showChat() {
             sendMessage(btn.dataset.question);
         });
     });
+
+    // 공지사항 텍스트 클릭 → 질문 전송
+    var noticeBtn = document.querySelector('.notice-text-link');
+    if (noticeBtn && noticeBtn.dataset.question) {
+        noticeBtn.addEventListener('click', () => {
+            sendMessage(noticeBtn.dataset.question);
+        });
+    }
 
     // Send button
     sendBtn.addEventListener('click', () => {
@@ -259,7 +462,7 @@ function showChat() {
             const body = {
                 question: text,
                 session_id: sessionId,
-                category: selectedCategory === '전체' ? null : selectedCategory,
+                category: null,
             };
             if (currentCompanyId) {
                 body.company_id = currentCompanyId;
@@ -316,7 +519,6 @@ function showChat() {
 
         chatInput.disabled = false;
         sendBtn.disabled = false;
-        chatInput.focus();
     }
 
     /* ── Render bot message with RAG response ── */
@@ -341,40 +543,52 @@ function showChat() {
             bubble.appendChild(catBadge);
         }
 
-        // RAG warning: used_rag === false
-        if (result.used_rag === false) {
-            var warning = document.createElement('div');
-            warning.className = 'rag-warning';
-            warning.textContent = '\u26A0 등록된 근거 없이 생성된 답변입니다. 확인이 필요합니다.';
-            bubble.appendChild(warning);
-        }
+        // RAG warning disabled
 
         // Markdown-rendered answer
         var answerDiv = document.createElement('div');
         answerDiv.className = 'message-answer';
+        var formattedAnswer = formatBotText(result.answer || '');
         if (typeof marked !== 'undefined' && marked.parse) {
-            answerDiv.innerHTML = marked.parse(result.answer || '');
+            answerDiv.innerHTML = marked.parse(formattedAnswer);
         } else {
-            answerDiv.textContent = result.answer || '';
+            answerDiv.textContent = formattedAnswer;
         }
+        // 링크: 새 탭에서 열기
+        answerDiv.querySelectorAll('a').forEach(function (a) {
+            a.setAttribute('target', '_blank');
+            a.setAttribute('rel', 'noopener noreferrer');
+        });
+        // 이미지: 클릭 시 라이트박스
+        answerDiv.querySelectorAll('img').forEach(function (img) {
+            img.addEventListener('click', function () { openLightbox(img.src); });
+        });
         bubble.appendChild(answerDiv);
 
         // Evidence section (if evidences exist in response)
-        if (result.evidences && result.evidences.length > 0) {
+        var hasEvidences = result.evidences && result.evidences.length > 0;
+        if (hasEvidences) {
             bubble.appendChild(buildEvidenceSection(result.evidences));
-        } else if (result.evidences && result.evidences.length === 0) {
-            var noEvidence = document.createElement('div');
-            noEvidence.className = 'evidence-empty';
-            noEvidence.textContent = '등록된 정보에서 답변을 찾지 못했습니다. 관리실에 문의해 주세요.';
-            bubble.appendChild(noEvidence);
         }
 
-        // Feedback buttons
+        // Feedback buttons 용 qa_ids 수집
         var qaIds = [];
         if (result.evidences) {
             result.evidences.forEach(function (e) {
                 if (e.qa_id) qaIds.push(e.qa_id);
             });
+        }
+
+        // 미답변 판정: evidences·qa_ids 모두 없고 답변이 미답변 패턴일 때만 저장
+        var answerText = result.answer || '';
+        var looksUnanswered = /죄송|찾지 못|찾을 수 없|등록된 (정보|답변).*없|답변.*없/.test(answerText);
+        var isUnanswered = !hasEvidences && qaIds.length === 0 && looksUnanswered;
+        if (isUnanswered) {
+            apiPost('/unanswered-questions', {
+                question: question,
+                company_id: currentCompanyId,
+                session_id: sessionId,
+            }).catch(function () { /* 저장 실패해도 무시 */ });
         }
         bubble.appendChild(buildFeedbackButtons(question, result.answer, qaIds));
 
@@ -468,6 +682,8 @@ function showChat() {
                 answer: answer,
                 qa_ids: qaIds,
                 rating: rating,
+                session_id: sessionId,
+                company_id: currentCompanyId,
             }).then(function () {
                 showToast('피드백 감사합니다');
             }).catch(function () {
@@ -552,10 +768,11 @@ function showChat() {
         }
 
         var textNode = document.createElement('div');
+        var displayText = type === 'bot' ? formatBotText(text) : text;
         if (type === 'bot' && typeof marked !== 'undefined' && marked.parse) {
-            textNode.innerHTML = marked.parse(text);
+            textNode.innerHTML = marked.parse(displayText);
         } else {
-            textNode.textContent = text;
+            textNode.textContent = displayText;
         }
         bubble.appendChild(textNode);
 
@@ -568,7 +785,13 @@ function showChat() {
 
     function scrollToBottom() {
         setTimeout(function () {
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            // Scroll the last message into view so the answer is visible
+            var lastMsg = chatMessages.lastElementChild;
+            if (lastMsg) {
+                lastMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
         }, 50);
     }
 
@@ -606,10 +829,14 @@ function showChat() {
         try {
             var auth = await apiGet('/auth/check');
             if (auth.authenticated && auth.session) {
-                var label = auth.session.full_name || auth.session.username || '';
-                document.getElementById('adminLink').textContent = '관리자 (' + label + ')';
-                var billingLink = document.getElementById('billingLink');
-                if (billingLink) billingLink.style.display = '';
+                var adminLoginLink2 = document.getElementById('adminLoginLink');
+                if (adminLoginLink2) adminLoginLink2.style.display = 'none';
+                var adminLink2 = document.getElementById('adminLink');
+                if (adminLink2 && currentCompanyId < 1000) {
+                    adminLink2.style.display = '';
+                    var label = auth.session.full_name || auth.session.username || '';
+                    adminLink2.textContent = '관리자 (' + label + ')';
+                }
                 if (auth.session.role === 'super_admin') {
                     var saLink = document.getElementById('superAdminLink');
                     if (saLink) saLink.style.display = '';
@@ -622,5 +849,4 @@ function showChat() {
         loadHistory();
     }
     checkAdmin();
-    chatInput.focus();
 }
