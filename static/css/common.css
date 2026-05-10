@@ -208,21 +208,13 @@ select:focus-visible {
     font-weight: var(--font-bold);
     color: var(--primary);
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 0;
 }
 
 .header-logo span {
-    font-size: 0.75rem;
-    font-weight: var(--font-bold);
-    color: var(--primary);
-    white-space: nowrap;
-    margin-top: -80px;
-    margin-left: 150px;
-    position: relative;
-    z-index: 102;
-    letter-spacing: -0.02em;
+    display: none;
 }
 
 .header-logo svg {
@@ -230,10 +222,9 @@ select:focus-visible {
 }
 
 .header-logo img {
-    height: 68px;
+    height: 88px;
     width: auto;
     flex-shrink: 0;
-    margin: -10px 0 -10px -10px;
 }
 
 .header-nav {
@@ -682,7 +673,7 @@ table tr:hover td {
     }
 
     .header-logo img {
-        height: 48px;
+        height: 64px;
     }
 
     .header-logo span {
@@ -728,7 +719,7 @@ table tr:hover td {
     }
 
     .header-logo img {
-        height: 56px;
+        height: 72px;
     }
 }
 
