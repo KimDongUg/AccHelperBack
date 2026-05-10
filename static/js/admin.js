@@ -2455,7 +2455,7 @@ async function downloadCollector() {
     const btn = document.getElementById('collectorDownloadBtn');
     if (btn) { btn.disabled = true; btn.textContent = '다운로드 중...'; }
     try {
-        const res = await fetch('/super/collector/download', {
+        const res = await fetch('/api/super/collector/download', {
             headers: { 'Authorization': `Bearer ${AuthSession.getToken()}` },
         });
         if (!res.ok) {
@@ -2486,7 +2486,7 @@ async function uploadCollector(input) {
     try {
         const form = new FormData();
         form.append('file', file);
-        const res = await fetch('/super/collector/upload', {
+        const res = await fetch('/api/super/collector/upload', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${AuthSession.getToken()}` },
             body: form,

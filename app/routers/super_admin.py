@@ -21,7 +21,7 @@ from app.services.embedding_service import bulk_rebuild_embeddings, upsert_qa_em
 
 logger = logging.getLogger("acchelper")
 
-router = APIRouter(prefix="/super", tags=["super-admin"])
+router = APIRouter(prefix="/api/super", tags=["super-admin"])
 
 
 class TenantUpdate(BaseModel):
