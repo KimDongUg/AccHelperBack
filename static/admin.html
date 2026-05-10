@@ -121,6 +121,20 @@
                     </div>
                 </div>
             </div>
+            <div class="stat-card" id="collectorCard" style="display:none">
+                <div class="stat-icon" style="background:#e3f2fd;color:#1565c0" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>ERP 수집기</h4>
+                    <div class="stat-value" style="display:flex;gap:4px;flex-wrap:wrap">
+                        <button class="btn btn-outline btn-sm" id="collectorDownloadBtn" onclick="downloadCollector()" style="font-size:0.75rem;padding:0.2rem 0.6rem">다운로드</button>
+                        <button class="btn btn-outline btn-sm" id="collectorUploadBtn" onclick="document.getElementById('collectorFileInput').click()" style="font-size:0.75rem;padding:0.2rem 0.6rem;display:none">업로드</button>
+                        <input type="file" id="collectorFileInput" accept=".zip" style="display:none" onchange="uploadCollector(this)">
+                    </div>
+                    <div style="font-size:0.7rem;color:#888;margin-top:2px" id="collectorInfo"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Company Settings -->

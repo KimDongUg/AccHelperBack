@@ -2,11 +2,15 @@
 
 import io
 import logging
+import os
+from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+from app.config import DATA_DIR
 
 from app.database import get_db
 from app.dependencies import require_super_admin
@@ -281,3 +285,64 @@ def upload_qa_excel(
         "failed": failed,
         "errors": errors,
     }
+
+
+# ── ERP Collector 배포 ───────────────────────────────────────────────────────
+
+COLLECTOR_DIR = DATA_DIR / "collector"
+COLLECTOR_FILENAME = "AIHelperCollector-win.zip"
+COLLECTOR_PATH = COLLECTOR_DIR / COLLECTOR_FILENAME
+
+
+@router.post("/collector/upload")
+async def upload_collector(
+    file: UploadFile = File(...),
+    user: dict = Depends(require_super_admin),
+):
+    """ERP 수집기 ZIP 파일 업로드 (슈퍼관리자 전용)."""
+    if not file.filename.endswith(".zip"):
+        raise HTTPException(status_code=400, detail="ZIP 파일만 업로드 가능합니다.")
+
+    COLLECTOR_DIR.mkdir(parents=True, exist_ok=True)
+    content = await file.read()
+
+    with open(COLLECTOR_PATH, "wb") as f:
+        f.write(content)
+
+    return {"success": True, "size": len(content), "filename": COLLECTOR_FILENAME}
+
+
+@router.get("/collector/info")
+def get_collector_info(
+    user: dict = Depends(require_super_admin),
+):
+    """ERP 수집기 파일 정보 조회."""
+    if not COLLECTOR_PATH.exists():
+        return {"exists": False}
+
+    stat = COLLECTOR_PATH.stat()
+    return {
+        "exists": True,
+        "filename": COLLECTOR_FILENAME,
+        "size": stat.st_size,
+        "size_mb": round(stat.st_size / 1024 / 1024, 1),
+        "updated_at": stat.st_mtime,
+    }
+
+
+@router.get("/collector/download")
+def download_collector(
+    user: dict = Depends(require_super_admin),
+):
+    """ERP 수집기 ZIP 다운로드 (슈퍼관리자 전용)."""
+    if not COLLECTOR_PATH.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="수집기 파일이 서버에 없습니다. 슈퍼관리자에게 문의하세요.",
+        )
+
+    return FileResponse(
+        path=str(COLLECTOR_PATH),
+        filename=COLLECTOR_FILENAME,
+        media_type="application/zip",
+    )
