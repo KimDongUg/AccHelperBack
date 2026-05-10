@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>글쓰기 — 우리아파트 당근</title>
+<link rel="stylesheet" href="/css/market.css?v=1">
+</head>
+<body>
+
+<div class="mkt-header">
+  <button class="mkt-back" onclick="history.back()">←</button>
+  <h1>글쓰기</h1>
+</div>
+
+<div class="mkt-write-wrap">
+
+  <!-- 카테고리 -->
+  <div class="mkt-section">
+    <div class="mkt-section-title">카테고리 <span style="color:#c62828">*</span></div>
+    <div class="mkt-category-grid" id="catGrid">
+      <button class="mkt-cat-btn" data-cat="중고거래" onclick="selectCat(this)">🛍 중고거래</button>
+      <button class="mkt-cat-btn" data-cat="무료나눔" onclick="selectCat(this)">🎁 무료나눔</button>
+      <button class="mkt-cat-btn" data-cat="공동구매" onclick="selectCat(this)">🤝 공동구매</button>
+      <button class="mkt-cat-btn" data-cat="분실물" onclick="selectCat(this)">🔍 분실물</button>
+    </div>
+  </div>
+
+  <!-- 이미지 -->
+  <div class="mkt-section">
+    <div class="mkt-section-title">사진 (최대 3장)</div>
+    <div class="mkt-img-grid" id="imgGrid">
+      <label class="mkt-img-add" id="imgAddBtn">
+        <span>📷</span>
+        <span>사진 추가</span>
+        <input type="file" id="imgInput" accept="image/jpeg,image/png" multiple style="display:none" onchange="addImages(this)">
+      </label>
+    </div>
+  </div>
+
+  <!-- 내용 -->
+  <div class="mkt-section">
+    <div class="mkt-section-title">제목 <span style="color:#c62828">*</span></div>
+    <input class="mkt-input" id="titleInput" type="text" placeholder="제목을 입력하세요" maxlength="100">
+  </div>
+
+  <div class="mkt-section">
+    <div class="mkt-section-title">가격</div>
+    <input class="mkt-input" id="priceInput" type="number" placeholder="0 (무료나눔은 0)" min="0" value="0">
+  </div>
+
+  <div class="mkt-section">
+    <div class="mkt-section-title">내용 <span style="color:#c62828">*</span></div>
+    <textarea class="mkt-textarea" id="contentInput" placeholder="상품 설명, 거래 방법 등을 자세히 적어주세요." maxlength="2000"></textarea>
+  </div>
+
+  <div id="errMsg" class="mkt-error" style="display:none"></div>
+
+  <button class="mkt-btn" id="submitBtn" onclick="submitPost()">등록하기</button>
+
+</div>
+
+<script src="/js/market.js?v=1"></script>
+<script>
+MarketAuth.required();
+
+let selectedCat = '';
+let imageFiles = [];
+
+function selectCat(el) {
+  document.querySelectorAll('.mkt-cat-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedCat = el.dataset.cat;
+  if (selectedCat === '무료나눔') {
+    document.getElementById('priceInput').value = '0';
+    document.getElementById('priceInput').disabled = true;
+  } else {
+    document.getElementById('priceInput').disabled = false;
+  }
+}
+
+function addImages(input) {
+  const files = Array.from(input.files);
+  const remaining = 3 - imageFiles.length;
+  const toAdd = files.slice(0, remaining);
+  toAdd.forEach(f => {
+    if (f.size > 5 * 1024 * 1024) { showToast('이미지는 5MB 이하만 가능합니다.'); return; }
+    imageFiles.push(f);
+    renderPreviews();
+  });
+  input.value = '';
+}
+
+function removeImage(idx) {
+  imageFiles.splice(idx, 1);
+  renderPreviews();
+}
+
+function renderPreviews() {
+  const grid = document.getElementById('imgGrid');
+  grid.innerHTML = '';
+  imageFiles.forEach((f, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'mkt-img-preview';
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    const btn = document.createElement('button');
+    btn.className = 'mkt-img-remove';
+    btn.textContent = '×';
+    btn.onclick = () => removeImage(i);
+    wrap.appendChild(img);
+    wrap.appendChild(btn);
+    grid.appendChild(wrap);
+  });
+  if (imageFiles.length < 3) {
+    const label = document.createElement('label');
+    label.className = 'mkt-img-add';
+    label.id = 'imgAddBtn';
+    label.innerHTML = '<span>📷</span><span>사진 추가</span><input type="file" accept="image/jpeg,image/png" multiple style="display:none" onchange="addImages(this)">';
+    grid.appendChild(label);
+  }
+}
+
+async function submitPost() {
+  const title = document.getElementById('titleInput').value.trim();
+  const content = document.getElementById('contentInput').value.trim();
+  const price = parseInt(document.getElementById('priceInput').value) || 0;
+  const errEl = document.getElementById('errMsg');
+  const btn = document.getElementById('submitBtn');
+
+  errEl.style.display = 'none';
+  if (!selectedCat) { errEl.textContent = '카테고리를 선택해주세요.'; errEl.style.display = 'block'; return; }
+  if (!title) { errEl.textContent = '제목을 입력해주세요.'; errEl.style.display = 'block'; return; }
+  if (!content) { errEl.textContent = '내용을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+  btn.disabled = true;
+  btn.textContent = '등록 중...';
+
+  try {
+    const form = new FormData();
+    form.append('title', title);
+    form.append('content', content);
+    form.append('category', selectedCat);
+    form.append('price', price);
+    imageFiles.forEach(f => form.append('images', f));
+
+    const token = MarketAuth.required();
+    const res = await fetch('/api/market/posts', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+      body: form,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '등록 실패');
+
+    location.href = `/market-post.html?id=${data.post_id}`;
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '등록하기';
+  }
+}
+</script>
+</body>
+</html>

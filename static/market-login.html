@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>우리아파트 당근 — 입주민 인증</title>
+<link rel="stylesheet" href="/css/market.css?v=1">
+</head>
+<body>
+
+<div class="mkt-header">
+  <button class="mkt-back" onclick="history.back()">←</button>
+  <h1>입주민 인증</h1>
+</div>
+
+<div class="mkt-login-wrap">
+  <div class="mkt-login-logo">
+    <div class="emoji">🥕</div>
+    <h2>우리아파트 당근</h2>
+    <p>세종푸르지오2차 입주민 전용 중고거래·나눔</p>
+  </div>
+
+  <form class="mkt-form" id="loginForm" onsubmit="return false">
+    <div>
+      <label>동</label>
+      <input class="mkt-input" value="1동" readonly>
+    </div>
+    <div>
+      <label>호수 <span style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="unit" type="text" placeholder="예: 501호" required>
+    </div>
+    <div>
+      <label>이름 <span style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="name" type="text" placeholder="입주자 또는 소유주명" required>
+    </div>
+    <div>
+      <label>전화번호 <span style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="phone" type="tel" placeholder="예: 010-1234-5678" required>
+    </div>
+
+    <div id="errMsg" class="mkt-error" style="display:none"></div>
+
+    <button class="mkt-btn" id="loginBtn" type="submit" onclick="doLogin()">인증하기</button>
+  </form>
+
+  <p style="text-align:center;font-size:12px;color:#aaa;margin-top:20px">
+    관리비 납부 시 등록한 정보와 동일하게 입력해주세요.<br>
+    실명·전화번호는 서버에 저장되지 않습니다.
+  </p>
+</div>
+
+<script src="/js/market.js?v=1"></script>
+<script>
+// 이미 로그인된 경우 바로 이동
+if (MarketAuth.getToken()) location.href = '/market.html';
+
+async function doLogin() {
+  const unit = document.getElementById('unit').value.trim();
+  const name = document.getElementById('name').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const errEl = document.getElementById('errMsg');
+  const btn = document.getElementById('loginBtn');
+
+  if (!unit || !name || !phone) {
+    errEl.textContent = '모든 항목을 입력해주세요.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '인증 중...';
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/api/market/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ building: '1동', unit_number: unit, name, phone }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || '인증 실패');
+
+    MarketAuth.save(data.token, { unit: data.unit, building: data.building });
+    location.href = '/market.html';
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = '인증하기';
+  }
+}
+</script>
+</body>
+</html>

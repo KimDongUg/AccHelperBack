@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>우리아파트 당근</title>
+<link rel="stylesheet" href="/css/market.css?v=1">
+</head>
+<body>
+
+<div class="mkt-header">
+  <button class="mkt-back" onclick="location.href='/'">←</button>
+  <h1>🥕 우리아파트 당근</h1>
+  <div class="mkt-header-right">
+    <span id="myUnit" style="font-size:13px;opacity:0.9"></span>
+    <button style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.8" onclick="logout()">로그아웃</button>
+  </div>
+</div>
+
+<div class="mkt-tabs" id="tabs">
+  <button class="mkt-tab active" data-cat="전체" onclick="selectCat(this)">전체</button>
+  <button class="mkt-tab" data-cat="중고거래" onclick="selectCat(this)">🛍 중고거래</button>
+  <button class="mkt-tab" data-cat="무료나눔" onclick="selectCat(this)">🎁 무료나눔</button>
+  <button class="mkt-tab" data-cat="공동구매" onclick="selectCat(this)">🤝 공동구매</button>
+  <button class="mkt-tab" data-cat="분실물" onclick="selectCat(this)">🔍 분실물</button>
+</div>
+
+<div id="postList" class="mkt-list"></div>
+
+<div id="emptyState" class="mkt-empty" style="display:none">
+  <span class="emoji">🥕</span>
+  <p>아직 게시글이 없어요.<br>첫 번째 글을 올려보세요!</p>
+</div>
+
+<a href="/market-write.html" class="mkt-fab" title="글쓰기">+</a>
+
+<script src="/js/market.js?v=1"></script>
+<script>
+let currentCat = '전체';
+
+MarketAuth.required();
+const user = MarketAuth.getUser();
+if (user) document.getElementById('myUnit').textContent = user.unit;
+
+function logout() {
+  MarketAuth.clear();
+  location.href = '/market-login.html';
+}
+
+function selectCat(el) {
+  document.querySelectorAll('.mkt-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentCat = el.dataset.cat;
+  loadPosts();
+}
+
+async function loadPosts() {
+  const list = document.getElementById('postList');
+  const empty = document.getElementById('emptyState');
+  list.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa">불러오는 중...</div>';
+  try {
+    const params = currentCat !== '전체' ? `?category=${encodeURIComponent(currentCat)}` : '';
+    const data = await mktFetch('/posts' + params);
+    list.innerHTML = '';
+    if (!data.items || data.items.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    data.items.forEach(p => {
+      const imgHtml = p.thumbnail
+        ? `<img class="mkt-thumb" src="${p.thumbnail}" alt="" loading="lazy">`
+        : `<div class="mkt-thumb-placeholder">${categoryEmoji(p.category)}</div>`;
+
+      const div = document.createElement('a');
+      div.className = 'mkt-item';
+      div.href = `/market-post.html?id=${p.id}`;
+      div.innerHTML = `
+        ${imgHtml}
+        <div class="mkt-info">
+          <div class="mkt-title">${escHtml(p.title)}</div>
+          <div class="mkt-meta">${escHtml(p.writer_unit)} · ${p.time_ago}</div>
+          <div class="mkt-price">${formatPrice(p.price, p.category)}</div>
+          <div class="mkt-bottom">
+            ${statusBadge(p.status)}
+            ${p.comment_count > 0 ? `<span class="mkt-comment-count">💬 ${p.comment_count}</span>` : ''}
+          </div>
+        </div>`;
+      list.appendChild(div);
+    });
+  } catch (e) {
+    list.innerHTML = `<div class="mkt-empty"><p>${e.message}</p></div>`;
+  }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadPosts();
+</script>
+</body>
+</html>

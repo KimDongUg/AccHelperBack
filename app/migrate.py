@@ -145,6 +145,72 @@ def _run_pg_migration(engine: Engine):
         # admin_users table — 알림톡 수신 여부
         _pg_add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT TRUE")
 
+        # --- 우리아파트 당근 market 테이블 (PostgreSQL) ---
+        if not _pg_table_exists(conn, "apartment_residents"):
+            conn.execute(text("""
+                CREATE TABLE apartment_residents (
+                    id SERIAL PRIMARY KEY,
+                    building VARCHAR(20) NOT NULL,
+                    unit_number VARCHAR(20) NOT NULL,
+                    resident_name VARCHAR(100),
+                    resident_phone VARCHAR(30),
+                    owner_name VARCHAR(100),
+                    owner_phone VARCHAR(30)
+                )
+            """))
+            logger.info("PG: Created table apartment_residents")
+
+        if not _pg_table_exists(conn, "market_posts"):
+            conn.execute(text("""
+                CREATE TABLE market_posts (
+                    id SERIAL PRIMARY KEY,
+                    category VARCHAR(50) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    price INTEGER DEFAULT 0,
+                    status VARCHAR(30) DEFAULT '판매중',
+                    writer_building VARCHAR(20) NOT NULL,
+                    writer_unit VARCHAR(20) NOT NULL,
+                    is_hidden BOOLEAN DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            logger.info("PG: Created table market_posts")
+
+        if not _pg_table_exists(conn, "market_images"):
+            conn.execute(text("""
+                CREATE TABLE market_images (
+                    id SERIAL PRIMARY KEY,
+                    post_id INTEGER NOT NULL REFERENCES market_posts(id) ON DELETE CASCADE,
+                    image_url TEXT NOT NULL
+                )
+            """))
+            logger.info("PG: Created table market_images")
+
+        if not _pg_table_exists(conn, "market_comments"):
+            conn.execute(text("""
+                CREATE TABLE market_comments (
+                    id SERIAL PRIMARY KEY,
+                    post_id INTEGER NOT NULL REFERENCES market_posts(id) ON DELETE CASCADE,
+                    writer_unit VARCHAR(20) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            logger.info("PG: Created table market_comments")
+
+        if not _pg_table_exists(conn, "market_reports"):
+            conn.execute(text("""
+                CREATE TABLE market_reports (
+                    id SERIAL PRIMARY KEY,
+                    post_id INTEGER NOT NULL REFERENCES market_posts(id) ON DELETE CASCADE,
+                    reporter_unit VARCHAR(20) NOT NULL,
+                    reason VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            logger.info("PG: Created table market_reports")
+
         conn.commit()
     logger.info("PG: Column migrations committed")
 
@@ -279,6 +345,72 @@ def run_migration(engine: Engine):
         # --- admin_users table: 알림톡 수신 여부 ---
         if _table_exists(conn, "admin_users"):
             _add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT 1")
+
+        # --- 우리아파트 당근 market 테이블 ---
+        if not _table_exists(conn, "apartment_residents"):
+            conn.execute(text("""
+                CREATE TABLE apartment_residents (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    building VARCHAR(20) NOT NULL,
+                    unit_number VARCHAR(20) NOT NULL,
+                    resident_name VARCHAR(100),
+                    resident_phone VARCHAR(30),
+                    owner_name VARCHAR(100),
+                    owner_phone VARCHAR(30)
+                )
+            """))
+            logger.info("Created table apartment_residents")
+
+        if not _table_exists(conn, "market_posts"):
+            conn.execute(text("""
+                CREATE TABLE market_posts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category VARCHAR(50) NOT NULL,
+                    title VARCHAR(255) NOT NULL,
+                    content TEXT NOT NULL,
+                    price INTEGER DEFAULT 0,
+                    status VARCHAR(30) DEFAULT '판매중',
+                    writer_building VARCHAR(20) NOT NULL,
+                    writer_unit VARCHAR(20) NOT NULL,
+                    is_hidden BOOLEAN DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            logger.info("Created table market_posts")
+
+        if not _table_exists(conn, "market_images"):
+            conn.execute(text("""
+                CREATE TABLE market_images (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL REFERENCES market_posts(id) ON DELETE CASCADE,
+                    image_url TEXT NOT NULL
+                )
+            """))
+            logger.info("Created table market_images")
+
+        if not _table_exists(conn, "market_comments"):
+            conn.execute(text("""
+                CREATE TABLE market_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL REFERENCES market_posts(id) ON DELETE CASCADE,
+                    writer_unit VARCHAR(20) NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            logger.info("Created table market_comments")
+
+        if not _table_exists(conn, "market_reports"):
+            conn.execute(text("""
+                CREATE TABLE market_reports (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL REFERENCES market_posts(id) ON DELETE CASCADE,
+                    reporter_unit VARCHAR(20) NOT NULL,
+                    reason VARCHAR(100) NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            logger.info("Created table market_reports")
 
         conn.commit()
         logger.info("Migration completed successfully")

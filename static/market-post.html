@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>게시글 — 우리아파트 당근</title>
+<link rel="stylesheet" href="/css/market.css?v=1">
+</head>
+<body>
+
+<div class="mkt-header">
+  <button class="mkt-back" onclick="location.href='/market.html'">←</button>
+  <h1 id="pageTitle">게시글</h1>
+  <div class="mkt-header-right">
+    <button id="reportBtn" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.8" onclick="showReportModal()">신고</button>
+  </div>
+</div>
+
+<div id="postContent">
+  <div style="text-align:center;padding:60px;color:#aaa">불러오는 중...</div>
+</div>
+
+<!-- 댓글 입력 -->
+<div class="mkt-comment-input-wrap" id="commentBar" style="display:none">
+  <input class="mkt-comment-input" id="commentInput" placeholder="댓글을 입력하세요..." maxlength="300">
+  <button class="mkt-comment-submit" onclick="submitComment()">등록</button>
+</div>
+
+<!-- 신고 모달 -->
+<div class="mkt-modal-overlay" id="reportModal" style="display:none" onclick="closeReportModal(event)">
+  <div class="mkt-modal" onclick="event.stopPropagation()">
+    <h3>신고 사유를 선택하세요</h3>
+    <div class="mkt-report-option" onclick="selectReason(this)" data-reason="욕설/비방">욕설 / 비방</div>
+    <div class="mkt-report-option" onclick="selectReason(this)" data-reason="광고성 게시글">광고성 게시글</div>
+    <div class="mkt-report-option" onclick="selectReason(this)" data-reason="사기 의심">사기 의심</div>
+    <div class="mkt-report-option" onclick="selectReason(this)" data-reason="기타">기타</div>
+    <div class="mkt-modal-btns">
+      <button class="mkt-btn mkt-btn-gray" style="flex:1" onclick="closeReportModal()">취소</button>
+      <button class="mkt-btn" style="flex:1" id="reportSubmitBtn" onclick="submitReport()">신고</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/market.js?v=1"></script>
+<script>
+MarketAuth.required();
+const user = MarketAuth.getUser();
+const postId = new URLSearchParams(location.search).get('id');
+if (!postId) location.href = '/market.html';
+
+let post = null;
+let selectedReason = '';
+let imgIdx = 0;
+
+async function loadPost() {
+  try {
+    post = await mktFetch(`/posts/${postId}`);
+    renderPost(post);
+    document.getElementById('commentBar').style.display = 'flex';
+  } catch (e) {
+    document.getElementById('postContent').innerHTML =
+      `<div class="mkt-empty"><p>${e.message}</p></div>`;
+  }
+}
+
+function renderPost(p) {
+  const isOwner = p.is_owner;
+  const images = p.images || [];
+
+  let imgSection = '';
+  if (images.length > 0) {
+    imgSection = `
+      <div class="mkt-detail-imgs" id="imgSlider">
+        <img src="${images[0]}" alt="" id="mainImg">
+        ${images.length > 1 ? `
+          <button class="mkt-img-arrow left" onclick="prevImg()">‹</button>
+          <button class="mkt-img-arrow right" onclick="nextImg()">›</button>
+          <div class="mkt-img-nav" id="imgDots">
+            ${images.map((_, i) => `<div class="mkt-img-dot${i===0?' active':''}" onclick="goImg(${i})"></div>`).join('')}
+          </div>` : ''}
+      </div>`;
+  }
+
+  const ownerActions = isOwner ? `
+    <div class="mkt-section" style="margin:8px 16px;padding:12px;border-radius:10px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.09)">
+      <div class="mkt-section-title" style="margin-bottom:8px">거래 상태 변경</div>
+      <div class="mkt-status-wrap">
+        <button class="mkt-status-opt ${p.status==='판매중'?'active-sell':''}" onclick="changeStatus('판매중')">판매중</button>
+        <button class="mkt-status-opt ${p.status==='예약중'?'active-reserve':''}" onclick="changeStatus('예약중')">예약중</button>
+        <button class="mkt-status-opt ${p.status==='거래완료'?'active-done':''}" onclick="changeStatus('거래완료')">거래완료</button>
+      </div>
+    </div>
+    <div class="mkt-actions">
+      <button class="mkt-btn mkt-btn-outline" onclick="editPost()">수정</button>
+      <button class="mkt-btn mkt-btn-gray" onclick="deletePost()">삭제</button>
+    </div>` : '';
+
+  const commentsHtml = (p.comments || []).map(c => `
+    <div class="mkt-comment">
+      <div class="mkt-comment-avatar">${c.writer_unit.replace('호','')}</div>
+      <div class="mkt-comment-body">
+        <div class="mkt-comment-header">
+          <span class="mkt-comment-unit">${escHtml(c.writer_unit)}</span>
+          <span class="mkt-comment-time">${c.time_ago}</span>
+        </div>
+        <div class="mkt-comment-text">${escHtml(c.content)}</div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('postContent').innerHTML = `
+    ${imgSection}
+    <div class="mkt-detail-body">
+      <div class="mkt-detail-category">${categoryEmoji(p.category)} ${p.category} &nbsp; ${statusBadge(p.status)}</div>
+      <div class="mkt-detail-title">${escHtml(p.title)}</div>
+      <div class="mkt-detail-meta">
+        <span>${escHtml(p.writer_unit)}</span>
+        <span>·</span>
+        <span>${p.time_ago}</span>
+      </div>
+      <div class="mkt-detail-price">${formatPrice(p.price, p.category)}</div>
+      <div class="mkt-detail-content">${escHtml(p.content)}</div>
+    </div>
+    ${ownerActions}
+    <div class="mkt-comments" id="commentsWrap">
+      <div class="mkt-comments-title">댓글 ${p.comments.length}개</div>
+      <div id="commentList">${commentsHtml}</div>
+    </div>`;
+
+  imgIdx = 0;
+}
+
+function prevImg() { goImg(imgIdx - 1); }
+function nextImg() { goImg(imgIdx + 1); }
+function goImg(i) {
+  const imgs = post.images;
+  imgIdx = (i + imgs.length) % imgs.length;
+  document.getElementById('mainImg').src = imgs[imgIdx];
+  document.querySelectorAll('.mkt-img-dot').forEach((d, j) => d.classList.toggle('active', j === imgIdx));
+}
+
+async function changeStatus(status) {
+  try {
+    await mktFetch(`/posts/${postId}/status`, { method: 'PATCH', body: { status } });
+    post.status = status;
+    showToast('거래 상태가 변경되었습니다.');
+    loadPost();
+  } catch (e) { showToast(e.message); }
+}
+
+function editPost() {
+  // 간단 인라인 편집 — 별도 페이지 대신 prompt 사용 (MVP)
+  const newTitle = prompt('제목 수정:', post.title);
+  if (newTitle === null) return;
+  const newContent = prompt('내용 수정:', post.content);
+  if (newContent === null) return;
+  const newPrice = prompt('가격 수정 (원):', post.price);
+  if (newPrice === null) return;
+
+  mktFetch(`/posts/${postId}`, {
+    method: 'PATCH',
+    body: { title: newTitle, content: newContent, price: parseInt(newPrice) || 0 },
+  }).then(() => { showToast('수정되었습니다.'); loadPost(); })
+    .catch(e => showToast(e.message));
+}
+
+async function deletePost() {
+  if (!confirm('게시글을 삭제할까요?')) return;
+  try {
+    await mktFetch(`/posts/${postId}`, { method: 'DELETE' });
+    showToast('삭제되었습니다.');
+    setTimeout(() => location.href = '/market.html', 800);
+  } catch (e) { showToast(e.message); }
+}
+
+async function submitComment() {
+  const input = document.getElementById('commentInput');
+  const content = input.value.trim();
+  if (!content) return;
+  try {
+    const res = await mktFetch('/comments', { method: 'POST', body: { post_id: parseInt(postId), content } });
+    const c = res.comment;
+    const html = `
+      <div class="mkt-comment">
+        <div class="mkt-comment-avatar">${c.writer_unit.replace('호','')}</div>
+        <div class="mkt-comment-body">
+          <div class="mkt-comment-header">
+            <span class="mkt-comment-unit">${escHtml(c.writer_unit)}</span>
+            <span class="mkt-comment-time">${c.time_ago}</span>
+          </div>
+          <div class="mkt-comment-text">${escHtml(c.content)}</div>
+        </div>
+      </div>`;
+    document.getElementById('commentList').insertAdjacentHTML('beforeend', html);
+    input.value = '';
+  } catch (e) { showToast(e.message); }
+}
+
+// 신고
+function showReportModal() { document.getElementById('reportModal').style.display = 'flex'; selectedReason = ''; }
+function closeReportModal(e) { if (!e || e.target === document.getElementById('reportModal')) document.getElementById('reportModal').style.display = 'none'; }
+function selectReason(el) {
+  document.querySelectorAll('.mkt-report-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedReason = el.dataset.reason;
+}
+async function submitReport() {
+  if (!selectedReason) { showToast('신고 사유를 선택해주세요.'); return; }
+  try {
+    await mktFetch(`/posts/${postId}/report`, { method: 'POST', body: { reason: selectedReason } });
+    showToast('신고가 접수되었습니다.');
+    closeReportModal();
+  } catch (e) { showToast(e.message); }
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+loadPost();
+</script>
+</body>
+</html>
