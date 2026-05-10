@@ -3,54 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>보태미 - 경리도우미</title>
+    <title>AI Helper</title>
     <link rel="icon" type="image/png" href="/assets/images/logo.png">
-    <link rel="stylesheet" href="/css/common.css?v=7">
-    <link rel="stylesheet" href="/css/index.css?v=7">
+    <link rel="stylesheet" href="/css/common.css?v=10">
+    <link rel="stylesheet" href="/css/index.css?v=9">
 </head>
 <body>
     <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
 
     <header class="header" role="banner">
         <div class="header-left">
-            <a href="/" class="header-logo" aria-label="AI Helper 홈으로 이동">
+            <a href="/" id="headerLogo" class="header-logo" aria-label="AI Helper 홈으로 이동">
                 <img src="/assets/images/logo.png" alt="AI Helper 로고" aria-hidden="true">
             </a>
             <nav class="header-nav" aria-label="메인 내비게이션">
                 <a href="/" class="active" aria-current="page">AI 챗봇</a>
+                <!-- 매뉴얼 버튼 숨김
+                <a href="/manual.html" class="nav-manual-btn" title="사용 매뉴얼">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    매뉴얼
+                </a>
+                -->
                 <a href="/market-login.html" id="daangnNavLink" style="display:none;background:#ff6f0f;color:#fff;padding:5px 13px;border-radius:20px;font-weight:700;font-size:13px;text-decoration:none">🥕 우리아파트 당근</a>
-                <a href="#" class="disabled" aria-disabled="true" title="준비 중입니다" id="billingLink" style="display:none">부과내역서</a>
                 <a href="/super-admin.html" id="superAdminLink" style="display:none">수퍼관리</a>
             </nav>
         </div>
         <div class="header-right">
             <span id="companyLabel" class="company-label" style="display:none;"></span>
-            <a href="/admin.html" class="btn btn-outline btn-sm" id="adminLink">로그인</a>
+            <a href="/login.html" class="btn btn-outline btn-sm" id="headerLoginLink">관리자 로그인</a>
+            <a href="/admin.html" class="btn btn-outline btn-sm" id="adminLink" style="display:none">관리자</a>
         </div>
     </header>
 
-    <!-- Site Introduction -->
-    <section class="site-intro">
-        <div class="site-intro-inner">
-            <p class="site-intro-title">보태미를 제작하며...</p>
-            <p>부족한 남편을 위해 오늘도 고생하는 아내의 수고를 조금이라도 덜어 주고 싶어 만들었습니다. 동종업계에 계신 분들께도 도움이 되면 좋겠습니다.</p>
-        </div>
-    </section>
-
     <!-- Company Selection -->
     <main id="companySelection" class="company-selection" style="display:none;">
-        <div class="company-hero">
-            <div class="company-hero-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-            </div>
-            <h1>회사를 선택해 주세요</h1>
-            <p>보태미를 이용할 회사를 선택하세요</p>
-            <div class="company-register-link">
-                <a href="/company-register.html">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                    회사 등록
+        <div class="company-register-link">
+            <div class="company-top-btns">
+                <a href="/login.html" id="adminLoginLink">관리자로그인</a>
+                <a href="/manual.html" class="manual-btn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    매뉴얼
                 </a>
             </div>
+            <a href="/company-register.html">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                회사 등록
+            </a>
         </div>
         <div class="company-grid" id="companyGrid">
             <!-- Populated by JS -->
@@ -70,18 +68,21 @@
     <!-- Chat Section -->
     <main id="chatSection" class="chat-container" style="display:none;">
         <div class="chat-hero">
-            <h1>우리아파트 AI 경리 입니다. 무엇이든 물어보세요~</h1>
-            <p>이사, 관리비, 기타 궁금한점 물어보세요</p>
+            <!-- 기본 인사말 (공지 없을 때) -->
+            <div id="heroDefault">
+                <h1><span id="heroCompanyName"></span> AI 상담원 입니다.<br>무엇이든 물어보세요~</h1>
+                <p>이사, 관리비, 기타 궁금한점 물어보세요</p>
+                <p class="category-hint">아래 버튼을 클릭하시면 자주 묻는 질문에 대한 답변을 바로 확인할 수 있습니다.</p>
+            </div>
+            <!-- 공지사항 (notice_active=true 일 때 표시) -->
+            <div id="noticeArea" style="display:none" class="notice-area">
+                <div id="noticeContent" class="notice-content"></div>
+                <p class="category-hint" style="margin-top:0.5rem">아래 버튼을 클릭하시면 자주 묻는 질문에 대한 답변을 바로 확인할 수 있습니다.</p>
+            </div>
         </div>
 
-        <!-- Category filters -->
-        <div class="category-filters" role="toolbar" aria-label="카테고리 필터">
-            <button class="category-btn active" data-category="전체" aria-pressed="true">전체</button>
-            <button class="category-btn" data-category="이주정산" aria-pressed="false">이주정산</button>
-            <button class="category-btn" data-category="관리비" aria-pressed="false">관리비</button>
-            <button class="category-btn" data-category="회계처리" aria-pressed="false">회계처리</button>
-            <button class="category-btn" data-category="기타" aria-pressed="false">기타</button>
-        </div>
+        <!-- Quick category questions (dynamically populated by js/index.js) -->
+        <div class="category-filters" role="toolbar" aria-label="빠른 질문"></div>
 
         <!-- Chat messages -->
         <div class="chat-messages" id="chatMessages" role="log" aria-label="채팅 메시지" aria-live="polite">
@@ -90,25 +91,36 @@
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </div>
                 <div class="message-bubble">
-                    안녕하세요! 우리아파트 AI 경리입니다.<br>
+                    안녕하세요! <span id="greetingCompanyName"></span> AI Helper입니다.<br>
                     이주정산, 관리비, 회계처리 등 궁금한 점을 물어보세요.
                 </div>
             </div>
         </div>
 
         <div class="typing-indicator" id="typingIndicator" role="status" aria-label="응답 작성 중">
-            <span></span><span></span><span></span>
+            <div class="spinner-icon">
+                <svg viewBox="0 0 40 40" width="28" height="28">
+                    <g transform="translate(20,20)">
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".12"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".25" transform="rotate(30)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".37" transform="rotate(60)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".50" transform="rotate(90)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".62" transform="rotate(120)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".75" transform="rotate(150)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".80" transform="rotate(180)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".85" transform="rotate(210)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".90" transform="rotate(240)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".93" transform="rotate(270)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity=".96" transform="rotate(300)"/>
+                        <line x1="0" y1="-9" x2="0" y2="-15" stroke-linecap="round" stroke-width="3" opacity="1" transform="rotate(330)"/>
+                    </g>
+                </svg>
+            </div>
             <span class="typing-text">답변 생성 중...</span>
         </div>
 
         <!-- Quick questions -->
-        <div class="quick-questions" id="quickQuestions" aria-label="자주 묻는 질문">
-            <button class="quick-btn" data-question="부가가치세 신고 기한은 언제인가요?">부가세 신고 기한</button>
-            <button class="quick-btn" data-question="4대보험 요율은 어떻게 되나요?">4대보험 요율</button>
-            <button class="quick-btn" data-question="접대비 한도는 얼마인가요?">접대비 한도</button>
-            <button class="quick-btn" data-question="퇴직금 계산은 어떻게 하나요?">퇴직금 계산</button>
-            <button class="quick-btn" data-question="경리 업무 월별 체크리스트를 알려주세요.">월별 체크리스트</button>
-        </div>
+        <!-- Quick questions removed — merged into top category buttons -->
 
         <!-- Chat input -->
         <div class="chat-input-wrap">
@@ -132,14 +144,15 @@
                 <a href="/refund-policy.html">환불 정책</a>
                 <a href="/contact.html">문의하기</a>
             </nav>
-            <p class="footer-copyright">&copy; 2026 보태미 - 경리도우미(Accounting Helper). All rights reserved.</p>
+            <p class="footer-copyright">&copy; 2026 AI Helper(Accounting Helper). All rights reserved.</p>
             <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
             <p class="footer-business-info">보듬누리 | 통신판매업 신고 제 2026-세종-0130 호 | 세종시 다정남로 22, 122-1203</p>
         </div>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <script src="/js/api.js?v=7"></script>
-    <script src="/js/index.js?v=7"></script>
+    <script>if(typeof marked!=='undefined')marked.setOptions({breaks:true});</script>
+    <script src="/js/api.js?v=9"></script>
+    <script src="/js/index.js?v=14"></script>
 </body>
 </html>
