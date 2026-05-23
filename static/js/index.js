@@ -245,11 +245,30 @@ async function validateAndStartChat(code) {
             }
         }
 
-        // 우리아파트 당근 (관리비 메뉴 완성 후 오픈 예정 — 주석 해제하여 활성화)
-        // var daangnNavLink = document.getElementById('daangnNavLink');
-        // if (daangnNavLink) {
-        //     daangnNavLink.style.display = company.building_type === '아파트' ? '' : 'none';
-        // }
+        // 우리아파트 당근 (아파트 타입에만 표시)
+        var daangnNavLink = document.getElementById('daangnNavLink');
+        if (daangnNavLink) {
+            if (company.building_type === '아파트') {
+                daangnNavLink.style.display = '';
+                // 회사 정보를 세션에 저장 (market-login에서 동 기본값 결정에 사용)
+                sessionStorage.setItem('market_company_name', company.company_name);
+                sessionStorage.setItem('market_company_id', company.company_id);
+            } else {
+                daangnNavLink.style.display = 'none';
+            }
+        }
+
+        // 민원게시판 (아파트 타입에만 표시)
+        var complaintNavLink = document.getElementById('complaintNavLink');
+        if (complaintNavLink) {
+            if (company.building_type === '아파트') {
+                complaintNavLink.style.display = '';
+                complaintNavLink.href = '/complaint.html?company=' + company.company_id;
+                sessionStorage.setItem('complaint_company_id', company.company_id);
+            } else {
+                complaintNavLink.style.display = 'none';
+            }
+        }
 
         // Show chat (로그인 없이 누구나 이용 가능)
         showChat(company);

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>민원게시판</title>
+<link rel="icon" type="image/png" href="/assets/images/logo.png">
+<link rel="stylesheet" href="/css/complaint.css?v=1">
+</head>
+<body>
+
+<div class="cp-header">
+  <button class="cp-back" onclick="location.href='/'">←</button>
+  <h1>📋 민원게시판</h1>
+  <div class="cp-header-right" id="adminBadge"></div>
+</div>
+
+<div id="postList" class="cp-list"></div>
+
+<div id="emptyState" class="cp-empty" style="display:none">
+  <span class="emoji">📋</span>
+  <p>아직 민원글이 없어요.<br>첫 번째 민원을 남겨보세요!</p>
+</div>
+
+<a href="#" class="cp-fab" id="writeBtn" title="민원 작성">+</a>
+
+<script src="/js/complaint.js?v=1"></script>
+<script>
+const companyId = getCompanyParam();
+if (!companyId) {
+    alert('잘못된 접근입니다. 메인 페이지에서 이동해주세요.');
+    location.href = '/';
+}
+
+// 글쓰기 버튼 → company 파라미터 유지
+document.getElementById('writeBtn').href = `/complaint-write.html?company=${companyId}`;
+
+// 관리자 배지
+if (ComplaintAuth.isAdmin()) {
+    document.getElementById('adminBadge').textContent = '관리자';
+    document.getElementById('adminBadge').style.cssText = 'font-size:11px;background:rgba(255,255,255,0.25);padding:2px 8px;border-radius:12px;';
+}
+
+let currentPage = 1;
+let totalPages = 1;
+
+async function loadPosts(page) {
+    const list = document.getElementById('postList');
+    const empty = document.getElementById('emptyState');
+    if (page === 1) list.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa">불러오는 중...</div>';
+
+    try {
+        const data = await cpFetch(`?company_id=${companyId}&page=${page}`);
+        totalPages = data.pages;
+        currentPage = page;
+
+        if (page === 1) list.innerHTML = '';
+
+        if (!data.items || data.items.length === 0) {
+            if (page === 1) empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+
+        data.items.forEach(p => {
+            if (p.is_deleted) {
+                const div = document.createElement('div');
+                div.className = 'cp-deleted-notice';
+                div.textContent = `${escHtml(p.delete_reason)} 사유로 글이 삭제되었습니다.`;
+                list.appendChild(div);
+                return;
+            }
+            const a = document.createElement('a');
+            a.className = 'cp-item';
+            a.href = `/complaint-post.html?id=${p.id}&company=${companyId}`;
+            a.innerHTML = `
+              <div class="cp-item-top">
+                <div class="cp-item-title">${escHtml(p.title)}</div>
+                ${p.has_reply ? '<span class="cp-badge cp-badge-reply">답변완료</span>' : ''}
+              </div>
+              <div class="cp-item-meta">
+                <span>${escHtml(p.writer)}</span>
+                <span>${p.time_ago}</span>
+              </div>
+              ${p.preview ? `<div class="cp-item-preview">${escHtml(p.preview)}</div>` : ''}`;
+            list.appendChild(a);
+        });
+
+        // 더보기
+        if (currentPage < totalPages) {
+            const btn = document.createElement('button');
+            btn.id = 'loadMoreBtn';
+            btn.textContent = '더보기';
+            btn.style.cssText = 'display:block;width:calc(100% - 24px);margin:8px 12px;padding:12px;background:#fff;border:1px solid #ddd;border-radius:10px;font-size:14px;cursor:pointer;';
+            btn.onclick = () => { btn.remove(); loadPosts(currentPage + 1); };
+            list.appendChild(btn);
+        }
+    } catch (e) {
+        list.innerHTML = `<div class="cp-empty"><p>${e.message}</p></div>`;
+    }
+}
+
+loadPosts(1);
+</script>
+</body>
+</html>

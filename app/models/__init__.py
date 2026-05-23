@@ -12,6 +12,7 @@ from app.models.prompt_template import PromptTemplate
 from app.models.unanswered_question import UnansweredQuestion
 from app.models.cta_click_log import CtaClickLog
 from app.models.market import ApartmentResident, MarketPost, MarketImage, MarketComment, MarketReport
+from app.models.complaint import Complaint
 
 __all__ = [
     "Company",
@@ -33,4 +34,5 @@ __all__ = [
     "MarketImage",
     "MarketComment",
     "MarketReport",
+    "Complaint",
 ]

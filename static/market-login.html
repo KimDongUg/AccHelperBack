@@ -17,13 +17,13 @@
   <div class="mkt-login-logo">
     <div class="emoji">🥕</div>
     <h2>우리아파트 당근</h2>
-    <p>세종푸르지오2차 입주민 전용 중고거래·나눔</p>
+    <p id="aptSubtitle">입주민 전용 중고거래·나눔</p>
   </div>
 
   <form class="mkt-form" id="loginForm" onsubmit="return false">
     <div>
-      <label>동</label>
-      <input class="mkt-input" value="1동" readonly>
+      <label>동 <span id="dongRequired" style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="buildingInput" type="text" placeholder="예: 1동" maxlength="10">
     </div>
     <div>
       <label>호수 <span style="color:#c62828">*</span></label>
@@ -45,7 +45,7 @@
 
   <p style="text-align:center;font-size:12px;color:#aaa;margin-top:20px">
     관리비 납부 시 등록한 정보와 동일하게 입력해주세요.<br>
-    실명·전화번호는 서버에 저장되지 않습니다.
+    이름·전화번호는 서버에 저장되지 않으며 동/호수만 게시됩니다.
   </p>
 </div>
 
@@ -54,40 +54,65 @@
 // 이미 로그인된 경우 바로 이동
 if (MarketAuth.getToken()) location.href = '/market.html';
 
+// 회사 정보로 동 기본값 설정
+(function () {
+    const companyName = sessionStorage.getItem('market_company_name') || '';
+    const buildingInput = document.getElementById('buildingInput');
+
+    // 세종푸르지오시티 2차 → 1동 고정
+    if (companyName.includes('세종푸르지오시티') && companyName.includes('2차') ||
+        companyName.includes('세종푸르지오2차')) {
+        buildingInput.value = '1동';
+        buildingInput.readOnly = true;
+        buildingInput.style.background = '#f4f4f4';
+        buildingInput.style.color = '#666';
+        document.getElementById('dongRequired').textContent = '';
+        document.getElementById('aptSubtitle').textContent = companyName + ' 입주민 전용 중고거래·나눔';
+    } else if (companyName) {
+        document.getElementById('aptSubtitle').textContent = companyName + ' 입주민 전용 중고거래·나눔';
+    }
+})();
+
 async function doLogin() {
-  const unit = document.getElementById('unit').value.trim();
-  const name = document.getElementById('name').value.trim();
-  const phone = document.getElementById('phone').value.trim();
-  const errEl = document.getElementById('errMsg');
-  const btn = document.getElementById('loginBtn');
+    const building = document.getElementById('buildingInput').value.trim();
+    const unit = document.getElementById('unit').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const errEl = document.getElementById('errMsg');
+    const btn = document.getElementById('loginBtn');
 
-  if (!unit || !name || !phone) {
-    errEl.textContent = '모든 항목을 입력해주세요.';
-    errEl.style.display = 'block';
-    return;
-  }
+    if (!building || !unit || !name || !phone) {
+        errEl.textContent = '모든 항목을 입력해주세요.';
+        errEl.style.display = 'block';
+        return;
+    }
 
-  btn.disabled = true;
-  btn.textContent = '인증 중...';
-  errEl.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = '인증 중...';
+    errEl.style.display = 'none';
 
-  try {
-    const res = await fetch('/api/market/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ building: '1동', unit_number: unit, name, phone }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || '인증 실패');
+    try {
+        const res = await fetch('/api/market/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ building, unit_number: unit, name, phone }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '인증 실패');
 
-    MarketAuth.save(data.token, { unit: data.unit, building: data.building });
-    location.href = '/market.html';
-  } catch (e) {
-    errEl.textContent = e.message;
-    errEl.style.display = 'block';
-    btn.disabled = false;
-    btn.textContent = '인증하기';
-  }
+        // 이름도 세션에 저장 (수정 시 본인 확인용)
+        MarketAuth.save(data.token, {
+            unit: data.unit,
+            building: data.building,
+            name: name,
+        });
+        location.href = '/market.html';
+    } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '인증하기';
+    }
 }
 </script>
 </body>

@@ -26,6 +26,20 @@
   <button class="mkt-comment-submit" onclick="submitComment()">등록</button>
 </div>
 
+<!-- 수정 모달 -->
+<div class="mkt-modal-overlay" id="editModal" style="display:none" onclick="closeEditModal(event)">
+  <div class="mkt-modal" onclick="event.stopPropagation()">
+    <h3>본인 확인</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">작성 시 입력한 이름을 입력해주세요.</p>
+    <input class="mkt-input" id="editNameVerify" type="text" placeholder="이름" style="margin-bottom:12px">
+    <div id="editNameErr" style="color:#c62828;font-size:13px;margin-bottom:8px;display:none">이름이 일치하지 않습니다.</div>
+    <div class="mkt-modal-btns">
+      <button class="mkt-btn mkt-btn-gray" style="flex:1" onclick="closeEditModal()">취소</button>
+      <button class="mkt-btn" style="flex:1" onclick="verifyAndEdit()">확인</button>
+    </div>
+  </div>
+</div>
+
 <!-- 신고 모달 -->
 <div class="mkt-modal-overlay" id="reportModal" style="display:none" onclick="closeReportModal(event)">
   <div class="mkt-modal" onclick="event.stopPropagation()">
@@ -148,7 +162,31 @@ async function changeStatus(status) {
 }
 
 function editPost() {
-  // 간단 인라인 편집 — 별도 페이지 대신 prompt 사용 (MVP)
+  // 이름 확인 모달 표시
+  document.getElementById('editNameVerify').value = '';
+  document.getElementById('editNameErr').style.display = 'none';
+  document.getElementById('editModal').style.display = 'flex';
+}
+
+function closeEditModal(e) {
+  if (!e || e.target === document.getElementById('editModal')) {
+    document.getElementById('editModal').style.display = 'none';
+  }
+}
+
+function verifyAndEdit() {
+  const entered = document.getElementById('editNameVerify').value.trim();
+  const stored = (user && user.name) ? user.name.trim() : '';
+  if (!stored || entered !== stored) {
+    document.getElementById('editNameErr').style.display = 'block';
+    return;
+  }
+  document.getElementById('editModal').style.display = 'none';
+  // 이름 확인 통과 → 수정 폼 표시
+  showEditForm();
+}
+
+function showEditForm() {
   const newTitle = prompt('제목 수정:', post.title);
   if (newTitle === null) return;
   const newContent = prompt('내용 수정:', post.content);

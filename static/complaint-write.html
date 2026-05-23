@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>민원 작성</title>
+<link rel="icon" type="image/png" href="/assets/images/logo.png">
+<link rel="stylesheet" href="/css/complaint.css?v=1">
+</head>
+<body>
+
+<div class="cp-header">
+  <button class="cp-back" onclick="history.back()">←</button>
+  <h1>민원 작성</h1>
+</div>
+
+<div class="cp-form-wrap">
+
+  <div class="cp-section">
+    <div class="cp-section-title">동 / 호수 <span style="color:#E74C3C">*</span></div>
+    <div class="cp-row">
+      <input class="cp-input" id="dongInput" type="text" placeholder="예: 1동" maxlength="10">
+      <input class="cp-input" id="hoInput" type="text" placeholder="예: 501호" maxlength="10">
+    </div>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">이름 <span style="color:#E74C3C">*</span></div>
+    <input class="cp-input" id="nameInput" type="text" placeholder="이름을 입력하세요 (목록에는 표시되지 않습니다)" maxlength="50">
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">제목 <span style="color:#E74C3C">*</span></div>
+    <input class="cp-input" id="titleInput" type="text" placeholder="제목을 입력하세요" maxlength="100">
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">내용 <span style="color:#E74C3C">*</span></div>
+    <textarea class="cp-textarea" id="contentInput" placeholder="민원 내용을 상세히 작성해주세요." maxlength="3000"></textarea>
+  </div>
+
+  <p style="font-size:12px;color:#9E9E9E;margin-bottom:12px;line-height:1.6">
+    ※ 이름은 저장되지만 게시판에는 동/호수만 표시됩니다.<br>
+    ※ 허위 민원이나 욕설 등 부적절한 글은 관리자에 의해 삭제될 수 있습니다.
+  </p>
+
+  <div id="errMsg" class="cp-error"></div>
+
+  <button class="cp-btn" id="submitBtn" onclick="submitComplaint()">민원 등록</button>
+
+</div>
+
+<script src="/js/complaint.js?v=1"></script>
+<script>
+const companyId = getCompanyParam();
+if (!companyId) { alert('잘못된 접근입니다.'); location.href = '/'; }
+
+// 회사명으로 동 기본값 설정
+(async () => {
+    try {
+        const res = await fetch(`/api/companies/public/${encodeURIComponent(companyId)}`);
+        if (res.ok) {
+            const company = await res.json();
+            const defaultDong = getDefaultDong(company.company_name);
+            const dongInput = document.getElementById('dongInput');
+            if (defaultDong) {
+                dongInput.value = defaultDong;
+                dongInput.readOnly = true;
+            }
+        }
+    } catch {}
+})();
+
+async function submitComplaint() {
+    const dong = document.getElementById('dongInput').value.trim();
+    const ho = document.getElementById('hoInput').value.trim();
+    const name = document.getElementById('nameInput').value.trim();
+    const title = document.getElementById('titleInput').value.trim();
+    const content = document.getElementById('contentInput').value.trim();
+    const errEl = document.getElementById('errMsg');
+    const btn = document.getElementById('submitBtn');
+
+    errEl.style.display = 'none';
+    if (!dong) { errEl.textContent = '동을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!ho) { errEl.textContent = '호수를 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!title) { errEl.textContent = '제목을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!content) { errEl.textContent = '내용을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true;
+    btn.textContent = '등록 중...';
+
+    try {
+        const data = await cpFetch('', {
+            method: 'POST',
+            body: { company_id: parseInt(companyId), dong, ho, name, title, content },
+        });
+        location.href = `/complaint-post.html?id=${data.complaint_id}&company=${companyId}`;
+    } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '민원 등록';
+    }
+}
+</script>
+</body>
+</html>

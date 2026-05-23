@@ -1,0 +1,346 @@
+/* 민원게시판 전용 스타일 */
+:root {
+  --primary: #7DC242;
+  --primary-dark: #4A8A2A;
+  --primary-light: #A8D876;
+  --primary-bg: #EFF8E8;
+  --gray-50: #FAFAFA;
+  --gray-100: #F5F5F5;
+  --gray-200: #EEEEEE;
+  --gray-300: #E0E0E0;
+  --gray-500: #9E9E9E;
+  --gray-600: #757575;
+  --gray-900: #212121;
+  --danger: #E74C3C;
+  --radius: 10px;
+  --shadow: 0 1px 6px rgba(0,0,0,0.09);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR','맑은 고딕', -apple-system, sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-900);
+  max-width: 680px;
+  margin: 0 auto;
+  min-height: 100vh;
+}
+
+/* ── 헤더 ──────────────────────────────────────────────── */
+.cp-header {
+  background: var(--primary);
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+}
+.cp-header h1 { font-size: 17px; font-weight: 700; flex: 1; }
+.cp-back { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 0 4px; }
+.cp-header-right { font-size: 13px; }
+
+/* ── 목록 ──────────────────────────────────────────────── */
+.cp-list { padding: 8px 0; }
+
+.cp-item {
+  display: block;
+  background: #fff;
+  margin: 6px 12px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--gray-200);
+  transition: box-shadow 0.15s;
+}
+.cp-item:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.13); }
+.cp-item-top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.cp-item-title {
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-badge {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.cp-badge-reply { background: #E3F2FD; color: #1565C0; }
+.cp-badge-deleted { background: #FFEBEE; color: #C62828; }
+.cp-item-meta {
+  font-size: 12px;
+  color: var(--gray-500);
+  display: flex;
+  gap: 8px;
+}
+.cp-item-preview {
+  font-size: 13px;
+  color: var(--gray-600);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-deleted-notice {
+  font-size: 13px;
+  color: var(--danger);
+  margin: 6px 12px;
+  padding: 10px 14px;
+  background: #FFEBEE;
+  border-radius: var(--radius);
+}
+
+/* FAB 글쓰기 버튼 */
+.cp-fab {
+  position: fixed;
+  bottom: 24px;
+  right: max(24px, calc(50% - 340px + 24px));
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 26px;
+  line-height: 52px;
+  text-align: center;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.2);
+  z-index: 200;
+}
+.cp-fab:hover { background: var(--primary-dark); }
+
+/* 빈 상태 */
+.cp-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--gray-500);
+}
+.cp-empty .emoji { font-size: 48px; display: block; margin-bottom: 12px; }
+
+/* ── 글쓰기 ──────────────────────────────────────────────── */
+.cp-form-wrap {
+  padding: 16px 14px 80px;
+}
+.cp-section { margin-bottom: 16px; }
+.cp-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+  margin-bottom: 6px;
+}
+.cp-input, .cp-textarea, .cp-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.cp-input:focus, .cp-textarea:focus, .cp-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+.cp-textarea { min-height: 140px; resize: vertical; line-height: 1.6; }
+.cp-row { display: flex; gap: 8px; }
+.cp-row .cp-input { flex: 1; }
+.cp-input[readonly] { background: var(--gray-100); color: var(--gray-600); }
+
+.cp-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  margin-top: 8px;
+}
+.cp-btn:hover { background: var(--primary-dark); }
+.cp-btn:disabled { background: var(--gray-300); cursor: not-allowed; }
+.cp-btn-outline {
+  background: #fff;
+  color: var(--primary);
+  border: 1.5px solid var(--primary);
+}
+.cp-btn-outline:hover { background: var(--primary-bg); }
+.cp-btn-danger {
+  background: var(--danger);
+}
+.cp-btn-danger:hover { background: #C0392B; }
+.cp-btn-gray {
+  background: var(--gray-200);
+  color: var(--gray-900);
+}
+.cp-btn-gray:hover { background: var(--gray-300); }
+
+.cp-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 6px;
+  display: none;
+}
+
+/* ── 상세 보기 ──────────────────────────────────────────────── */
+.cp-post-body {
+  background: #fff;
+  margin: 10px 12px;
+  border-radius: var(--radius);
+  padding: 18px 16px;
+  box-shadow: var(--shadow);
+}
+.cp-post-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.cp-post-meta {
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 14px;
+  display: flex;
+  gap: 12px;
+}
+.cp-post-content {
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--gray-900);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cp-post-deleted {
+  font-size: 15px;
+  color: var(--danger);
+  font-weight: 500;
+  padding: 20px 0;
+  text-align: center;
+}
+
+/* 답변 영역 */
+.cp-reply-wrap {
+  background: var(--primary-bg);
+  margin: 0 12px 10px;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--primary);
+}
+.cp-reply-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 6px;
+}
+.cp-reply-content {
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.cp-reply-time {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 6px;
+}
+
+/* 관리자 액션 패널 */
+.cp-admin-panel {
+  margin: 0 12px 12px;
+  padding: 14px;
+  background: #fff;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+.cp-admin-panel-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-600);
+  margin-bottom: 10px;
+}
+.cp-admin-btns { display: flex; gap: 8px; }
+.cp-admin-btns button { flex: 1; }
+
+/* 답변 입력 폼 */
+.cp-reply-form { margin-top: 10px; }
+.cp-reply-form textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--primary);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 90px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+.cp-reply-form textarea:focus { outline: none; }
+
+/* ── 모달 ──────────────────────────────────────────────── */
+.cp-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  z-index: 500;
+}
+.cp-modal {
+  background: #fff;
+  width: 100%;
+  max-width: 680px;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 16px 32px;
+}
+.cp-modal h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.cp-modal textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 80px;
+  resize: vertical;
+  margin-bottom: 12px;
+}
+.cp-modal textarea:focus { outline: none; border-color: var(--primary); }
+.cp-modal-btns { display: flex; gap: 8px; }
+.cp-modal-btns button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+/* 토스트 */
+.cp-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  padding: 10px 20px;
+  border-radius: 24px;
+  font-size: 14px;
+  opacity: 0;
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 1000;
+}
+.cp-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
