@@ -91,3 +91,43 @@ function cpTimeAgo(iso) {
 function escHtml(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
+
+// ── 공통 헤더 초기화 ──────────────────────────────────────────────────────────
+
+function initCpHeader() {
+    const companyId   = sessionStorage.getItem('complaint_company_id');
+    const companyName = sessionStorage.getItem('market_company_name') || '';
+    const sess        = ComplaintAuth.getSession();
+
+    // 회사 이름 표시
+    const labelEl = document.getElementById('cpCompanyLabel');
+    if (labelEl && companyName) {
+        labelEl.textContent = companyName;
+        labelEl.style.display = '';
+    }
+
+    // 민원게시판 링크에 company 파라미터 삽입
+    const cpNav = document.getElementById('cpComplaintNav');
+    if (cpNav && companyId) cpNav.href = `/complaint.html?company=${companyId}`;
+
+    // 당근 링크 표시 여부
+    const daangnNav = document.getElementById('cpDaangnNav');
+    if (daangnNav) {
+        if (companyName || companyId) daangnNav.style.display = '';
+        else daangnNav.style.display = 'none';
+    }
+
+    // 관리자 버튼 처리
+    const loginBtn = document.getElementById('cpHeaderLoginLink');
+    const adminBtn = document.getElementById('cpAdminLink');
+    if (sess && sess.isLoggedIn && sess.token) {
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (adminBtn) {
+            adminBtn.style.display = '';
+            adminBtn.textContent = '관리자 (' + (sess.fullName || sess.username || '') + ')';
+        }
+    } else {
+        if (loginBtn) loginBtn.style.display = '';
+        if (adminBtn) adminBtn.style.display = 'none';
+    }
+}

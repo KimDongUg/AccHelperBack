@@ -22,9 +22,12 @@ body {
   font-family: 'Noto Sans KR','맑은 고딕', -apple-system, sans-serif;
   background: var(--gray-50);
   color: var(--gray-900);
+  min-height: 100vh;
+}
+
+.cp-page {
   max-width: 680px;
   margin: 0 auto;
-  min-height: 100vh;
 }
 
 /* ── 헤더 ──────────────────────────────────────────────── */
