@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import SECRET_KEY, UPLOAD_DIR
 from app.database import get_db
+from app.dependencies import require_admin
 from app.models.market import (
     ApartmentResident, MarketPost, MarketImage, MarketComment, MarketReport
 )
@@ -103,6 +104,7 @@ class LoginRequest(BaseModel):
     unit_number: str
     name: str
     phone: str
+    company_id: Optional[int] = None
 
 
 @router.post("/login")
@@ -117,29 +119,126 @@ def market_login(req: LoginRequest, db: Session = Depends(get_db)):
         )
         .first()
     )
-    if not resident:
-        raise HTTPException(
-            status_code=401,
-            detail="입주민 정보가 일치하지 않습니다. 관리비 등록 정보와 동일하게 입력해주세요.",
+
+    if resident:
+        # 기존 입주민: 이름 + 전화번호 검증
+        resident_match = (
+            resident.resident_name == req.name
+            and _normalize_phone(resident.resident_phone or "") == phone_norm
+        )
+        owner_match = (
+            resident.owner_name == req.name
+            and _normalize_phone(resident.owner_phone or "") == phone_norm
+        )
+        # 자가등록 입주민은 이름+전화번호로만 검증
+        self_match = (
+            resident.is_self_registered
+            and resident.resident_name == req.name
+            and _normalize_phone(resident.resident_phone or "") == phone_norm
         )
 
-    resident_match = (
-        resident.resident_name == req.name
-        and _normalize_phone(resident.resident_phone or "") == phone_norm
-    )
-    owner_match = (
-        resident.owner_name == req.name
-        and _normalize_phone(resident.owner_phone or "") == phone_norm
-    )
-
-    if not (resident_match or owner_match):
-        raise HTTPException(
-            status_code=401,
-            detail="입주민 정보가 일치하지 않습니다. 관리비 등록 정보와 동일하게 입력해주세요.",
+        if not (resident_match or owner_match or self_match):
+            raise HTTPException(
+                status_code=401,
+                detail="입주민 정보가 일치하지 않습니다. 관리비 등록 정보와 동일하게 입력해주세요.",
+            )
+        is_new = False
+    else:
+        # 미등록 입주민: 자동 등록 (관리자 확인 대기)
+        resident = ApartmentResident(
+            building=req.building,
+            unit_number=req.unit_number,
+            resident_name=req.name,
+            resident_phone=req.phone,
+            company_id=req.company_id,
+            is_self_registered=True,
+            is_verified=False,
         )
+        db.add(resident)
+        db.commit()
+        db.refresh(resident)
+        logger.info(
+            "입주민 자동등록: building=%s unit=%s name=%s company_id=%s",
+            req.building, req.unit_number, req.name, req.company_id,
+        )
+        is_new = True
 
     token = _create_market_token(req.building, req.unit_number, req.name)
-    return {"success": True, "token": token, "unit": req.unit_number, "building": req.building}
+    return {
+        "success": True,
+        "token": token,
+        "unit": req.unit_number,
+        "building": req.building,
+        "is_new_registration": is_new,
+    }
+
+
+# ── 관리자: 입주민 관리 ───────────────────────────────────────────────────────
+
+@router.get("/admin/residents")
+def list_residents(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """자가등록 입주민 목록 (관리자용)"""
+    residents = (
+        db.query(ApartmentResident)
+        .filter(
+            ApartmentResident.company_id == admin["company_id"],
+            ApartmentResident.is_self_registered == True,
+        )
+        .order_by(ApartmentResident.registered_at.desc())
+        .all()
+    )
+    return [
+        {
+            "id": r.id,
+            "building": r.building,
+            "unit_number": r.unit_number,
+            "name": r.resident_name,
+            "phone": r.resident_phone,
+            "is_verified": r.is_verified,
+            "registered_at": r.registered_at.isoformat() if r.registered_at else None,
+        }
+        for r in residents
+    ]
+
+
+@router.patch("/admin/residents/{resident_id}/verify")
+def verify_resident(
+    resident_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """입주민 승인"""
+    r = db.query(ApartmentResident).filter(
+        ApartmentResident.id == resident_id,
+        ApartmentResident.company_id == admin["company_id"],
+    ).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="입주민을 찾을 수 없습니다.")
+    r.is_verified = True
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/residents/{resident_id}")
+def delete_resident(
+    resident_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """입주민 삭제 (허위 등록 처리)"""
+    r = db.query(ApartmentResident).filter(
+        ApartmentResident.id == resident_id,
+        ApartmentResident.company_id == admin["company_id"],
+    ).first()
+    if not r:
+        raise HTTPException(status_code=404, detail="입주민을 찾을 수 없습니다.")
+    db.delete(r)
+    db.commit()
+    logger.info("입주민 삭제: id=%d by admin=%d", resident_id, admin["user_id"])
+    return {"ok": True}
 
 
 # ── 게시글 목록 ───────────────────────────────────────────────────────────────

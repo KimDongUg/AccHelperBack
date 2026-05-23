@@ -13,6 +13,10 @@ class ApartmentResident(Base):
     resident_phone = Column(String(30))
     owner_name = Column(String(100))
     owner_phone = Column(String(30))
+    company_id = Column(Integer, nullable=True)
+    is_self_registered = Column(Boolean, default=False)
+    is_verified = Column(Boolean, default=True)
+    registered_at = Column(DateTime, server_default=func.now())
 
 
 class MarketPost(Base):

@@ -3,29 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 - 경리 도우미</title>
-    <link rel="stylesheet" href="/css/common.css">
-    <link rel="stylesheet" href="/css/admin.css">
+    <title>관리자 - AI Helper</title>
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <link rel="stylesheet" href="/css/common.css?v=15">
+    <link rel="stylesheet" href="/css/admin.css?v=15">
 </head>
 <body>
     <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
 
     <header class="header" role="banner">
         <div class="header-left">
-            <a href="/" class="header-logo" aria-label="경리 도우미 홈으로 이동">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                <span>경리 도우미</span>
+            <a href="/" id="headerLogo" class="header-logo" aria-label="AI Helper 홈으로 이동">
+                <img src="/assets/images/logo.png" alt="AI Helper 로고" aria-hidden="true">
             </a>
         </div>
         <div class="header-right">
+            <span id="headerCompanyName" style="font-size:var(--text-sm);color:var(--primary);font-weight:600"></span>
             <span id="adminUsername" style="font-size:var(--text-sm);color:var(--gray-600)"></span>
-            <a href="/" class="btn btn-outline btn-sm">챗봇</a>
+            <span id="roleBadge" class="role-badge" style="display:none"></span>
+            <button id="profileBtn" class="btn btn-outline btn-sm" aria-label="내 정보">내 정보</button>
+            <a href="/super-admin.html" id="superAdminLink" class="btn btn-outline btn-sm" style="display:none">수퍼관리</a>
+            <a href="/" id="chatBotLink" class="btn btn-outline btn-sm">챗봇</a>
             <button id="logoutBtn" class="btn btn-sm" style="color:var(--gray-600)" aria-label="로그아웃">로그아웃</button>
         </div>
     </header>
 
     <main id="main-content" class="admin-container">
-        <h1 class="admin-title">Q&A 관리 대시보드</h1>
+        <h1 class="admin-title">관리 대시보드</h1>
 
         <!-- Stats — 3 cards -->
         <div class="stats-grid" role="region" aria-label="통계 요약">
@@ -62,72 +66,614 @@
                     </div>
                 </div>
             </div>
+            <div class="stat-card stat-card-link" id="feedbackCard" onclick="switchTab('feedback')" title="불만족 피드백 탭으로 이동">
+                <div class="stat-icon yellow" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>불만족 피드백</h4>
+                    <div class="stat-value" id="statFeedback" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card stat-card-link" id="unansweredCard" onclick="switchTab('unanswered')" title="미답변 질문 탭으로 이동">
+                <div class="stat-icon red" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>미답변 질문</h4>
+                    <div class="stat-value" id="statUnanswered" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" id="subscriptionCard">
+                <div class="stat-icon purple" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>구독 상태</h4>
+                    <div class="stat-value" id="statSubscription" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" id="qrCodeCard">
+                <div class="stat-icon teal" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="4" height="4"/><line x1="22" y1="18" x2="22" y2="22"/><line x1="18" y1="22" x2="22" y2="22"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>챗봇 QR코드</h4>
+                    <div class="stat-value" id="statQrCode">
+                        <button class="btn btn-outline btn-sm" id="qrDownloadBtn" onclick="showQrModal()" style="font-size:0.75rem;padding:0.2rem 0.6rem">QR 다운로드</button>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" id="noticeCard">
+                <div class="stat-icon green" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>공고문</h4>
+                    <div class="stat-value">
+                        <button class="btn btn-outline btn-sm" onclick="showNoticeModal()" style="font-size:0.75rem;padding:0.2rem 0.6rem">다운로드</button>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" id="collectorCard" style="display:none">
+                <div class="stat-icon" style="background:#e3f2fd;color:#1565c0" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>ERP 수집기</h4>
+                    <div class="stat-value">
+                        <a class="btn btn-outline btn-sm" href="https://github.com/KimDongUg/AIHelperCollector/releases/download/v5.10.1/AIHelperCollector-v5.10.1-win.zip" download style="font-size:0.75rem;padding:0.2rem 0.6rem;text-decoration:none">다운로드</a>
+                    </div>
+                    <div style="font-size:0.7rem;color:#888;margin-top:2px">v5.10.1 · Windows 10+</div>
+                </div>
+            </div>
         </div>
 
-        <!-- Toolbar -->
-        <div class="toolbar" role="toolbar" aria-label="Q&A 검색 및 필터">
-            <div class="search-wrap">
-                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <label for="searchInput" class="sr-only">검색</label>
-                <input type="text" id="searchInput" class="form-control search-input" placeholder="질문, 답변, 키워드 검색..." aria-label="Q&A 검색">
+        <!-- Company Settings -->
+        <section class="company-settings" id="companySettingsSection">
+            <h2 class="admin-section-title">회사 설정</h2>
+            <div class="company-settings-grid">
+                <div class="form-group">
+                    <label for="dashCompanyName">회사명</label>
+                    <input type="text" id="dashCompanyName" class="form-control" placeholder="회사명을 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="dashCompanyAddress">회사 주소</label>
+                    <input type="text" id="dashCompanyAddress" class="form-control" placeholder="회사 주소를 입력하세요">
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="dashChatbotUrl">챗봇 주소</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center">
+                        <input type="text" id="dashChatbotUrl" class="form-control" readonly style="background:#f5f5f5;cursor:default">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="copyChatbotUrl()" style="white-space:nowrap">복사</button>
+                    </div>
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="dashGreeting">챗봇 인사말</label>
+                    <textarea id="dashGreeting" class="form-control" rows="2" placeholder="예: 안녕하세요! OOO AI Helper입니다. 궁금한 점을 물어보세요."></textarea>
+                    <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.25rem">챗봇 첫 화면에 표시되는 인사말입니다.</div>
+                </div>
+                <!-- 공지사항 -->
+                <div class="form-group notice-admin-group" style="grid-column:1/-1">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+                        <label style="margin:0">공지사항</label>
+                        <label class="notice-toggle-wrap">
+                            <input type="checkbox" id="noticeActive">
+                            <span class="notice-toggle-slider"></span>
+                            <span style="font-size:var(--text-sm);color:var(--gray-600);margin-left:0.25rem" id="noticeActiveLabel">비활성</span>
+                        </label>
+                    </div>
+                    <textarea id="noticeText" class="form-control" rows="2" placeholder="공지 내용을 입력하세요. (예: 생활 소음 협조 부탁드립니다...)"></textarea>
+                    <input type="text" id="noticeTextLink" class="form-control" placeholder="텍스트 클릭 시 챗봇에 물어볼 질문 (선택, 예: 층간소음 관련 규정이 어떻게 되나요?)" style="margin-top:0.4rem">
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.4rem">
+                        <input type="file" id="noticeImageFile" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none" onchange="uploadNoticeImage(this)">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('noticeImageFile').click()">이미지 선택</button>
+                        <span id="noticeImgStatus" style="font-size:var(--text-xs);color:var(--gray-400)"></span>
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.4rem">공지 활성화 시 챗봇 첫 화면의 인사말 대신 표시됩니다. 이미지는 공지 내용 안에 삽입됩니다.</div>
+                </div>
+
+                <div class="form-group" style="grid-column:1/-1">
+                    <label>카테고리 버튼 설정</label>
+                    <div id="categoryItemsWrap"></div>
+                    <button type="button" class="btn btn-outline btn-sm" id="addCategoryBtn" onclick="addCategoryItem()" style="margin-top:0.5rem">+ 카테고리 추가</button>
+                    <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.25rem">챗봇 첫 화면의 빠른 질문 버튼입니다.</div>
+                </div>
             </div>
-            <label for="categoryFilter" class="sr-only">카테고리 필터</label>
-            <select id="categoryFilter" class="form-control" aria-label="카테고리 필터">
-                <option value="">전체 카테고리</option>
-                <option value="세금">세금</option>
-                <option value="급여">급여</option>
-                <option value="비용처리">비용처리</option>
-                <option value="회계처리">회계처리</option>
-                <option value="기타">기타</option>
-            </select>
-            <label for="statusFilter" class="sr-only">상태 필터</label>
-            <select id="statusFilter" class="form-control" aria-label="상태 필터">
-                <option value="">전체 상태</option>
-                <option value="active">활성</option>
-                <option value="inactive">비활성</option>
-            </select>
-            <button class="btn btn-primary" onclick="openCreateModal()" aria-label="새 Q&A 추가">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                새 Q&A 추가
-            </button>
-            <button class="btn btn-outline" id="btnExcelUpload" onclick="openUploadModal()" aria-label="엑셀 업로드" style="display:none">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                엑셀 업로드
-            </button>
+            <div style="text-align:right;margin-top:0.75rem">
+                <button class="btn btn-primary" id="companySettingsSaveBtn" onclick="saveCompanySettings()">저장</button>
+            </div>
+        </section>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav" role="tablist" aria-label="관리 탭">
+            <button class="tab-btn active" role="tab" aria-selected="true" data-tab="qa" id="tabQa">Q&A 관리</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="admins" id="tabAdmins" style="display:none">관리자 관리</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback" id="tabFeedback">피드백</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="unanswered" id="tabUnanswered">미답변 질문</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="statistics" id="tabStatistics">통계</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="questionViews" id="tabQuestionViews">질문 조회 상세</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="residents" id="tabResidents" style="display:none">입주민 관리</button>
         </div>
 
-        <!-- Table -->
-        <div class="qa-table-wrap" id="qaTableWrap">
-            <!-- Loading overlay -->
-            <div class="table-loading" id="tableLoading" role="status" aria-label="데이터 로딩 중">
-                <div class="table-spinner" aria-hidden="true"></div>
+        <!-- Tab: Q&A Management -->
+        <div class="tab-content active" id="tabContentQa" role="tabpanel">
+            <!-- Toolbar -->
+            <div class="toolbar" role="toolbar" aria-label="Q&A 검색 및 필터">
+                <div class="search-wrap">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <label for="searchInput" class="sr-only">검색</label>
+                    <input type="text" id="searchInput" class="form-control search-input" placeholder="질문, 답변, 키워드 검색..." aria-label="Q&A 검색">
+                </div>
+                <label for="categoryFilter" class="sr-only">카테고리 필터</label>
+                <select id="categoryFilter" class="form-control" aria-label="카테고리 필터">
+                    <option value="">전체 카테고리</option>
+                </select>
+                <label for="statusFilter" class="sr-only">상태 필터</label>
+                <select id="statusFilter" class="form-control" aria-label="상태 필터">
+                    <option value="">전체 상태</option>
+                    <option value="active">활성</option>
+                    <option value="inactive">비활성</option>
+                </select>
+                <label for="createdByFilter" class="sr-only">작성자 필터</label>
+                <select id="createdByFilter" class="form-control" aria-label="작성자 필터">
+                    <option value="">전체 작성자</option>
+                </select>
+                <label for="companyFilter" class="sr-only">회사 필터</label>
+                <select id="companyFilter" class="form-control" aria-label="회사 필터" style="display:none">
+                    <option value="">전체 회사</option>
+                </select>
+                <button class="btn btn-primary" id="addQaBtn" onclick="openCreateModal()" aria-label="새 Q&A 추가">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    새 Q&A 추가
+                </button>
+                <button class="btn btn-outline" id="exportQaExcelBtn" onclick="exportQaToExcel()" aria-label="Q&A 엑셀 다운로드" style="display:none">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    엑셀 다운로드
+                </button>
             </div>
+
+            <!-- Table -->
+            <div class="qa-table-wrap" id="qaTableWrap">
+                <div class="table-loading" id="tableLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="Q&A 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col" style="width:80px">카테고리</th>
+                                <th scope="col" style="width:120px;display:none" id="companyColHeader">회사</th>
+                                <th scope="col" class="col-question">질문</th>
+                                <th scope="col" class="col-answer">답변 미리보기</th>
+                                <th scope="col" style="width:60px">상태</th>
+                                <th scope="col" style="width:80px">작성자</th>
+                                <th scope="col" style="width:100px" class="col-date">수정일</th>
+                                <th scope="col" style="width:120px" class="col-actions">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qaTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="emptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    <p>등록된 Q&A가 없습니다.</p>
+                </div>
+                <nav class="pagination" id="pagination" aria-label="페이지 내비게이션"></nav>
+            </div>
+        </div>
+
+        <!-- Tab: Admin Management -->
+        <div class="tab-content" id="tabContentAdmins" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">관리자 목록</h3>
+                <button class="btn btn-primary" id="addAdminBtn" onclick="openAdminModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    관리자 추가
+                </button>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="관리자 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col">이메일</th>
+                                <th scope="col">이름</th>
+                                <th scope="col" style="width:80px">역할</th>
+                                <th scope="col" style="width:60px">상태</th>
+                                <th scope="col" style="width:150px">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Feedback -->
+        <div class="tab-content" id="tabContentFeedback" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">사용자 피드백</h3>
+                <select id="feedbackRatingFilter" class="form-control" aria-label="평가 필터" style="min-width:120px">
+                    <option value="dislike">불만족만</option>
+                    <option value="">전체</option>
+                    <option value="like">만족만</option>
+                </select>
+                <select id="feedbackStatusFilter" class="form-control" aria-label="상태 필터" style="min-width:120px">
+                    <option value="pending">미처리</option>
+                    <option value="">전체</option>
+                    <option value="resolved">처리완료</option>
+                </select>
+            </div>
+            <div class="qa-table-wrap" id="feedbackTableWrap">
+                <div class="table-loading" id="feedbackTableLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="피드백 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:60px">평가</th>
+                                <th scope="col" class="col-question">질문</th>
+                                <th scope="col" class="col-answer">답변 미리보기</th>
+                                <th scope="col" style="width:80px">상태</th>
+                                <th scope="col" style="width:130px">일시</th>
+                                <th scope="col" style="width:180px" class="col-actions">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="feedbackTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="feedbackEmptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <p>피드백이 없습니다.</p>
+                </div>
+                <nav class="pagination" id="feedbackPagination" aria-label="피드백 페이지 내비게이션"></nav>
+            </div>
+        </div>
+
+        <!-- Tab: Unanswered Questions -->
+        <div class="tab-content" id="tabContentUnanswered" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">미답변 질문 목록</h3>
+            </div>
+            <div class="qa-table-wrap" id="unansweredTableWrap">
+                <div class="table-loading" id="unansweredTableLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="미답변 질문 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="col-question">질문</th>
+                                <th scope="col" style="width:140px">질문일시</th>
+                                <th scope="col" style="width:80px">상태</th>
+                                <th scope="col" style="width:180px" class="col-actions">작업</th>
+                            </tr>
+                        </thead>
+                        <tbody id="unansweredTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="unansweredEmptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    <p>미답변 질문이 없습니다.</p>
+                </div>
+                <nav class="pagination" id="unansweredPagination" aria-label="미답변 질문 페이지 내비게이션"></nav>
+            </div>
+        </div>
+
+        <!-- Tab: Activity Logs -->
+        <div class="tab-content" id="tabContentLogs" role="tabpanel" style="display:none">
+            <div class="toolbar">
+                <h3 style="margin:0;font-size:var(--text-base)">활동 로그</h3>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="활동 로그">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:50px">ID</th>
+                                <th scope="col" style="width:120px">작업 유형</th>
+                                <th scope="col" style="width:100px">대상</th>
+                                <th scope="col">상세</th>
+                                <th scope="col" style="width:140px">시간</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="logEmptyState" class="empty-state" style="display:none">
+                    <p>활동 로그가 없습니다.</p>
+                </div>
+                <nav class="pagination" id="logPagination" aria-label="로그 페이지 내비게이션"></nav>
+            </div>
+        </div>
+
+        <!-- Tab: Statistics -->
+        <div class="tab-content" id="tabContentStatistics" role="tabpanel" style="display:none">
+            <!-- Period Selector -->
+            <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                <h3 style="margin:0;font-size:var(--text-base)">이용 통계</h3>
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto">
+                    <select id="statsPeriodType" class="form-control" aria-label="통계 기간 유형" style="min-width:100px">
+                        <option value="daily">일별</option>
+                        <option value="monthly">월별</option>
+                        <option value="quarterly">분기별</option>
+                        <option value="yearly">연도별</option>
+                    </select>
+                    <input type="date" id="statsDateFrom" class="form-control" style="min-width:140px">
+                    <span style="color:var(--gray-500)">~</span>
+                    <input type="date" id="statsDateTo" class="form-control" style="min-width:140px">
+                    <button class="btn btn-primary btn-sm" onclick="loadStatistics()">조회</button>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="stats-summary-grid" id="statsSummaryGrid">
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">총 접속자</div>
+                    <div class="stats-summary-value" id="statsTotalVisitors">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">총 질문 조회</div>
+                    <div class="stats-summary-value" id="statsTotalQuestions">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">총 답변 조회</div>
+                    <div class="stats-summary-value" id="statsTotalAnswers">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">일평균 접속자</div>
+                    <div class="stats-summary-value" id="statsAvgVisitors">-</div>
+                </div>
+            </div>
+
+            <!-- Charts -->
+            <div class="stats-charts-grid">
+                <div class="stats-chart-card">
+                    <h4 class="stats-chart-title">접속자 추이</h4>
+                    <div class="stats-chart-wrap">
+                        <canvas id="visitorsChart"></canvas>
+                    </div>
+                </div>
+                <div class="stats-chart-card">
+                    <h4 class="stats-chart-title">질문/답변 조회 추이</h4>
+                    <div class="stats-chart-wrap">
+                        <canvas id="qaViewsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detail Table -->
+            <div class="qa-table-wrap" style="margin-top:1rem">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="통계 상세">
+                        <thead>
+                            <tr>
+                                <th scope="col" id="statsColPeriod">기간</th>
+                                <th scope="col" style="width:120px">접속자 수</th>
+                                <th scope="col" style="width:120px">질문 조회</th>
+                                <th scope="col" style="width:120px">답변 조회</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="statsEmptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3v18h18"/><polyline points="18 9 13 14 9 10 3 16"/></svg>
+                    <p>해당 기간의 통계 데이터가 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Question Views Detail -->
+        <div class="tab-content" id="tabContentQuestionViews" role="tabpanel" style="display:none">
+            <!-- Toolbar -->
+            <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                <h3 style="margin:0;font-size:var(--text-base)">질문 조회 상세</h3>
+                <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto;flex-wrap:wrap">
+                    <select id="qvPeriodType" class="form-control" aria-label="통계 기간 유형" style="min-width:100px">
+                        <option value="daily">일별</option>
+                        <option value="monthly">월별</option>
+                        <option value="quarterly">분기별</option>
+                        <option value="yearly">연도별</option>
+                    </select>
+                    <input type="date" id="qvDateFrom" class="form-control" style="min-width:140px">
+                    <span style="color:var(--gray-500)">~</span>
+                    <input type="date" id="qvDateTo" class="form-control" style="min-width:140px">
+                    <button class="btn btn-primary btn-sm" onclick="loadQuestionViews()">조회</button>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="stats-summary-grid" id="qvSummaryGrid" style="margin-top:1rem">
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">조회된 질문 수</div>
+                    <div class="stats-summary-value" id="qvTotalQuestions">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">총 조회 수</div>
+                    <div class="stats-summary-value" id="qvTotalViews">-</div>
+                </div>
+                <div class="stats-summary-card">
+                    <div class="stats-summary-label">일평균 조회 수</div>
+                    <div class="stats-summary-value" id="qvAvgViews">-</div>
+                </div>
+            </div>
+
+            <!-- Chart -->
+            <div class="stats-chart-card" style="margin-top:1rem">
+                <h4 class="stats-chart-title">질문 조회 추이 <span style="font-size:var(--text-xs);color:var(--gray-400);font-weight:400">(차트 클릭 시 상세 보기)</span></h4>
+                <div class="stats-chart-wrap">
+                    <canvas id="qvDailyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Period Summary Table -->
+            <div class="qa-table-wrap" style="margin-top:1rem">
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="질문 조회 기간별 요약">
+                        <thead>
+                            <tr>
+                                <th scope="col" id="qvColPeriod" style="width:140px">기간</th>
+                                <th scope="col" style="width:120px">질문 수</th>
+                                <th scope="col" style="width:120px">총 조회 수</th>
+                                <th scope="col" style="width:100px">상세</th>
+                            </tr>
+                        </thead>
+                        <tbody id="qvTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="qvEmptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    <p>해당 기간의 질문 조회 데이터가 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Subscription Management -->
+        <div class="tab-content" id="tabContentSubscription" role="tabpanel" style="display:none">
+            <div class="subscription-wrap">
+                <!-- 구독 상태 카드 -->
+                <div class="sub-status-card" id="subStatusCard">
+                    <div class="sub-status-header">
+                        <div class="sub-status-icon" id="subStatusIcon">💳</div>
+                        <div>
+                            <h3 id="subPlanLabel">구독 정보 로딩 중...</h3>
+                            <p id="subPlanDetail" class="sub-detail"></p>
+                        </div>
+                    </div>
+                    <div class="sub-card-info" id="subCardInfo" style="display:none">
+                        <span class="sub-card-badge" id="subCardBadge"></span>
+                    </div>
+                    <div class="sub-dates" id="subDates" style="display:none">
+                        <div class="sub-date-item">
+                            <span class="sub-date-label">마지막 결제일</span>
+                            <span class="sub-date-value" id="subLastPaid">-</span>
+                        </div>
+                        <div class="sub-date-item">
+                            <span class="sub-date-label">다음 결제 예정일</span>
+                            <span class="sub-date-value" id="subNextPay">-</span>
+                        </div>
+                        <div class="sub-date-item">
+                            <span class="sub-date-label">월 구독료</span>
+                            <span class="sub-date-value" id="subAmount">-</span>
+                        </div>
+                    </div>
+                    <div class="sub-actions">
+                        <button class="btn btn-primary" id="subPayBtn" onclick="initSubscriptionPayment()">카드 등록 및 결제</button>
+                        <button class="btn btn-outline" id="subRePayBtn" style="display:none" onclick="executeRePayment()">재결제 (구독 갱신)</button>
+                        <button class="btn btn-outline btn-danger-outline" id="subCancelBtn" style="display:none" onclick="cancelSubscription()">구독 해지</button>
+                    </div>
+                </div>
+
+                <!-- 결제 내역 -->
+                <div class="sub-history">
+                    <h3>결제 내역</h3>
+                    <div class="table-responsive">
+                        <table class="table" id="subHistoryTable">
+                            <thead>
+                                <tr>
+                                    <th>결제일</th>
+                                    <th>주문명</th>
+                                    <th>금액</th>
+                                    <th>상태</th>
+                                    <th>비고</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subHistoryBody">
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="subHistoryEmpty" class="empty-state" style="display:none">
+                        <p>결제 내역이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: 입주민 관리 -->
+        <div class="tab-content" id="tabContentResidents" role="tabpanel" style="display:none">
+            <div style="padding:16px 0 8px;display:flex;align-items:center;justify-content:space-between">
+                <h3 style="font-size:15px;font-weight:700">자가등록 입주민 목록</h3>
+                <button class="btn btn-outline btn-sm" onclick="loadResidents()">새로고침</button>
+            </div>
+            <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">
+                당근마켓에서 자가등록한 입주민입니다. 실제 입주민 여부를 확인 후 허위 등록이면 삭제하세요.
+            </p>
             <div class="table-wrap">
-                <table class="qa-table" aria-label="Q&A 목록">
+                <table class="qa-table" id="residentsTable" aria-label="자가등록 입주민 목록">
                     <thead>
                         <tr>
-                            <th scope="col" style="width:50px">ID</th>
-                            <th scope="col" style="width:80px">카테고리</th>
-                            <th scope="col" class="col-question">질문</th>
-                            <th scope="col" class="col-answer">답변 미리보기</th>
-                            <th scope="col" style="width:60px">상태</th>
-                            <th scope="col" style="width:100px" class="col-date">수정일</th>
-                            <th scope="col" style="width:120px">작업</th>
+                            <th>동</th>
+                            <th>호수</th>
+                            <th>이름</th>
+                            <th>전화번호</th>
+                            <th>등록일시</th>
+                            <th>상태</th>
+                            <th>관리</th>
                         </tr>
                     </thead>
-                    <tbody id="qaTableBody">
+                    <tbody id="residentsTableBody">
+                        <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--gray-400)">불러오는 중...</td></tr>
                     </tbody>
                 </table>
             </div>
-            <div id="emptyState" class="empty-state" style="display:none" role="status">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                <p>등록된 Q&A가 없습니다.</p>
+            <div id="residentsEmpty" class="empty-state" style="display:none">
+                <p>자가등록 입주민이 없습니다.</p>
             </div>
-            <nav class="pagination" id="pagination" aria-label="페이지 내비게이션"></nav>
         </div>
     </main>
 
-    <!-- Create/Edit Modal -->
+    <!-- Question Views Detail Modal -->
+    <div class="modal-overlay" id="qvDetailModal" role="dialog" aria-modal="true" aria-labelledby="qvDetailModalTitle">
+        <div class="modal" style="max-width:720px">
+            <div class="modal-header">
+                <h3 id="qvDetailModalTitle">질문 조회 상세</h3>
+                <button class="modal-close" onclick="closeQvDetailModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body" style="max-height:60vh;overflow-y:auto">
+                <div id="qvDetailLoading" style="text-align:center;padding:2rem;color:var(--gray-400)">불러오는 중...</div>
+                <table class="qa-table" id="qvDetailTable" style="display:none" aria-label="기간별 질문 상세">
+                    <thead>
+                        <tr>
+                            <th scope="col" style="width:50px">#</th>
+                            <th scope="col">질문</th>
+                            <th scope="col" style="width:100px">카테고리</th>
+                            <th scope="col" style="width:80px">조회 수</th>
+                        </tr>
+                    </thead>
+                    <tbody id="qvDetailTableBody"></tbody>
+                </table>
+                <div id="qvDetailEmpty" class="empty-state" style="display:none">
+                    <p>해당 기간의 질문 조회 데이터가 없습니다.</p>
+                </div>
+                <nav class="pagination" id="qvDetailPagination" style="margin-top:0.75rem"></nav>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline btn-sm" onclick="closeQvDetailModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create/Edit QA Modal -->
     <div class="modal-overlay" id="qaModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal">
             <div class="modal-header">
@@ -136,25 +682,41 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="editQaId">
+                <div class="form-group" id="modalCompanyGroup" style="display:none">
+                    <label for="modalCompany">회사 <span class="required" aria-hidden="true">*</span></label>
+                    <select id="modalCompany" class="form-control" aria-required="true"></select>
+                </div>
                 <div class="form-group">
                     <label for="modalCategory">카테고리 <span class="required" aria-hidden="true">*</span></label>
                     <select id="modalCategory" class="form-control" aria-required="true">
-                        <option value="세금">세금</option>
-                        <option value="급여">급여</option>
-                        <option value="비용처리">비용처리</option>
-                        <option value="회계처리">회계처리</option>
-                        <option value="기타">기타</option>
+                        <option value="">카테고리 선택</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label for="modalQuestion">질문 <span class="required" aria-hidden="true">*</span></label>
-                    <textarea id="modalQuestion" class="form-control" rows="3" placeholder="질문을 입력하세요 (최소 5자)" minlength="5" aria-required="true" aria-describedby="questionHint"></textarea>
+                    <textarea id="modalQuestion" class="form-control" rows="3" placeholder="질문을 입력하세요" aria-required="true" aria-describedby="questionHint"></textarea>
                     <div class="field-hint" id="questionHint" aria-live="polite"></div>
                     <div class="duplicate-warn" id="duplicateWarn" style="display:none" role="alert"></div>
                 </div>
                 <div class="form-group">
                     <label for="modalAnswer">답변 <span class="required" aria-hidden="true">*</span></label>
-                    <textarea id="modalAnswer" class="form-control" rows="5" placeholder="답변을 입력하세요 (최소 10자)" minlength="10" aria-required="true" aria-describedby="answerHint"></textarea>
+                    <input type="file" id="imageUploadInput" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+                    <div class="editor-toolbar">
+                        <button type="button" class="editor-btn" id="imageUploadBtn" onclick="document.getElementById('imageUploadInput').click()" title="이미지 업로드">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                            이미지
+                        </button>
+                        <button type="button" class="editor-btn" onclick="insertLinkToAnswer()" title="링크 추가">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                            링크
+                        </button>
+                        <button type="button" class="editor-btn" id="previewToggleBtn" onclick="toggleAnswerPreview()" title="미리보기">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            미리보기
+                        </button>
+                    </div>
+                    <textarea id="modalAnswer" class="form-control" rows="7" placeholder="답변을 입력하세요&#10;&#10;마크다운 지원: **굵게**, [링크텍스트](URL), ![이미지설명](이미지URL)" aria-required="true" aria-describedby="answerHint"></textarea>
+                    <div class="answer-preview" id="answerPreview" style="display:none"></div>
                     <div class="field-hint" id="answerHint" aria-live="polite"></div>
                 </div>
                 <div class="form-group">
@@ -176,13 +738,62 @@
         </div>
     </div>
 
+    <!-- Admin Modal -->
+    <div class="modal-overlay" id="adminModal" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="adminModalTitle">관리자 추가</h3>
+                <button class="modal-close" onclick="closeAdminModal()" aria-label="닫기">&times;</button>
+            </div>
+            <form id="adminForm" onsubmit="event.preventDefault(); saveAdmin();">
+            <div class="modal-body">
+                <input type="hidden" id="editAdminId">
+                <div class="form-group">
+                    <label for="adminEmail">이메일 <span class="required">*</span></label>
+                    <input type="email" id="adminEmail" class="form-control" placeholder="이메일을 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="adminFullName">관리자명 <span class="required">*</span></label>
+                    <input type="text" id="adminFullName" class="form-control" placeholder="관리자명을 입력하세요" required>
+                </div>
+                <div class="form-group" id="adminPasswordGroup">
+                    <label for="adminPassword">비밀번호 <span class="required">*</span></label>
+                    <input type="password" id="adminPassword" class="form-control" placeholder="비밀번호를 입력하세요" required>
+                </div>
+                <div class="form-group">
+                    <label for="adminPhone">전화번호</label>
+                    <input type="text" id="adminPhone" class="form-control" placeholder="전화번호를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="adminDepartment">부서</label>
+                    <input type="text" id="adminDepartment" class="form-control" placeholder="부서를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label for="adminPosition">직급</label>
+                    <input type="text" id="adminPosition" class="form-control" placeholder="직급을 입력하세요">
+                </div>
+                <div class="form-group" style="display:flex;align-items:center;gap:8px;margin-top:12px;">
+                    <input type="checkbox" id="adminAlertToggle" checked>
+                    <label for="adminAlertToggle" style="margin:0;cursor:pointer;">미답변 질문 알림톡 수신</label>
+                </div>
+                <div id="adminAlertHint" style="display:none;margin-top:6px;font-size:12px;color:var(--gray-500, #888);">시설관리 회사는 카카오 알림톡 기능을 지원하지 않습니다.</div>
+                <input type="hidden" id="adminRole" value="admin">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" type="button" onclick="closeAdminModal()">취소</button>
+                <button class="btn btn-primary" id="adminSaveBtn" type="submit">저장</button>
+            </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Delete Confirm -->
     <div class="confirm-overlay" id="deleteConfirm" role="alertdialog" aria-modal="true" aria-labelledby="deleteConfirmTitle" aria-describedby="deleteConfirmDesc">
         <div class="confirm-dialog">
             <div class="confirm-icon" aria-hidden="true">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             </div>
-            <h3 id="deleteConfirmTitle">Q&A 삭제</h3>
+            <h3 id="deleteConfirmTitle">삭제 확인</h3>
             <p id="deleteConfirmDesc">정말 삭제하시겠습니까?<br>이 작업은 되돌릴 수 없습니다.</p>
             <div class="actions">
                 <button class="btn btn-outline" onclick="closeDeleteConfirm()">취소</button>
@@ -191,34 +802,93 @@
         </div>
     </div>
 
-    <!-- Excel Upload Modal -->
-    <div class="modal-overlay" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
-        <div class="modal" style="max-width:480px">
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+        <div class="modal">
             <div class="modal-header">
-                <h3 id="uploadModalTitle">엑셀 Q&A 일괄 업로드</h3>
-                <button class="modal-close" onclick="closeUploadModal()" aria-label="닫기">&times;</button>
+                <h3 id="profileModalTitle">내 정보 수정</h3>
+                <button class="modal-close" onclick="closeProfileModal()" aria-label="닫기">&times;</button>
             </div>
+            <form id="profileForm" onsubmit="event.preventDefault(); saveProfile();">
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="uploadCompany">대상 회사 <span class="required" aria-hidden="true">*</span></label>
-                    <select id="uploadCompany" class="form-control" aria-required="true">
-                        <option value="">회사를 선택하세요</option>
-                    </select>
+                    <label for="profileEmail">이메일</label>
+                    <input type="email" id="profileEmail" class="form-control" disabled style="background:var(--gray-100)">
                 </div>
                 <div class="form-group">
-                    <label for="uploadFile">엑셀 파일 (.xlsx) <span class="required" aria-hidden="true">*</span></label>
-                    <input type="file" id="uploadFile" class="form-control" accept=".xlsx" aria-required="true">
+                    <label for="profileFullName">이름</label>
+                    <input type="text" id="profileFullName" class="form-control" placeholder="이름을 입력하세요">
                 </div>
-                <p style="font-size:var(--text-sm);color:var(--gray-500);margin-top:8px">
-                    <a href="#" id="downloadTemplate" style="color:var(--primary)">양식 다운로드</a> &mdash;
-                    카테고리, 질문, 답변은 필수입니다.
-                </p>
+                <div class="form-group">
+                    <label for="profilePhone">전화번호</label>
+                    <input type="text" id="profilePhone" class="form-control" placeholder="전화번호를 입력하세요">
+                </div>
+                <hr style="margin:1.25rem 0;border:0;border-top:1px solid var(--gray-200)">
+                <p style="font-size:var(--text-sm);color:var(--gray-500);margin-bottom:0.75rem">비밀번호를 변경하려면 아래를 입력하세요.</p>
+                <div class="form-group">
+                    <label for="profileCurrentPw">현재 비밀번호</label>
+                    <input type="password" id="profileCurrentPw" class="form-control" placeholder="현재 비밀번호" autocomplete="current-password">
+                </div>
+                <div class="form-group">
+                    <label for="profileNewPw">새 비밀번호</label>
+                    <input type="password" id="profileNewPw" class="form-control" placeholder="새 비밀번호 (8자 이상)" autocomplete="new-password">
+                </div>
+                <div class="form-group">
+                    <label for="profileNewPwConfirm">새 비밀번호 확인</label>
+                    <input type="password" id="profileNewPwConfirm" class="form-control" placeholder="새 비밀번호 확인" autocomplete="new-password">
+                </div>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" onclick="closeUploadModal()">취소</button>
-                <button class="btn btn-primary" id="uploadBtn" onclick="submitUpload()" aria-label="업로드">
-                    <span class="btn-text">업로드</span>
-                    <span class="btn-spinner" aria-hidden="true"></span>
+                <button class="btn btn-outline" type="button" onclick="closeProfileModal()">취소</button>
+                <button class="btn btn-primary" id="profileSaveBtn" type="submit">저장</button>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- QR Code Modal -->
+    <div class="modal-overlay" id="qrModal" role="dialog" aria-modal="true" aria-labelledby="qrModalTitle">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header">
+                <h3 id="qrModalTitle">챗봇 QR코드</h3>
+                <button class="modal-close" onclick="closeQrModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center">
+                <p id="qrUrlDisplay" style="font-size:var(--text-sm);color:var(--gray-600);margin-bottom:1rem;word-break:break-all"></p>
+                <div id="qrCanvas" style="display:inline-block;padding:1rem;background:#fff;border-radius:var(--radius-md);border:1px solid var(--gray-200)"></div>
+            </div>
+            <div class="modal-footer" style="justify-content:center">
+                <button class="btn btn-primary" onclick="downloadQrCode()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PNG 다운로드
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice Modal -->
+    <div class="modal-overlay" id="noticeModal" role="dialog" aria-modal="true" aria-labelledby="noticeModalTitle">
+        <div class="modal" style="max-width:480px">
+            <div class="modal-header">
+                <h3 id="noticeModalTitle">AI 챗봇 도입 공고문</h3>
+                <button class="modal-close" onclick="closeNoticeModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body" style="text-align:center">
+                <p style="font-size:var(--text-sm);color:var(--gray-600);margin-bottom:1rem">
+                    AI Helper 챗봇 도입 안내 공고문을 다운로드하여<br>엘리베이터 등에 게시하실 수 있습니다.
+                </p>
+                <div id="noticePreviewArea" style="border:1px solid var(--gray-200);border-radius:var(--radius-md);overflow:hidden;max-height:300px;overflow-y:auto;background:#f0f4f0">
+                    <div id="noticePreviewContent" style="transform:scale(0.35);transform-origin:top center;width:210mm;margin:0 auto"></div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content:center;gap:0.5rem;flex-wrap:wrap">
+                <button class="btn btn-outline" onclick="previewNotice()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    인쇄 미리보기
+                </button>
+                <button class="btn btn-primary" onclick="downloadNoticePng()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PNG 다운로드
                 </button>
             </div>
         </div>
@@ -227,7 +897,29 @@
     <!-- Toast container -->
     <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
 
-    <script src="/js/api.js"></script>
-    <script src="/js/admin.js"></script>
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-inner">
+            <nav class="footer-links" aria-label="정책 링크">
+                <a href="/privacy.html">개인정보처리방침</a>
+                <a href="/terms.html">이용약관</a>
+                <a href="/copyright.html">저작권 정책</a>
+                <a href="/refund-policy.html">환불 정책</a>
+                <a href="/contact.html">문의하기</a>
+            </nav>
+            <p class="footer-copyright">&copy; 2026 AI Helper(Accounting Helper). All rights reserved.</p>
+            <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
+            <p class="footer-business-info">보듬누리 | 통신판매업 신고 제 2026-세종-0130 호 | 세종시 다정남로 22, 122-1203</p>
+        </div>
+    </footer>
+
+    <script src="https://js.tosspayments.com/v2/standard"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>if(typeof marked!=='undefined')marked.setOptions({breaks:true});</script>
+    <script src="/js/api.js?v=15"></script>
+    <script src="/js/admin.js?v=16"></script>
 </body>
 </html>

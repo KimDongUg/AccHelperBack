@@ -155,10 +155,19 @@ def _run_pg_migration(engine: Engine):
                     resident_name VARCHAR(100),
                     resident_phone VARCHAR(30),
                     owner_name VARCHAR(100),
-                    owner_phone VARCHAR(30)
+                    owner_phone VARCHAR(30),
+                    company_id INTEGER,
+                    is_self_registered BOOLEAN DEFAULT FALSE,
+                    is_verified BOOLEAN DEFAULT TRUE,
+                    registered_at TIMESTAMP DEFAULT NOW()
                 )
             """))
             logger.info("PG: Created table apartment_residents")
+        else:
+            _pg_add_column_if_missing(conn, "apartment_residents", "company_id", "INTEGER")
+            _pg_add_column_if_missing(conn, "apartment_residents", "is_self_registered", "BOOLEAN DEFAULT FALSE")
+            _pg_add_column_if_missing(conn, "apartment_residents", "is_verified", "BOOLEAN DEFAULT TRUE")
+            _pg_add_column_if_missing(conn, "apartment_residents", "registered_at", "TIMESTAMP DEFAULT NOW()")
 
         if not _pg_table_exists(conn, "market_posts"):
             conn.execute(text("""
@@ -356,10 +365,19 @@ def run_migration(engine: Engine):
                     resident_name VARCHAR(100),
                     resident_phone VARCHAR(30),
                     owner_name VARCHAR(100),
-                    owner_phone VARCHAR(30)
+                    owner_phone VARCHAR(30),
+                    company_id INTEGER,
+                    is_self_registered BOOLEAN DEFAULT 0,
+                    is_verified BOOLEAN DEFAULT 1,
+                    registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """))
             logger.info("Created table apartment_residents")
+        else:
+            _add_column_if_missing(conn, "apartment_residents", "company_id", "INTEGER")
+            _add_column_if_missing(conn, "apartment_residents", "is_self_registered", "BOOLEAN DEFAULT 0")
+            _add_column_if_missing(conn, "apartment_residents", "is_verified", "BOOLEAN DEFAULT 1")
+            _add_column_if_missing(conn, "apartment_residents", "registered_at", "DATETIME DEFAULT CURRENT_TIMESTAMP")
 
         if not _table_exists(conn, "market_posts"):
             conn.execute(text("""

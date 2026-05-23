@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>우리아파트 당근 — 입주민 인증</title>
+<link rel="stylesheet" href="/css/market.css?v=1">
+</head>
+<body>
+
+<div class="mkt-header">
+  <button class="mkt-back" onclick="history.back()">←</button>
+  <h1>입주민 인증</h1>
+</div>
+
+<div class="mkt-login-wrap">
+  <div class="mkt-login-logo">
+    <div class="emoji">🥕</div>
+    <h2>우리아파트 당근</h2>
+    <p id="aptSubtitle">입주민 전용 중고거래·나눔</p>
+  </div>
+
+  <form class="mkt-form" id="loginForm" onsubmit="return false">
+    <div>
+      <label>동 <span id="dongRequired" style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="buildingInput" type="text" placeholder="예: 1동" maxlength="10">
+    </div>
+    <div>
+      <label>호수 <span style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="unit" type="text" placeholder="예: 501호" required>
+    </div>
+    <div>
+      <label>이름 <span style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="name" type="text" placeholder="입주자 또는 소유주명" required>
+    </div>
+    <div>
+      <label>전화번호 <span style="color:#c62828">*</span></label>
+      <input class="mkt-input" id="phone" type="tel" placeholder="예: 010-1234-5678" required>
+    </div>
+
+    <div id="errMsg" class="mkt-error" style="display:none"></div>
+
+    <button class="mkt-btn" id="loginBtn" type="submit" onclick="doLogin()">인증하기</button>
+  </form>
+
+  <p style="text-align:center;font-size:12px;color:#aaa;margin-top:20px">
+    관리비 납부 시 등록한 정보와 동일하게 입력해주세요.<br>
+    등록된 정보가 없으면 신규 등록 후 관리자 확인 절차가 진행됩니다.<br>
+    동/호수만 게시판에 표시됩니다.
+  </p>
+</div>
+
+<script src="/js/market.js?v=1"></script>
+<script>
+// 이미 로그인된 경우 바로 이동
+if (MarketAuth.getToken()) location.href = '/market.html';
+
+// 회사 정보로 동 기본값 설정
+(function () {
+    const companyName = sessionStorage.getItem('market_company_name') || '';
+    const buildingInput = document.getElementById('buildingInput');
+
+    // 세종푸르지오시티 2차 → 1동 고정
+    if (companyName.includes('세종푸르지오시티') && companyName.includes('2차') ||
+        companyName.includes('세종푸르지오2차')) {
+        buildingInput.value = '1동';
+        buildingInput.readOnly = true;
+        buildingInput.style.background = '#f4f4f4';
+        buildingInput.style.color = '#666';
+        document.getElementById('dongRequired').textContent = '';
+        document.getElementById('aptSubtitle').textContent = companyName + ' 입주민 전용 중고거래·나눔';
+    } else if (companyName) {
+        document.getElementById('aptSubtitle').textContent = companyName + ' 입주민 전용 중고거래·나눔';
+    }
+})();
+
+async function doLogin() {
+    const building = document.getElementById('buildingInput').value.trim();
+    const unit = document.getElementById('unit').value.trim();
+    const name = document.getElementById('name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
+    const errEl = document.getElementById('errMsg');
+    const btn = document.getElementById('loginBtn');
+
+    if (!building || !unit || !name || !phone) {
+        errEl.textContent = '모든 항목을 입력해주세요.';
+        errEl.style.display = 'block';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = '인증 중...';
+    errEl.style.display = 'none';
+
+    const companyId = parseInt(sessionStorage.getItem('market_company_id') || sessionStorage.getItem('complaint_company_id') || '0') || null;
+
+    try {
+        const res = await fetch('/api/market/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ building, unit_number: unit, name, phone, company_id: companyId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || '인증 실패');
+
+        MarketAuth.save(data.token, {
+            unit: data.unit,
+            building: data.building,
+            name: name,
+        });
+
+        if (data.is_new_registration) {
+            alert('등록된 입주민 정보가 없어 신규 등록되었습니다.\n관리자 확인 후 이상이 없으면 정상 이용 가능합니다.');
+        }
+        location.href = '/market.html';
+    } catch (e) {
+        errEl.textContent = e.message;
+        errEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '인증하기';
+    }
+}
+</script>
+</body>
+</html>
