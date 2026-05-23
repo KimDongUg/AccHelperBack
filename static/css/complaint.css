@@ -28,6 +28,7 @@ body {
 .cp-page {
   max-width: 680px;
   margin: 0 auto;
+  padding-top: 8px;
 }
 
 /* ── 헤더 ──────────────────────────────────────────────── */
@@ -53,16 +54,15 @@ body {
 .cp-item {
   display: block;
   background: #fff;
-  margin: 6px 12px;
-  border-radius: var(--radius);
+  margin: 4px 0;
+  border-radius: 0;
   padding: 14px 16px;
   text-decoration: none;
   color: inherit;
-  box-shadow: var(--shadow);
-  border: 1px solid var(--gray-200);
-  transition: box-shadow 0.15s;
+  border-bottom: 1px solid var(--gray-200);
+  transition: background 0.12s;
 }
-.cp-item:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.13); }
+.cp-item:hover { background: var(--gray-50); }
 .cp-item-top { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
 .cp-item-title {
   font-size: 15px;
@@ -98,10 +98,10 @@ body {
 .cp-deleted-notice {
   font-size: 13px;
   color: var(--danger);
-  margin: 6px 12px;
-  padding: 10px 14px;
+  margin: 0;
+  padding: 10px 16px;
   background: #FFEBEE;
-  border-radius: var(--radius);
+  border-bottom: 1px solid #FFCDD2;
 }
 
 /* FAB 글쓰기 버튼 */
@@ -203,10 +203,10 @@ body {
 /* ── 상세 보기 ──────────────────────────────────────────────── */
 .cp-post-body {
   background: #fff;
-  margin: 10px 12px;
-  border-radius: var(--radius);
+  margin: 0;
+  border-radius: 0;
   padding: 18px 16px;
-  box-shadow: var(--shadow);
+  border-bottom: 1px solid var(--gray-200);
 }
 .cp-post-title {
   font-size: 18px;
@@ -250,11 +250,11 @@ body {
 /* 답변 영역 */
 .cp-reply-wrap {
   background: var(--primary-bg);
-  margin: 0 12px 10px;
-  border-radius: var(--radius);
+  margin: 0;
+  border-radius: 0;
   padding: 14px 16px;
-  box-shadow: var(--shadow);
   border-left: 4px solid var(--primary);
+  border-bottom: 1px solid var(--gray-200);
 }
 .cp-reply-label {
   font-size: 12px;
@@ -276,11 +276,11 @@ body {
 
 /* 관리자 액션 패널 */
 .cp-admin-panel {
-  margin: 0 12px 12px;
-  padding: 14px;
+  margin: 0;
+  padding: 14px 16px;
   background: #fff;
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: 0;
+  border-bottom: 1px solid var(--gray-200);
 }
 .cp-admin-panel-title {
   font-size: 12px;
