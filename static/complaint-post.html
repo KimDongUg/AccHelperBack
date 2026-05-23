@@ -19,6 +19,34 @@
   <div style="text-align:center;padding:60px;color:#aaa">불러오는 중...</div>
 </div>
 
+<!-- 수정 본인확인 모달 -->
+<div class="cp-modal-overlay" id="editVerifyModal" style="display:none" onclick="closeEditVerifyModal(event)">
+  <div class="cp-modal" onclick="event.stopPropagation()">
+    <h3>본인 확인</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">작성 시 입력한 이름을 입력해주세요.</p>
+    <input class="cp-write-input" id="editVerifyName" type="text" placeholder="이름" maxlength="50" style="width:100%;margin-bottom:8px">
+    <div id="editVerifyErr" style="color:#c62828;font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="cp-modal-btns">
+      <button style="background:#E0E0E0;color:#212121" onclick="closeEditVerifyModal()">취소</button>
+      <button style="background:var(--primary);color:#fff" id="editVerifyBtn" onclick="openEditForm()">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수정 폼 모달 -->
+<div class="cp-modal-overlay" id="editFormModal" style="display:none" onclick="closeEditFormModal(event)">
+  <div class="cp-modal" onclick="event.stopPropagation()">
+    <h3>민원 수정</h3>
+    <input class="cp-write-input" id="editTitle" type="text" placeholder="제목" maxlength="255" style="width:100%;margin-bottom:8px">
+    <textarea class="cp-write-textarea" id="editContent" placeholder="내용" maxlength="3000" style="width:100%;min-height:140px;margin-bottom:8px"></textarea>
+    <div id="editFormErr" style="color:#c62828;font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="cp-modal-btns">
+      <button style="background:#E0E0E0;color:#212121" onclick="closeEditFormModal()">취소</button>
+      <button style="background:var(--primary);color:#fff" id="editSubmitBtn" onclick="submitEdit()">수정 완료</button>
+    </div>
+  </div>
+</div>
+
 <!-- 삭제 모달 -->
 <div class="cp-modal-overlay" id="deleteModal" style="display:none" onclick="closeDeleteModal(event)">
   <div class="cp-modal" onclick="event.stopPropagation()">
@@ -78,6 +106,9 @@ function renderPost(p) {
           <span>${p.time_ago}</span>
         </div>
         <div class="cp-post-content">${escHtml(p.content)}</div>
+        <div style="margin-top:14px;text-align:right">
+          <button onclick="showEditVerifyModal()" style="background:none;border:none;font-size:13px;color:var(--gray-500);cursor:pointer;text-decoration:underline">수정</button>
+        </div>
       </div>`;
 
     // 답변 표시
@@ -137,6 +168,64 @@ async function submitReply() {
         showCpToast('답변이 등록되었습니다.');
         loadPost();
     } catch (e) { showCpToast(e.message); }
+}
+
+// 수정 본인확인
+function showEditVerifyModal() {
+    document.getElementById('editVerifyName').value = '';
+    document.getElementById('editVerifyErr').style.display = 'none';
+    document.getElementById('editVerifyModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('editVerifyName').focus(), 100);
+}
+function closeEditVerifyModal(e) {
+    if (!e || e.target === document.getElementById('editVerifyModal'))
+        document.getElementById('editVerifyModal').style.display = 'none';
+}
+
+// 이름 확인 후 수정 폼 열기
+function openEditForm() {
+    const name = document.getElementById('editVerifyName').value.trim();
+    const errEl = document.getElementById('editVerifyErr');
+    if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+    // 서버에서 이름 검증 (수정 요청으로 확인)
+    document.getElementById('editVerifyBtn').disabled = true;
+    errEl.style.display = 'none';
+
+    // 임시로 이름만 저장 후 폼 열기
+    document.getElementById('editVerifyModal').style.display = 'none';
+    document.getElementById('editVerifyBtn').disabled = false;
+    document.getElementById('editTitle').value = post.title;
+    document.getElementById('editContent').value = post.content;
+    document.getElementById('editFormErr').style.display = 'none';
+    document.getElementById('editFormModal').style.display = 'flex';
+    document.getElementById('editFormModal').dataset.verifiedName = name;
+}
+function closeEditFormModal(e) {
+    if (!e || e.target === document.getElementById('editFormModal'))
+        document.getElementById('editFormModal').style.display = 'none';
+}
+
+async function submitEdit() {
+    const name = document.getElementById('editFormModal').dataset.verifiedName;
+    const title = document.getElementById('editTitle').value.trim();
+    const content = document.getElementById('editContent').value.trim();
+    const errEl = document.getElementById('editFormErr');
+    const btn = document.getElementById('editSubmitBtn');
+
+    if (!title) { errEl.textContent = '제목을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!content) { errEl.textContent = '내용을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = '수정 중...'; errEl.style.display = 'none';
+    try {
+        await cpFetch(`/${postId}`, { method: 'PATCH', body: { name, title, content } });
+        document.getElementById('editFormModal').style.display = 'none';
+        showCpToast('수정되었습니다.');
+        loadPost();
+    } catch (e) {
+        errEl.textContent = e.message; errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = '수정 완료';
+    }
 }
 
 function showDeleteModal() {

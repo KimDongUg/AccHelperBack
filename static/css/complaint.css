@@ -292,6 +292,31 @@ body {
 }
 .cp-reply-form textarea:focus { outline: none; }
 
+/* 수정 모달 입력 */
+.cp-write-input {
+  display: block;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.cp-write-input:focus { outline: none; border-color: var(--primary); }
+.cp-write-textarea {
+  display: block;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  background: #fff;
+  transition: border-color 0.15s;
+}
+.cp-write-textarea:focus { outline: none; border-color: var(--primary); }
+
 /* ── 모달 ──────────────────────────────────────────────── */
 .cp-modal-overlay {
   position: fixed; inset: 0;
