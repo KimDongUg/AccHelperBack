@@ -34,6 +34,12 @@ class ReplyCreate(BaseModel):
     content: str = Field(..., max_length=3000)
 
 
+class ComplaintUpdate(BaseModel):
+    name: str = Field(..., max_length=100)
+    title: str = Field(..., max_length=255)
+    content: str = Field(..., max_length=3000)
+
+
 class DeleteRequest(BaseModel):
     reason: str = Field(default="민원글이 아니어서 삭제 되었습니다!", max_length=500)
 
@@ -146,6 +152,26 @@ def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
             "time_ago": _time_ago(c.replied_at),
         } if c.reply_content else None,
     }
+
+
+@router.patch("/{complaint_id}")
+def update_complaint(
+    complaint_id: int,
+    body: ComplaintUpdate,
+    db: Session = Depends(get_db),
+):
+    c = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="민원글을 찾을 수 없습니다.")
+    if c.is_deleted:
+        raise HTTPException(status_code=400, detail="삭제된 글은 수정할 수 없습니다.")
+    if c.writer_name != body.name.strip():
+        raise HTTPException(status_code=403, detail="이름이 일치하지 않습니다.")
+
+    c.title = body.title.strip()
+    c.content = body.content.strip()
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/{complaint_id}/reply")
