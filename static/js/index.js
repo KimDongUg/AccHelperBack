@@ -453,18 +453,31 @@ function showChat(companyData) {
         });
     }
 
+    function validateAndSend(text) {
+        if (!text) return;
+        if (text.length < 7) {
+            chatInput.classList.add('input-warn');
+            chatInput.placeholder = '7자 이상 입력해주세요.';
+            chatInput.focus();
+            setTimeout(() => {
+                chatInput.classList.remove('input-warn');
+                chatInput.placeholder = '질문을 입력하세요...';
+            }, 2000);
+            return;
+        }
+        sendMessage(text);
+    }
+
     // Send button
     sendBtn.addEventListener('click', () => {
-        const text = chatInput.value.trim();
-        if (text) sendMessage(text);
+        validateAndSend(chatInput.value.trim());
     });
 
     // Enter key
     chatInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.isComposing) {
             e.preventDefault();
-            const text = chatInput.value.trim();
-            if (text) sendMessage(text);
+            validateAndSend(chatInput.value.trim());
         }
     });
 

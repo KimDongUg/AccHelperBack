@@ -272,6 +272,20 @@
     color: var(--gray-400);
 }
 
+.chat-input.input-warn {
+    border-color: #e53935;
+    box-shadow: 0 0 0 3px rgba(229,57,53,0.15);
+    animation: shake 0.3s ease;
+}
+.chat-input.input-warn::placeholder {
+    color: #e53935;
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25%       { transform: translateX(-6px); }
+    75%       { transform: translateX(6px); }
+}
+
 .chat-send-btn {
     width: 44px;
     height: 44px;
