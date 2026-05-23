@@ -245,12 +245,17 @@ async function validateAndStartChat(code) {
             }
         }
 
-        // 우리아파트 당근 — 부과내역서 기능 완료 전까지 비활성화
-        if (company.building_type === '아파트') {
-            sessionStorage.setItem('market_company_name', company.company_name);
-            sessionStorage.setItem('market_company_id', company.company_id);
+        // 우리아파트 당근 (아파트 타입에만 표시)
+        var daangnNavLink = document.getElementById('daangnNavLink');
+        if (daangnNavLink) {
+            if (company.building_type === '아파트') {
+                sessionStorage.setItem('market_company_name', company.company_name);
+                sessionStorage.setItem('market_company_id', company.company_id);
+                daangnNavLink.style.display = '';
+            } else {
+                daangnNavLink.style.display = 'none';
+            }
         }
-        // daangnNavLink는 부과내역서 완성 후 재활성화 예정
 
         // 민원게시판 (아파트 타입에만 표시)
         var complaintNavLink = document.getElementById('complaintNavLink');
