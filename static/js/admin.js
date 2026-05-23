@@ -37,8 +37,8 @@ function applyAlimtalkRestriction() {
  *  INIT
  * ═══════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', async () => {
-    // Auth guard
-    if (!AuthSession.isValid()) { AuthSession.redirectToLogin(); return; }
+    // Auth guard — token 없으면 즉시 리디렉션, 있으면 서버 체크까지 시도
+    if (!AuthSession.getToken()) { AuthSession.redirectToLogin(); return; }
 
     // Keep local session as fallback if server auth check fails
     const localSess = AuthSession.get();
