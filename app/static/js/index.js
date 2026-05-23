@@ -245,10 +245,10 @@ async function validateAndStartChat(code) {
             }
         }
 
-        // 우리아파트 당근 (아파트 타입에만 표시)
+        // 우리아파트 당근 (아파트·오피스텔 모두 표시)
         var daangnNavLink = document.getElementById('daangnNavLink');
         if (daangnNavLink) {
-            if (company.building_type === '아파트') {
+            if (company.building_type === '아파트' || company.building_type === '오피스텔') {
                 sessionStorage.setItem('market_company_name', company.company_name);
                 sessionStorage.setItem('market_company_id', company.company_id);
                 daangnNavLink.style.display = '';
