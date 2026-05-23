@@ -857,6 +857,8 @@ function showChat(companyData) {
             if (auth.authenticated && auth.session) {
                 var adminLoginLink2 = document.getElementById('adminLoginLink');
                 if (adminLoginLink2) adminLoginLink2.style.display = 'none';
+                var headerLoginLink2 = document.getElementById('headerLoginLink');
+                if (headerLoginLink2) headerLoginLink2.style.display = 'none';
                 var adminLink2 = document.getElementById('adminLink');
                 if (adminLink2 && currentCompanyId < 1000) {
                     adminLink2.style.display = '';
