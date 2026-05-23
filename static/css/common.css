@@ -668,6 +668,9 @@ table tr:hover td {
  *  RESPONSIVE
  * ═══════════════════════════════════════════════ */
 
+/* nav 텍스트: 기본은 full, 모바일은 short */
+.nav-short { display: none; }
+
 /* Mobile */
 @media (max-width: 767px) {
     .header {
@@ -680,8 +683,12 @@ table tr:hover td {
         justify-content: center;
     }
 
+    /* 로고: 캐릭터 이미지만 표시 (AI Helper 텍스트 영역 숨김) */
     .header-logo img {
-        height: 64px;
+        height: 48px;
+        width: 48px;
+        object-fit: cover;
+        object-position: left center;
     }
 
     .header-logo span {
@@ -698,9 +705,13 @@ table tr:hover td {
 
     .header-nav a,
     .header-nav button {
-        padding: 0.4rem 0.75rem;
-        font-size: 0.8125rem;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.8rem;
     }
+
+    /* nav 텍스트 short 버전 표시 */
+    .nav-long  { display: none; }
+    .nav-short { display: inline; }
 
     .card {
         padding: 1rem;
