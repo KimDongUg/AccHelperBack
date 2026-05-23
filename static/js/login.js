@@ -15,6 +15,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.location.href = chatUrl;
                     return;
                 }
+                if (redirectTarget === 'complaint') {
+                    const complaintUrl = redirectCompany ? `/complaint.html?company=${encodeURIComponent(redirectCompany)}` : '/complaint.html';
+                    window.location.href = complaintUrl;
+                    return;
+                }
                 if (res.session && res.session.role === 'super_admin') {
                     window.location.href = '/super-admin.html';
                     return;
@@ -99,6 +104,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (redirectTarget === 'chat') {
                         const chatUrl = redirectCompany ? `/?company=${encodeURIComponent(redirectCompany)}` : '/';
                         window.location.href = chatUrl;
+                        return;
+                    }
+                    if (redirectTarget === 'complaint') {
+                        const complaintUrl = redirectCompany ? `/complaint.html?company=${encodeURIComponent(redirectCompany)}` : '/complaint.html';
+                        window.location.href = complaintUrl;
                         return;
                     }
                     if (role === 'super_admin') {

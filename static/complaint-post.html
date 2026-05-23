@@ -15,30 +15,6 @@
   <div class="cp-header-right" id="adminBadge"></div>
 </div>
 
-<!-- 관리자 로그인 모달 -->
-<div class="cp-modal-overlay" id="adminLoginModal" style="display:none" onclick="closeAdminLoginModal(event)">
-  <div class="cp-modal" onclick="event.stopPropagation()" style="max-width:340px">
-    <h3>관리자 로그인</h3>
-    <div style="margin:12px 0 6px">
-      <label style="font-size:13px;color:#555;display:block;margin-bottom:4px">회사번호</label>
-      <input class="cp-input" id="alCompanyId" type="number" placeholder="회사번호" style="width:100%">
-    </div>
-    <div style="margin-bottom:6px">
-      <label style="font-size:13px;color:#555;display:block;margin-bottom:4px">이메일</label>
-      <input class="cp-input" id="alEmail" type="email" placeholder="이메일" style="width:100%">
-    </div>
-    <div style="margin-bottom:12px">
-      <label style="font-size:13px;color:#555;display:block;margin-bottom:4px">비밀번호</label>
-      <input class="cp-input" id="alPassword" type="password" placeholder="비밀번호" style="width:100%">
-    </div>
-    <div id="alErr" style="color:#c62828;font-size:13px;margin-bottom:8px;display:none"></div>
-    <div class="cp-modal-btns">
-      <button style="background:#E0E0E0;color:#212121;flex:1" onclick="closeAdminLoginModal()">취소</button>
-      <button style="background:var(--primary);color:#fff;flex:1" id="alSubmitBtn" onclick="doAdminLogin()">로그인</button>
-    </div>
-  </div>
-</div>
-
 <div id="postContent">
   <div style="text-align:center;padding:60px;color:#aaa">불러오는 중...</div>
 </div>
@@ -66,65 +42,17 @@ function renderAdminBadge() {
     if (ComplaintAuth.isAdmin()) {
         badge.innerHTML = `<span style="font-size:11px;background:rgba(255,255,255,0.25);padding:2px 8px;border-radius:12px;margin-right:6px">관리자</span><button onclick="doAdminLogout()" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.85">로그아웃</button>`;
     } else {
-        badge.innerHTML = `<button onclick="document.getElementById('adminLoginModal').style.display='flex'" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.85">관리자 로그인</button>`;
+        badge.innerHTML = `<a href="/login.html?redirect=complaint&company=${companyId}" style="color:#fff;font-size:12px;opacity:0.85;text-decoration:none">관리자 로그인</a>`;
     }
 }
 renderAdminBadge();
-
-function closeAdminLoginModal(e) {
-    if (!e || e.target === document.getElementById('adminLoginModal')) {
-        document.getElementById('adminLoginModal').style.display = 'none';
-    }
-}
-
-async function doAdminLogin() {
-    const companyIdVal = document.getElementById('alCompanyId').value.trim();
-    const email = document.getElementById('alEmail').value.trim();
-    const password = document.getElementById('alPassword').value;
-    const errEl = document.getElementById('alErr');
-    const btn = document.getElementById('alSubmitBtn');
-
-    if (!companyIdVal || !email || !password) {
-        errEl.textContent = '모든 항목을 입력해주세요.'; errEl.style.display = 'block'; return;
-    }
-    btn.disabled = true; btn.textContent = '로그인 중...'; errEl.style.display = 'none';
-
-    try {
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ company_id: parseInt(companyIdVal), email, password, remember: false }),
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.detail || data.message || '로그인 실패');
-        if (!data.success) throw new Error(data.message || '로그인 실패');
-
-        const session = data.session;
-        const role = session?.role;
-        if (role !== 'admin' && role !== 'super_admin') {
-            throw new Error('관리자 계정이 아닙니다.');
-        }
-
-        const token = data.token || session?.token || null;
-        const sessionData = { ...session, token, isLoggedIn: true };
-        sessionStorage.setItem('acc_auth_session', JSON.stringify(sessionData));
-
-        document.getElementById('adminLoginModal').style.display = 'none';
-        renderAdminBadge();
-        showCpToast('관리자로 로그인되었습니다.');
-        loadPost(); // 관리자 패널 표시를 위해 재로드
-    } catch (e) {
-        errEl.textContent = e.message; errEl.style.display = 'block';
-        btn.disabled = false; btn.textContent = '로그인';
-    }
-}
 
 function doAdminLogout() {
     sessionStorage.removeItem('acc_auth_session');
     localStorage.removeItem('acc_auth_session');
     renderAdminBadge();
     showCpToast('로그아웃되었습니다.');
-    loadPost(); // 관리자 패널 숨기기
+    loadPost();
 }
 
 

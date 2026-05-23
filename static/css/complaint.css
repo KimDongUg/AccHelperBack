@@ -326,18 +326,6 @@ body {
 .cp-modal-btns { display: flex; gap: 8px; }
 .cp-modal-btns button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
 
-/* 관리자 로그인 모달 입력 */
-.cp-input {
-  padding: 10px 12px;
-  border: 1.5px solid var(--gray-300);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  background: #fff;
-  transition: border-color 0.15s;
-}
-.cp-input:focus { outline: none; border-color: var(--primary); }
-
 /* 토스트 */
 .cp-toast {
   position: fixed;
