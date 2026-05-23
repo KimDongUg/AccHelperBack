@@ -19,8 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.location.href = '/super-admin.html';
                     return;
                 }
-                const billingActive = (res.session && res.session.billing_active);
-                window.location.href = billingActive ? '/admin.html' : '/billing.html';
+                window.location.href = '/admin.html';
                 return;
             }
             // Server says no — clear stale client session
@@ -85,10 +84,16 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (result.success && result.session) {
                 // Persist session client-side (with JWT token)
                 const jwtToken = result.token || result.session.token || null;
+                console.log('[LOGIN] success → result.token:', result.token ? 'exists' : 'null',
+                    '| session.token:', result.session.token ? 'exists' : 'null',
+                    '| session.expiry_time:', result.session.expiry_time,
+                    '(type:', typeof result.session.expiry_time + ')',
+                    '| session.login_time:', result.session.login_time,
+                    '(type:', typeof result.session.login_time + ')');
                 AuthSession.save(result.session, remember, jwtToken);
                 loginCard.classList.add('success');
                 const role = result.session.role;
-                const billingActive = result.session.billing_active;
+
                 setTimeout(() => {
                     // Redirect to chat if requested via URL params
                     if (redirectTarget === 'chat') {
@@ -99,7 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (role === 'super_admin') {
                         window.location.href = '/super-admin.html';
                     } else {
-                        window.location.href = billingActive ? '/admin.html' : '/billing.html';
+                        window.location.href = '/admin.html';
                     }
                 }, 300);
             } else {

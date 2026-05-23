@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수퍼관리 - AI Helper</title>
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <link rel="stylesheet" href="/css/common.css?v=10">
+    <link rel="stylesheet" href="/css/super-admin.css?v=10">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+
+    <header class="header" role="banner">
+        <div class="header-left">
+            <a href="/" class="header-logo" aria-label="AI Helper 홈으로 이동">
+                <img src="/assets/images/logo.png" alt="AI Helper 로고" aria-hidden="true">
+            </a>
+            <nav class="header-nav" aria-label="메인 내비게이션">
+                <a href="/">AI 챗봇</a>
+                <a href="/super-admin.html" class="active" aria-current="page">수퍼관리</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <span id="headerCompanyName" style="font-size:var(--text-sm);color:var(--primary);font-weight:600"></span>
+            <span id="headerUsername" style="font-size:var(--text-sm);color:var(--gray-600)"></span>
+            <span id="roleBadge" class="role-badge" style="display:none"></span>
+            <a href="/admin.html" class="btn btn-outline btn-sm">관리자</a>
+            <button id="logoutBtn" class="btn btn-sm" style="color:var(--gray-600)" aria-label="로그아웃">로그아웃</button>
+        </div>
+    </header>
+
+    <main id="main-content" class="sa-container">
+        <h1 class="sa-title">수퍼관리 대시보드</h1>
+
+        <!-- Stats — 6 cards -->
+        <div class="sa-stats-grid" role="region" aria-label="전체 현황 요약">
+            <div class="stat-card">
+                <div class="stat-icon blue" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>총 회사</h4>
+                    <div class="stat-value" id="statTotalCompanies" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>유료 구독</h4>
+                    <div class="stat-value" id="statActiveSubscribers" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon trial" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>체험 중</h4>
+                    <div class="stat-value" id="statTrialSubscribers" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon gray" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>무료</h4>
+                    <div class="stat-value" id="statFreeCompanies" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>총 매출</h4>
+                    <div class="stat-value" id="statTotalRevenue" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon purple" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                </div>
+                <div class="stat-info">
+                    <h4>총 결제건</h4>
+                    <div class="stat-value" id="statTotalPayments" aria-live="polite">
+                        <span class="stat-loading" aria-label="로딩 중"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Q&A Excel Upload -->
+        <section class="sa-section">
+            <div class="sa-upload-bar">
+                <h2 class="sa-section-title" style="margin-bottom:0">Q&A 엑셀 업로드</h2>
+                <button class="btn btn-primary" id="excelUploadBtn" onclick="openUploadModal()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    엑셀 업로드
+                </button>
+            </div>
+        </section>
+
+        <!-- Subscribers Table -->
+        <section class="sa-section">
+            <h2 class="sa-section-title">회사별 구독 현황</h2>
+            <div class="sa-table-wrap">
+                <div class="table-loading" id="subscribersLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="sa-table" aria-label="회사별 구독 현황">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:70px">회사번호</th>
+                                <th scope="col" style="width:150px">회사명</th>
+                                <th scope="col" style="width:90px">승인 상태</th>
+                                <th scope="col" style="width:80px">플랜</th>
+                                <th scope="col" style="width:90px">구독 상태</th>
+                                <th scope="col" style="width:140px" class="col-card">카드 정보</th>
+                                <th scope="col" style="width:110px">결제 합계</th>
+                                <th scope="col" style="width:180px;white-space:nowrap" class="col-date">최종 결제일</th>
+                                <th scope="col" style="width:220px">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="subscribersTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="subscribersEmpty" class="empty-state" style="display:none" role="status">
+                    <p>구독 데이터가 없습니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Payments Table -->
+        <section class="sa-section">
+            <h2 class="sa-section-title">결제 내역</h2>
+            <div class="toolbar" role="toolbar" aria-label="결제 내역 필터">
+                <label for="paymentCompanyFilter" class="sr-only">회사 필터</label>
+                <select id="paymentCompanyFilter" class="form-control" aria-label="회사 필터">
+                    <option value="">전체 회사</option>
+                </select>
+                <label for="paymentStatusFilter" class="sr-only">상태 필터</label>
+                <select id="paymentStatusFilter" class="form-control" aria-label="상태 필터">
+                    <option value="">전체 상태</option>
+                    <option value="success">성공</option>
+                    <option value="failed">실패</option>
+                    <option value="cancelled">취소</option>
+                </select>
+            </div>
+            <div class="sa-table-wrap">
+                <div class="table-loading" id="paymentsLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="sa-table" aria-label="결제 내역">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:80px">회사번호</th>
+                                <th scope="col">회사명</th>
+                                <th scope="col">관리자아이디(결제시)</th>
+                                <th scope="col">주문번호</th>
+                                <th scope="col" style="width:120px">금액</th>
+                                <th scope="col" style="width:100px">상태</th>
+                                <th scope="col" style="width:160px">결제일</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTableBody">
+                        </tbody>
+                    </table>
+                </div>
+                <div id="paymentsEmpty" class="empty-state" style="display:none" role="status">
+                    <p>결제 내역이 없습니다.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Company Detail Modal -->
+    <div class="modal-overlay" id="companyModal" role="dialog" aria-modal="true" aria-labelledby="companyModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="companyModalTitle">회사 상세 정보</h3>
+                <button class="modal-close" onclick="closeCompanyModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body" id="companyModalBody">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeCompanyModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Upload Modal -->
+    <div class="modal-overlay" id="uploadModal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="uploadModalTitle">Q&A 엑셀 업로드</h3>
+                <button class="modal-close" onclick="closeUploadModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="uploadCompany">회사 선택 <span class="required" aria-hidden="true">*</span></label>
+                    <select id="uploadCompany" class="form-control" aria-required="true"></select>
+                </div>
+                <div class="form-group">
+                    <label>양식 다운로드</label>
+                    <a href="#" class="upload-template-link" onclick="downloadTemplate(); return false;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        qa_upload_template.xlsx
+                    </a>
+                </div>
+                <div class="form-group">
+                    <label for="uploadFile">엑셀 파일 선택 <span class="required" aria-hidden="true">*</span></label>
+                    <div class="upload-file-area" id="uploadFileArea">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                        <p class="upload-file-text">클릭하거나 파일을 드래그하여 업로드</p>
+                        <p class="upload-file-hint">.xlsx 파일만 지원</p>
+                        <input type="file" id="uploadFile" accept=".xlsx" style="display:none">
+                    </div>
+                    <div class="upload-file-name" id="uploadFileName" style="display:none"></div>
+                </div>
+                <div class="upload-result" id="uploadResult" style="display:none">
+                    <h4>업로드 결과</h4>
+                    <div class="upload-result-stats" id="uploadResultStats"></div>
+                    <div class="upload-result-errors" id="uploadResultErrors" style="display:none"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeUploadModal()">닫기</button>
+                <button class="btn btn-primary" id="uploadBtn" onclick="uploadExcel()">
+                    <span class="btn-text">업로드</span>
+                    <span class="btn-spinner" aria-hidden="true"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Reject Reason Modal -->
+    <div class="modal-overlay" id="rejectModal" role="dialog" aria-modal="true" aria-labelledby="rejectModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="rejectModalTitle">회사 반려</h3>
+                <button class="modal-close" onclick="closeRejectModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="rejectReason">반려 사유 <span class="required" aria-hidden="true">*</span></label>
+                    <textarea id="rejectReason" class="reject-textarea" placeholder="반려 사유를 입력해 주세요" aria-required="true"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeRejectModal()">취소</button>
+                <button class="btn btn-reject" id="rejectConfirmBtn" onclick="confirmReject()">반려 확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Validation Result Modal -->
+    <div class="modal-overlay" id="validateModal" role="dialog" aria-modal="true" aria-labelledby="validateModalTitle">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="validateModalTitle">데이터 검증 결과</h3>
+                <button class="modal-close" onclick="closeValidateModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body" id="validateModalBody">
+            </div>
+            <div class="modal-footer" id="validateModalFooter">
+                <button class="btn btn-outline" onclick="closeValidateModal()">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="true"></div>
+
+    <footer class="site-footer" role="contentinfo">
+        <div class="footer-inner">
+            <nav class="footer-links" aria-label="정책 링크">
+                <a href="/privacy.html">개인정보처리방침</a>
+                <a href="/terms.html">이용약관</a>
+                <a href="/copyright.html">저작권 정책</a>
+                <a href="/refund-policy.html">환불 정책</a>
+                <a href="/contact.html">문의하기</a>
+            </nav>
+            <p class="footer-copyright">&copy; 2026 AI Helper(Accounting Helper). All rights reserved.</p>
+            <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
+            <p class="footer-business-info">보듬누리 | 통신판매업 신고 제 2026-세종-0130 호 | 세종시 다정남로 22, 122-1203</p>
+        </div>
+    </footer>
+
+    <script src="/js/api.js?v=8"></script>
+    <script src="/js/super-admin.js?v=10"></script>
+</body>
+</html>

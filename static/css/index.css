@@ -52,13 +52,22 @@
 
 .notice-text-link:hover { opacity: 0.75; }
 
+.notice-img-row {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+}
+
 .notice-img {
     display: block;
-    max-height: 200px;
-    max-width: 100%;
+    max-height: 220px;
+    max-width: 48%;
     border-radius: 8px;
-    margin: 0.5rem auto 0;
     object-fit: contain;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .notice-img-link { display: block; }

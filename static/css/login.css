@@ -55,8 +55,41 @@
     font-weight: 600;
 }
 
+.login-form .radio-group {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.login-form .radio-label {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 400;
+    cursor: pointer;
+}
+
 .login-form .input-wrap {
     position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: var(--gray-400);
+    display: flex;
+    align-items: center;
+    transition: color 0.2s;
+}
+
+.password-toggle:hover {
+    color: var(--gray-700);
 }
 
 .login-form .input-icon {
@@ -183,6 +216,89 @@
     color: var(--gray-700);
 }
 
+/* Find ID / Reset PW links */
+.login-links {
+    text-align: center;
+    margin-top: 1rem;
+    font-size: var(--text-sm);
+    color: var(--gray-500);
+}
+
+.login-links a {
+    color: var(--gray-600);
+    text-decoration: none;
+}
+
+.login-links a:hover {
+    color: var(--primary);
+    text-decoration: underline;
+}
+
+.login-links .divider {
+    margin: 0 0.5rem;
+    color: var(--gray-300);
+}
+
+/* Login page modals */
+.login-modal {
+    max-width: 400px;
+    width: 90%;
+}
+
+.login-modal .btn-primary {
+    position: relative;
+}
+
+.login-modal .btn-primary .spinner {
+    display: none;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: loginSpin 0.6s linear infinite;
+}
+
+.login-modal .btn-primary.loading .btn-text { visibility: hidden; }
+.login-modal .btn-primary.loading .spinner {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.modal-result {
+    display: none;
+    padding: 0.75rem 1rem;
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    margin-bottom: var(--space-md);
+    line-height: 1.5;
+}
+
+.modal-result.show {
+    display: block;
+}
+
+.modal-result.success {
+    background: #E8F5E9;
+    color: #2E7D32;
+}
+
+.modal-result.error {
+    background: #FFEBEE;
+    color: #C62828;
+}
+
+.modal-result .result-email {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    margin-top: 0.25rem;
+    letter-spacing: 0.5px;
+}
+
 /* Signup link */
 .login-signup {
     text-align: center;
@@ -231,8 +347,118 @@
 
 @keyframes successPulse {
     0%  { box-shadow: var(--shadow-lg); }
-    50% { box-shadow: 0 0 0 4px rgba(76, 175, 80, 0.3), var(--shadow-lg); }
+    50% { box-shadow: 0 0 0 4px rgba(125, 194, 66, 0.3), var(--shadow-lg); }
     100% { box-shadow: var(--shadow-lg); }
+}
+
+/* ── Company Register: Wide card ───────────── */
+.login-card-wide {
+    max-width: 480px;
+}
+
+/* Step indicator */
+.step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: var(--space-xl);
+}
+
+.step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--gray-400);
+    font-size: var(--text-sm);
+    font-weight: var(--font-medium);
+    transition: color 0.2s;
+}
+
+.step.active {
+    color: var(--primary);
+}
+
+.step.completed {
+    color: var(--success, #2E7D32);
+}
+
+.step-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-sm);
+    font-weight: var(--font-bold);
+    border: 2px solid var(--gray-300);
+    background: var(--white);
+    transition: all 0.2s;
+}
+
+.step.active .step-number {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--white);
+}
+
+.step.completed .step-number {
+    border-color: var(--success, #2E7D32);
+    background: var(--success, #2E7D32);
+    color: var(--white);
+}
+
+.step-divider {
+    width: 40px;
+    height: 2px;
+    background: var(--gray-300);
+    margin: 0 0.75rem;
+    transition: background 0.2s;
+}
+
+.step.completed ~ .step-divider,
+.step.completed + .step-divider {
+    background: var(--success, #2E7D32);
+}
+
+/* Company summary in step 2 */
+.company-summary {
+    text-align: center;
+    padding: 0.625rem 1rem;
+    margin-bottom: var(--space-md);
+    background: var(--primary-bg);
+    color: var(--primary);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+    font-weight: var(--font-semibold);
+}
+
+/* Step 2 dual buttons */
+.step2-buttons {
+    display: flex;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.step2-buttons .login-btn {
+    flex: 1;
+}
+
+.required {
+    color: #C62828;
+}
+
+/* Company code notice */
+.company-code-notice {
+    margin-top: 0.375rem;
+    padding: 0.375rem 0.625rem;
+    font-size: var(--text-xs);
+    font-weight: var(--font-semibold);
+    color: #E65100;
+    background: #FFF3E0;
+    border-radius: var(--radius-sm);
+    line-height: 1.4;
 }
 
 /* ── Responsive ─────────────────────────────── */
@@ -246,6 +472,10 @@
         padding: 2rem 1.5rem;
     }
 
+    .login-card-wide {
+        max-width: 100%;
+    }
+
     .login-icon {
         width: 56px;
         height: 56px;
@@ -253,5 +483,13 @@
 
     .login-title h2 {
         font-size: 1.25rem;
+    }
+
+    .step-label {
+        display: none;
+    }
+
+    .step-divider {
+        width: 24px;
     }
 }

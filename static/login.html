@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>로그인 - 보태미 경리도우미</title>
+    <title>로그인 - AI Helper</title>
     <link rel="icon" type="image/png" href="/assets/images/logo.png">
-    <link rel="stylesheet" href="/css/common.css?v=7">
+    <link rel="stylesheet" href="/css/common.css?v=10">
     <link rel="stylesheet" href="/css/login.css?v=7">
 </head>
 <body>
@@ -13,13 +13,12 @@
 
     <header class="header" role="banner">
         <div class="header-left">
-            <a href="/" class="header-logo" aria-label="보태미 경리도우미 홈으로 이동">
-                <img src="/assets/images/logo.png" alt="보태미 로고" aria-hidden="true">
-                <span>경리언니들 제가 도와드릴께요~ 힘내세요!</span>
+            <a href="/" class="header-logo" aria-label="AI Helper 홈으로 이동">
+                <img src="/assets/images/logo.png" alt="AI Helper 로고" aria-hidden="true">
             </a>
         </div>
         <div class="header-right">
-            <a href="/" class="btn btn-outline btn-sm">챗봇으로 돌아가기</a>
+            <a href="/" class="btn btn-outline btn-sm" onclick="var c=sessionStorage.getItem('last_company');if(c){this.href='/?company='+c}">챗봇으로 돌아가기</a>
         </div>
     </header>
 
@@ -160,7 +159,7 @@
                 <a href="/refund-policy.html">환불 정책</a>
                 <a href="/contact.html">문의하기</a>
             </nav>
-            <p class="footer-copyright">&copy; 2026 보태미 - 경리도우미(Accounting Helper). All rights reserved.</p>
+            <p class="footer-copyright">&copy; 2026 AI Helper(Accounting Helper). All rights reserved.</p>
             <p class="footer-contact">운영자 이메일: <a href="mailto:kduaro124@naver.com">kduaro124@naver.com</a></p>
             <p class="footer-business-info">보듬누리 | 통신판매업 신고 제 2026-세종-0130 호 | 세종시 다정남로 22, 122-1203</p>
         </div>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Helper - 아파트 회계 AI 챗봇</title>
+    <meta name="description" content="경리 담당자 없어도 괜찮습니다. 아파트 회계 질문, AI가 24시간 대신 답변합니다. 관리비·이주정산·회계처리 반복 질문은 AI에게.">
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <link rel="stylesheet" href="/css/common.css?v=15">
+    <link rel="stylesheet" href="/css/landing.css?v=2">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+
+    <!-- Header -->
+    <header class="landing-header" role="banner">
+        <a href="/landing.html" class="header-logo" aria-label="AI Helper 홈으로 이동">
+            <img src="/assets/images/logo.png" alt="AI Helper 로고" style="height:32px">
+        </a>
+        <nav class="landing-nav" aria-label="메인 내비게이션">
+            <a href="/landing.html" class="active">홈</a>
+            <a href="/manager.html">관리소장님</a>
+            <a href="/demo.html">데모 체험</a>
+            <a href="/contact.html">문의</a>
+        </nav>
+        <div>
+            <a href="/login.html" class="btn btn-outline btn-sm">관리자 로그인</a>
+        </div>
+    </header>
+
+    <main id="main-content">
+
+        <!-- ══ Section 1: HERO ══ -->
+        <section class="hero" id="hero-section">
+            <span class="hero-badge">AI Helper</span>
+            <h1>경리 담당자 없어도<br><em>괜찮습니다</em></h1>
+            <p class="hero-desc">
+                아파트 회계 질문, AI가 24시간 대신 답변합니다<br>
+                관리비·이주정산·회계처리 — 반복 질문은 이제 AI에게
+            </p>
+            <div class="hero-cta-group">
+                <button class="btn-kakao btn-kakao-primary" data-cta="kakao_intro"
+                        onclick="handleCtaClick('kakao_intro','main','hero','general');gaEvent('kakao_click','hero_cta')"
+                        aria-label="카카오로 도입 상담하기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                    카카오로 도입 상담하기
+                </button>
+                <a href="/demo.html" class="btn-kakao btn-kakao-outline"
+                   onclick="gaEvent('demo_click','hero')"
+                   aria-label="무료 데모 체험하기">
+                    💻 무료 데모 체험하기
+                </a>
+            </div>
+        </section>
+
+        <!-- ══ Section 2: 공감 (Pain Point) ══ -->
+        <section class="landing-section pain-section" id="pain-section">
+            <h2 class="section-title">관리소장님, 이런 상황 익숙하시죠?</h2>
+            <ul class="pain-checklist">
+                <li class="pain-item">
+                    <span class="pain-check" aria-hidden="true">☑</span>
+                    <span>매달 똑같은 관리비 질문에 일일이 답하고 계신가요?</span>
+                </li>
+                <li class="pain-item">
+                    <span class="pain-check" aria-hidden="true">☑</span>
+                    <span>경리 담당자가 바뀔 때마다 업무가 흔들리시나요?</span>
+                </li>
+                <li class="pain-item">
+                    <span class="pain-check" aria-hidden="true">☑</span>
+                    <span>퇴근 후에도 입주민 문의 전화가 오시나요?</span>
+                </li>
+                <li class="pain-item">
+                    <span class="pain-check" aria-hidden="true">☑</span>
+                    <span>회계 답변이 맞는지 매번 불안하신가요?</span>
+                </li>
+            </ul>
+        </section>
+
+        <!-- ══ Section 3: 해결책 ══ -->
+        <section class="landing-section" id="solution-section">
+            <h2 class="section-title">AI Helper가 대신합니다</h2>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon green" aria-hidden="true">💰</div>
+                    <h3>관리비 산정</h3>
+                    <p>관리비 부과 기준, 공용부분 배분, 장기수선충당금<br>입주민이 물어보면 AI가 즉시 정확하게 답변</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon blue" aria-hidden="true">📋</div>
+                    <h3>이주정산</h3>
+                    <p>입주자 변경 정산, 일할 계산, 선수금 처리<br>복잡한 계산도 AI가 안내</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon orange" aria-hidden="true">📑</div>
+                    <h3>회계처리</h3>
+                    <p>분개, 결산, 세금 신고 실무<br>경리 담당자가 없어도 업무 지식이 유지됩니다</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Section 4: Before / After ══ -->
+        <section class="landing-section ba-section" id="ba-section">
+            <h2 class="section-title">도입 전후 비교</h2>
+            <div class="ba-container">
+                <div class="ba-card ba-before">
+                    <h3 class="ba-label">도입 전</h3>
+                    <ul class="ba-list">
+                        <li>😩 매달 반복되는 같은 질문</li>
+                        <li>😰 경리 퇴사 후 업무 공백</li>
+                        <li>😤 야간 문의 응대 불가</li>
+                        <li>📉 답변 품질이 담당자마다 달라짐</li>
+                    </ul>
+                </div>
+                <div class="ba-arrow" aria-hidden="true">
+                    <span>→</span>
+                </div>
+                <div class="ba-card ba-after">
+                    <h3 class="ba-label">도입 후</h3>
+                    <ul class="ba-list">
+                        <li>✅ AI가 24시간 즉시 답변</li>
+                        <li>✅ 담당자 바뀌어도 지식 유지</li>
+                        <li>✅ 새벽 문의도 자동 응대</li>
+                        <li>✅ 어느 단지나 균일한 품질</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Section 5: 신뢰 + 가격 ══ -->
+        <section class="landing-section pricing-section" id="pricing-section">
+            <div class="landing-section-inner">
+                <h2 class="section-title">합리적인 요금제</h2>
+                <p class="section-subtitle">우리 단지 규모에 맞게 선택하세요</p>
+                <div class="pricing-grid">
+                    <div class="pricing-box">
+                        <div class="price-label">소형</div>
+                        <div class="price-sub">600세대 이하</div>
+                        <div class="price">월 49,000원</div>
+                    </div>
+                    <div class="pricing-box pricing-recommended">
+                        <span class="pricing-badge">추천</span>
+                        <div class="price-label">중형</div>
+                        <div class="price-sub">1,100세대 이하</div>
+                        <div class="price">월 69,000원</div>
+                    </div>
+                    <div class="pricing-box">
+                        <div class="price-label">대형</div>
+                        <div class="price-sub">1,600세대 이하</div>
+                        <div class="price">월 89,000원</div>
+                    </div>
+                    <div class="pricing-box">
+                        <div class="price-label">특대형</div>
+                        <div class="price-sub">1,600세대 초과</div>
+                        <div class="price">월 99,000원</div>
+                    </div>
+                </div>
+                <p class="cta-helper-text" style="margin-bottom:1.5rem">VAT 별도 · 무료 체험 후 결정하세요 · 언제든 해지 가능</p>
+
+                <!-- 데모 강조 박스 -->
+                <div class="demo-highlight-box">
+                    <div class="demo-highlight-icon" aria-hidden="true">💻</div>
+                    <h3>먼저 직접 써보세요</h3>
+                    <p>실제 질문을 입력해보고 결정하세요</p>
+                    <a href="/demo.html" class="btn-kakao btn-kakao-green"
+                       onclick="gaEvent('demo_click','pricing')"
+                       aria-label="무료 데모 체험하기">무료 데모 체험하기 →</a>
+                </div>
+
+                <!-- 신뢰 문구 -->
+                <div class="trust-badges">
+                    <span class="trust-item">✔ 사업자 등록 완료 (339-29-01454)</span>
+                    <span class="trust-item">✔ 개인정보처리방침 준수</span>
+                    <span class="trust-item">✔ 카카오 비즈니스 채널 연동</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Section 6: 최종 CTA ══ -->
+        <section class="cta-banner" id="final-cta-section">
+            <h2>지금 바로 도입 여부를 확인해보세요</h2>
+            <p>우리 단지 규모에 맞는 요금과 적용 방법을<br>카카오로 바로 안내해드립니다.</p>
+            <div class="hero-cta-group">
+                <button class="btn-kakao btn-kakao-primary" data-cta="kakao_quick"
+                        onclick="handleCtaClick('kakao_quick','main','footer','general');gaEvent('kakao_click','final_cta')"
+                        aria-label="카카오로 도입 상담하기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                    카카오로 도입 상담하기
+                </button>
+                <a href="/demo.html" class="btn-kakao btn-kakao-outline btn-kakao-outline-white"
+                   onclick="gaEvent('demo_click','final_cta')"
+                   aria-label="무료 데모 먼저 체험하기">
+                    💻 무료 데모 먼저 체험하기
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Sticky CTA -->
+    <div class="sticky-cta" id="sticky-cta" aria-label="카카오 상담하기">
+        <button class="sticky-cta-btn" data-cta="kakao_quick"
+                onclick="handleCtaClick('kakao_quick','main','sticky','general');gaEvent('kakao_click','sticky_cta')"
+                aria-label="카카오 상담하기">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+            <span>카카오 상담하기</span>
+        </button>
+    </div>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="footer-links">
+            <a href="/privacy.html">개인정보처리방침</a>
+            <a href="/terms.html">이용약관</a>
+            <a href="/copyright.html">저작권 정책</a>
+            <a href="/refund-policy.html">환불 정책</a>
+            <a href="/contact.html">문의하기</a>
+        </div>
+        <p>보듐누리 | 대표: 김동욱 | 사업자등록번호: 339-29-01454<br>
+        세종시 다정남로 22, 122-1203 | kduaro124@naver.com</p>
+    </footer>
+
+    <script src="/js/kakao-cta.js?v=1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initKakaoCta('main', 'general');
+
+            /* ── GA4 Helper ── */
+            window.gaEvent = function(eventName, position) {
+                if (typeof gtag === 'function') {
+                    gtag('event', eventName, { position: position });
+                }
+            };
+
+            /* ── Sticky CTA: hide until scrolled past hero ── */
+            var heroEl = document.getElementById('hero-section');
+            var stickyEl = document.getElementById('sticky-cta');
+            if (heroEl && stickyEl) {
+                var stickyObserver = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        stickyEl.classList.toggle('visible', !entry.isIntersecting);
+                    });
+                }, { threshold: 0 });
+                stickyObserver.observe(heroEl);
+            }
+
+            /* ── Pain point stagger animation ── */
+            var painItems = document.querySelectorAll('.pain-item');
+            if (painItems.length && typeof IntersectionObserver !== 'undefined') {
+                var painObserver = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            painObserver.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.2 });
+                painItems.forEach(function(item) {
+                    painObserver.observe(item);
+                });
+            }
+
+            /* ── Section view tracking (GA4) ── */
+            var sections = document.querySelectorAll('[id$="-section"]');
+            if (sections.length && typeof IntersectionObserver !== 'undefined') {
+                var viewedSections = new Set();
+                var sectionObserver = new IntersectionObserver(function(entries) {
+                    entries.forEach(function(entry) {
+                        if (entry.isIntersecting) {
+                            var id = entry.target.id;
+                            if (!viewedSections.has(id)) {
+                                viewedSections.add(id);
+                                gaEvent('section_view', id);
+                            }
+                        }
+                    });
+                }, { threshold: 0.3 });
+                sections.forEach(function(s) { sectionObserver.observe(s); });
+            }
+        });
+    </script>
+</body>
+</html>

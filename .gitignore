@@ -6,3 +6,7 @@ data/
 venv/
 nul
 AccHelperBack/
+
+AccHelperFront/
+AIHelperCollector/
+AccHelper_temp/

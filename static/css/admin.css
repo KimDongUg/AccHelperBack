@@ -1,3 +1,36 @@
+/* ── 공지사항 토글 스위치 ── */
+.notice-toggle-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    cursor: pointer;
+    user-select: none;
+}
+.notice-toggle-wrap input[type="checkbox"] { display: none; }
+.notice-toggle-slider {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    background: var(--gray-300, #ccc);
+    border-radius: 10px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+.notice-toggle-slider::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s;
+}
+.notice-toggle-wrap input:checked + .notice-toggle-slider { background: var(--primary, #4f46e5); }
+.notice-toggle-wrap input:checked + .notice-toggle-slider::after { transform: translateX(16px); }
+
 .admin-container {
     max-width: 100%;
     min-width: 0;
@@ -1024,4 +1057,13 @@
 .sub-status-failed {
     color: var(--danger);
     font-weight: 600;
+}
+
+/* 알림톡 링크로 진입 시 해당 질문 하이라이트 */
+@keyframes highlight-fade {
+    0% { background-color: #fff3cd; }
+    100% { background-color: transparent; }
+}
+.highlight-row {
+    animation: highlight-fade 3s ease-out;
 }

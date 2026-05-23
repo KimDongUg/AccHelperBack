@@ -16,6 +16,13 @@
         var overlay = document.getElementById('promoPopup');
         if (!overlay) return;
 
+        // 업체 챗봇 화면(입주민 접속)에서는 팝업 표시하지 않음
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('company')) {
+            document.dispatchEvent(new Event('promoPopupClosed'));
+            return;
+        }
+
         var closeBtn = document.getElementById('promoPopupClose');
         var confirmBtn = document.getElementById('promoPopupConfirm');
         var todayCheck = document.getElementById('promoTodayCheck');

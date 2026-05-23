@@ -107,25 +107,28 @@ document.addEventListener('DOMContentLoaded', function () {
     var params = new URLSearchParams(window.location.search);
     var code = params.get('company');
 
-    // 로고 클릭 동작 설정
+    // 로고/AI챗봇 버튼 클릭 동작 설정
+    function handleChatNavClick(e) {
+        e.preventDefault();
+        if (sess && sess.isLoggedIn && sess.role === 'super_admin') {
+            window.location.href = '/';
+        } else if (sess && sess.isLoggedIn && sess.companyId) {
+            window.location.href = '/?company=' + sess.companyId;
+        } else if (code) {
+            window.location.reload();
+        } else {
+            window.location.href = '/';
+        }
+    }
+
     var headerLogo = document.getElementById('headerLogo');
     if (headerLogo) {
-        headerLogo.addEventListener('click', function (e) {
-            e.preventDefault();
-            if (sess && sess.isLoggedIn && sess.role === 'super_admin') {
-                // 수퍼관리자 → 메인(회사 선택)
-                window.location.href = '/';
-            } else if (sess && sess.isLoggedIn && sess.companyId) {
-                // 일반 관리자 → 본인 업체 챗봇
-                window.location.href = '/?company=' + sess.companyId;
-            } else if (code) {
-                // 입주민(비로그인, 업체 챗봇 접속 중) → 현재 페이지 새로고침
-                window.location.reload();
-            } else {
-                // 비로그인 + 메인 → 메인
-                window.location.href = '/';
-            }
-        });
+        headerLogo.addEventListener('click', handleChatNavClick);
+    }
+
+    var chatBotNavLink = document.getElementById('chatBotNavLink');
+    if (chatBotNavLink) {
+        chatBotNavLink.addEventListener('click', handleChatNavClick);
     }
 
     if (code) {
@@ -242,11 +245,11 @@ async function validateAndStartChat(code) {
             }
         }
 
-        // 아파트 전용: 헤더 당근 메뉴 표시
-        var daangnNavLink = document.getElementById('daangnNavLink');
-        if (daangnNavLink) {
-            daangnNavLink.style.display = company.building_type === '아파트' ? '' : 'none';
-        }
+        // 우리아파트 당근 (관리비 메뉴 완성 후 오픈 예정 — 주석 해제하여 활성화)
+        // var daangnNavLink = document.getElementById('daangnNavLink');
+        // if (daangnNavLink) {
+        //     daangnNavLink.style.display = company.building_type === '아파트' ? '' : 'none';
+        // }
 
         // Show chat (로그인 없이 누구나 이용 가능)
         showChat(company);
@@ -313,12 +316,16 @@ function showChat(companyData) {
                 var rendered = '';
                 var imgRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
                 var lastIndex = 0, m;
+                var collectedImgs = [];
                 while ((m = imgRegex.exec(rawText)) !== null) {
                     var before = rawText.slice(lastIndex, m.index)
                         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
                     if (before.trim()) rendered += before;
-                    rendered += '<img src="' + escapeAttr(m[2]) + '" alt="' + escapeAttr(m[1]) + '" class="notice-img">';
+                    collectedImgs.push('<img src="' + escapeAttr(m[2]) + '" alt="' + escapeAttr(m[1]) + '" class="notice-img">');
                     lastIndex = m.index + m[0].length;
+                }
+                if (collectedImgs.length > 0) {
+                    rendered += '<div class="notice-img-row">' + collectedImgs.join('') + '</div>';
                 }
                 var tail = rawText.slice(lastIndex)
                     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');

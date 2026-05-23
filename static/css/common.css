@@ -164,20 +164,29 @@ select:focus-visible {
 /* Skip to content */
 .skip-link {
     position: absolute;
-    top: -100%;
+    top: -999px;
+    left: -999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+}
+
+.skip-link:focus {
+    top: 0.5rem;
     left: 1rem;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
     z-index: 10000;
     padding: 0.75rem 1.5rem;
     background: var(--primary);
     color: var(--white);
     border-radius: var(--radius-sm);
     font-weight: var(--font-medium);
-    transition: top 0.3s ease;
-}
-
-.skip-link:focus {
-    top: 0.5rem;
-    color: var(--white);
 }
 
 /* ═══════════════════════════════════════════════
@@ -185,8 +194,7 @@ select:focus-visible {
  * ═══════════════════════════════════════════════ */
 .header {
     background: var(--white);
-    border-bottom: 1px solid var(--gray-300);
-    padding: 30px 1.5rem;
+    padding: 8px 1.5rem;
     height: auto;
     display: flex;
     align-items: center;
@@ -194,7 +202,7 @@ select:focus-visible {
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.06);
 }
 
 .header-left {

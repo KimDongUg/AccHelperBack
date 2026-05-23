@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리소장님을 위한 AI Helper - AI Helper</title>
+    <meta name="description" content="아파트 관리소 경리 업무 자동화. 도입 절차, 비용 안내, 실제 운영 사례를 확인하세요.">
+    <link rel="icon" type="image/png" href="/assets/images/logo.png">
+    <link rel="stylesheet" href="/css/common.css?v=15">
+    <link rel="stylesheet" href="/css/landing.css?v=1">
+</head>
+<body>
+    <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
+
+    <!-- Header -->
+    <header class="landing-header" role="banner">
+        <a href="/landing.html" class="header-logo" aria-label="AI Helper 홈으로 이동">
+            <img src="/assets/images/logo.png" alt="AI Helper 로고" style="height:32px">
+        </a>
+        <nav class="landing-nav" aria-label="메인 내비게이션">
+            <a href="/landing.html">홈</a>
+            <a href="/manager.html" class="active">관리소장님</a>
+            <a href="/demo.html">데모 체험</a>
+            <a href="/contact.html">문의</a>
+        </nav>
+        <div>
+            <a href="/login.html" class="btn btn-outline btn-sm">관리자 로그인</a>
+        </div>
+    </header>
+
+    <main id="main-content">
+
+        <!-- ══ Hero ══ -->
+        <section class="hero">
+            <span class="hero-badge">관리소장님 전용</span>
+            <h1>경리 담당자 없이도<br><em>회계 질문에 답하는 AI</em></h1>
+            <p class="hero-desc">
+                경리 퇴사, 반복 질문, 입주민 민원...<br>
+                AI Helper가 24시간 정확하게 응대합니다.
+            </p>
+            <div class="hero-cta-group">
+                <button class="btn-kakao btn-kakao-primary" data-cta="kakao_manager_intro"
+                        onclick="handleCtaClick('kakao_manager_intro','manager','hero','manager')"
+                        aria-label="카카오로 도입자료 받기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                    카카오로 도입자료 받기
+                </button>
+            </div>
+            <p class="cta-helper-text">채널 추가 후 자료를 바로 받아보실 수 있습니다.</p>
+        </section>
+
+        <!-- ══ 문제 인식 ══ -->
+        <section class="landing-section">
+            <h2 class="section-title">이런 어려움 겪고 계신가요?</h2>
+            <p class="section-subtitle">아파트 관리소 경리 업무의 현실적인 문제들</p>
+            <ul class="problem-list">
+                <li>경리 담당자가 퇴사하면 업무 지식이 함께 사라집니다</li>
+                <li>같은 질문이 반복되지만, 매번 직접 답변해야 합니다</li>
+                <li>관리비·정산 관련 민원 응대에 시간을 빼앗깁니다</li>
+                <li>경리 담당자가 부재 시 질문에 답할 수 있는 사람이 없습니다</li>
+            </ul>
+            <div style="text-align:center">
+                <button class="btn-kakao btn-kakao-primary" data-cta="kakao_manager_intro"
+                        onclick="handleCtaClick('kakao_manager_intro','manager','problem','manager')"
+                        aria-label="카카오로 도입자료 받기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                    카카오로 도입자료 받기
+                </button>
+            </div>
+        </section>
+
+        <!-- ══ 비용 대비 효과 ══ -->
+        <section class="landing-section" style="background:var(--gray-50)">
+            <div class="landing-section-inner">
+                <h2 class="section-title">비용 대비 효과</h2>
+                <p class="section-subtitle">세대수 기준 합리적인 요금으로 24시간 AI 경리 보조</p>
+                <ul class="benefit-list">
+                    <li>경리 인건비 월 200만원+ → AI 도우미 월 49,000원~</li>
+                    <li>24시간 무중단 응대 — 야간·주말에도 답변 가능</li>
+                    <li>우리 단지 맞춤 Q&A 직접 관리 — 정확도 지속 향상</li>
+                    <li>담당자 교체에도 일관된 응대 품질 유지</li>
+                </ul>
+                <div class="pricing-grid">
+                    <div class="pricing-box">
+                        <div class="price-label">소형</div>
+                        <div class="price-sub">600세대 이하</div>
+                        <div class="price">월 49,000원</div>
+                    </div>
+                    <div class="pricing-box">
+                        <div class="price-label">중형</div>
+                        <div class="price-sub">1,100세대 이하</div>
+                        <div class="price">월 69,000원</div>
+                    </div>
+                    <div class="pricing-box">
+                        <div class="price-label">대형</div>
+                        <div class="price-sub">1,600세대 이하</div>
+                        <div class="price">월 89,000원</div>
+                    </div>
+                    <div class="pricing-box">
+                        <div class="price-label">특대형</div>
+                        <div class="price-sub">1,600세대 초과</div>
+                        <div class="price">월 99,000원</div>
+                    </div>
+                </div>
+                <p class="cta-helper-text" style="margin-bottom:1.5rem">VAT 별도 · 무료 체험 제공 · 언제든 해지 가능</p>
+                <div style="text-align:center">
+                    <button class="btn-kakao btn-kakao-primary" data-cta="kakao_manager_pricing"
+                            onclick="handleCtaClick('kakao_manager_pricing','manager','benefit','manager')"
+                            aria-label="카카오로 요금 안내 받기">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                        카카오로 요금 안내 받기
+                    </button>
+                    <p class="cta-helper-text">도입 절차와 비용을 카카오로 편하게 안내해드립니다.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ 도입 절차 ══ -->
+        <section class="landing-section">
+            <h2 class="section-title">도입 절차</h2>
+            <p class="section-subtitle">간단한 3단계로 시작할 수 있습니다</p>
+            <div class="step-list">
+                <div class="step-item">
+                    <span class="step-number">1</span>
+                    <div class="step-content">
+                        <h4>무료 상담 신청</h4>
+                        <p>카카오 또는 전화로 상담을 신청하세요. 단지 규모와 요구사항을 파악합니다.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-number">2</span>
+                    <div class="step-content">
+                        <h4>맞춤 Q&A 세팅</h4>
+                        <p>우리 단지에 맞는 Q&A 데이터를 등록합니다. 기본 템플릿을 제공하여 빠르게 시작할 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-number">3</span>
+                    <div class="step-content">
+                        <h4>서비스 오픈</h4>
+                        <p>QR코드 또는 링크를 입주민에게 배포하면 바로 사용할 수 있습니다.</p>
+                    </div>
+                </div>
+            </div>
+            <div style="text-align:center">
+                <button class="btn-kakao btn-kakao-primary" data-cta="kakao_manager_process"
+                        onclick="handleCtaClick('kakao_manager_process','manager','process','manager')"
+                        aria-label="카카오로 도입 절차 보기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                    카카오로 도입 절차 보기
+                </button>
+            </div>
+        </section>
+
+        <!-- ══ Bottom CTA ══ -->
+        <section class="cta-banner">
+            <h2>도입이 궁금하시다면, 카카오로 편하게 상담하세요</h2>
+            <p>실제 운영 사례와 비용을 안내해드립니다.</p>
+            <div class="hero-cta-group">
+                <button class="btn-kakao btn-kakao-primary" data-cta="kakao_manager_consult"
+                        onclick="handleCtaClick('kakao_manager_consult','manager','footer','manager')"
+                        aria-label="카카오로 상담 예약하기">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3C6.5 3 2 6.58 2 11c0 2.83 1.88 5.32 4.72 6.73-.16.56-.58 2.04-.66 2.36-.1.39.14.39.3.28.12-.08 1.94-1.32 2.73-1.86.6.09 1.22.14 1.85.14h.12c5.5 0 10-3.58 10-8s-4.5-8-10-8z"/></svg>
+                    카카오로 상담 예약하기
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+        <div class="footer-links">
+            <a href="/privacy.html">개인정보처리방침</a>
+            <a href="/terms.html">이용약관</a>
+            <a href="/copyright.html">저작권 정책</a>
+            <a href="/refund-policy.html">환불 정책</a>
+            <a href="/contact.html">문의하기</a>
+        </div>
+        <p>보듐누리 | 대표: 김동욱 | 사업자등록번호: 339-29-01454<br>
+        세종시 다정남로 22, 122-1203 | kduaro124@naver.com</p>
+    </footer>
+
+    <script src="/js/kakao-cta.js?v=1"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initKakaoCta('manager', 'manager');
+        });
+    </script>
+</body>
+</html>
