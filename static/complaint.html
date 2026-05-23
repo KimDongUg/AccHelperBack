@@ -12,7 +12,7 @@
 <div class="cp-header">
   <button class="cp-back" onclick="location.href='/'">←</button>
   <h1>📋 민원게시판</h1>
-  <div class="cp-header-right" id="adminBadge"></div>
+  <div id="adminBadge"></div>
 </div>
 
 <div id="postList" class="cp-list"></div>
@@ -35,23 +35,6 @@ if (!companyId) {
 // 글쓰기 버튼 → company 파라미터 유지
 document.getElementById('writeBtn').href = `/complaint-write.html?company=${companyId}`;
 
-// 헤더 관리자 UI
-function renderAdminBadge() {
-    const badge = document.getElementById('adminBadge');
-    if (ComplaintAuth.isAdmin()) {
-        badge.innerHTML = `<span style="font-size:11px;background:rgba(255,255,255,0.25);padding:2px 8px;border-radius:12px;margin-right:6px">관리자</span><button onclick="doAdminLogout()" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.85">로그아웃</button>`;
-    } else {
-        badge.innerHTML = `<a href="/login.html?redirect=complaint&company=${companyId}" style="color:#fff;font-size:12px;opacity:0.85;text-decoration:none">관리자 로그인</a>`;
-    }
-}
-renderAdminBadge();
-
-function doAdminLogout() {
-    sessionStorage.removeItem('acc_auth_session');
-    localStorage.removeItem('acc_auth_session');
-    renderAdminBadge();
-    showCpToast('로그아웃되었습니다.');
-}
 
 let currentPage = 1;
 let totalPages = 1;
