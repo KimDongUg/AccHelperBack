@@ -457,11 +457,12 @@ function showChat(companyData) {
         if (!text) return;
         if (text.length < 7) {
             chatInput.classList.add('input-warn');
-            chatInput.placeholder = '7자 이상 입력해주세요.';
+            const warnMsg = document.getElementById('inputWarnMsg');
+            if (warnMsg) { warnMsg.style.display = 'block'; }
             chatInput.focus();
             setTimeout(() => {
                 chatInput.classList.remove('input-warn');
-                chatInput.placeholder = '질문을 입력하세요...';
+                if (warnMsg) warnMsg.style.display = 'none';
             }, 2000);
             return;
         }
