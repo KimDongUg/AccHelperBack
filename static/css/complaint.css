@@ -217,6 +217,17 @@ body {
   margin-bottom: 14px;
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+.cp-post-writer {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+.cp-post-writer-name {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--primary-dark);
 }
 .cp-post-content {
   font-size: 15px;

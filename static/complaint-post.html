@@ -102,7 +102,7 @@ function renderPost(p) {
       <div class="cp-post-body">
         <div class="cp-post-title">${escHtml(p.title)}</div>
         <div class="cp-post-meta">
-          <span>📍 ${escHtml(p.writer)}</span>
+          <span class="cp-post-writer">📍 ${escHtml(p.writer)}${p.writer_name ? ` <span class="cp-post-writer-name">(${escHtml(p.writer_name)})</span>` : ''}</span>
           <span>${p.time_ago}</span>
         </div>
         <div class="cp-post-content">${escHtml(p.content)}</div>
