@@ -5,13 +5,14 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_admin, optional_admin
 from app.models.complaint import Complaint
+from app.services.alert_service import trigger_complaint_alert
 
 logger = logging.getLogger("acchelper")
 router = APIRouter(prefix="/api/complaints", tags=["complaints"])
@@ -105,6 +106,7 @@ def list_complaints(
 @router.post("", status_code=201)
 def create_complaint(
     body: ComplaintCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     c = Complaint(
@@ -119,6 +121,7 @@ def create_complaint(
     db.commit()
     db.refresh(c)
     logger.info("Complaint created: id=%d company_id=%d", c.id, c.company_id)
+    background_tasks.add_task(trigger_complaint_alert, c.id)
     return {"complaint_id": c.id}
 
 

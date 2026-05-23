@@ -32,6 +32,13 @@ def _build_admin_url(company_id: int, question_id: int) -> str:
     )
 
 
+def _build_complaint_url(company_id: int, complaint_id: int) -> str:
+    return (
+        f"{config.ADMIN_BASE_URL}/complaint-post.html"
+        f"?id={complaint_id}&company={company_id}"
+    )
+
+
 def _format_time(dt: datetime) -> str:
     kst_dt = dt.replace(tzinfo=timezone.utc).astimezone(KST)
     return kst_dt.strftime("%Y-%m-%d %H:%M")
@@ -116,6 +123,73 @@ def trigger_unanswered_alert(question_id: int) -> None:
         logger.error(
             "[Alert] trigger_unanswered_alert 오류 | question_id=%s | %s",
             question_id, e,
+        )
+    finally:
+        db.close()
+
+
+def trigger_complaint_alert(complaint_id: int) -> None:
+    """민원 등록 알림톡 트리거 (BackgroundTasks에서 호출)"""
+    from app.models.complaint import Complaint
+
+    db = SessionLocal()
+    try:
+        complaint = db.query(Complaint).get(complaint_id)
+        if not complaint:
+            return
+
+        company = db.query(Company).filter(
+            Company.company_id == complaint.company_id
+        ).first()
+        apt_name = company.company_name if company else "관리자"
+
+        if company and is_facility_management_company(company.company_name):
+            logger.info(
+                "[ComplaintAlert] 시설관리 회사 알림톡 차단 | company_id=%s",
+                complaint.company_id,
+            )
+            return
+
+        admins = db.query(AdminUser).filter(
+            AdminUser.company_id == complaint.company_id,
+            AdminUser.receive_unanswered_alert == True,
+            AdminUser.is_active == True,
+        ).all()
+
+        if not admins:
+            logger.warning(
+                "[ComplaintAlert] 알림 수신 관리자 없음 | company_id=%s", complaint.company_id
+            )
+            return
+
+        complaint_url = _build_complaint_url(complaint.company_id, complaint.id)
+        complaint_time = _format_time(complaint.created_at)
+
+        for admin in admins:
+            if not admin.phone:
+                continue
+            try:
+                send_unanswered_alimtalk(
+                    to=admin.phone,
+                    apt_name=apt_name,
+                    question=f"[민원] {complaint.title}",
+                    time=complaint_time,
+                    url=complaint_url,
+                )
+                logger.info(
+                    "[ComplaintAlert] 알림톡 발송 성공 | admin=%s | complaint_id=%d",
+                    admin.full_name or admin.email,
+                    complaint.id,
+                )
+            except Exception as e:
+                logger.error(
+                    "[ComplaintAlert] 알림톡 발송 실패 | admin_id=%s | %s", admin.user_id, e
+                )
+
+    except Exception as e:
+        logger.error(
+            "[ComplaintAlert] trigger_complaint_alert 오류 | complaint_id=%s | %s",
+            complaint_id, e,
         )
     finally:
         db.close()
