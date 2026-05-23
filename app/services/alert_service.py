@@ -15,7 +15,7 @@ from app.database import SessionLocal
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.unanswered_question import UnansweredQuestion
-from app.services.solapi_service import send_unanswered_alimtalk
+from app.services.solapi_service import send_unanswered_alimtalk, send_complaint_alimtalk
 
 logger = logging.getLogger(__name__)
 
@@ -164,15 +164,17 @@ def trigger_complaint_alert(complaint_id: int) -> None:
 
         complaint_url = _build_complaint_url(complaint.company_id, complaint.id)
         complaint_time = _format_time(complaint.created_at)
+        writer_display = f"{complaint.dong} {complaint.ho}"
 
         for admin in admins:
             if not admin.phone:
                 continue
             try:
-                send_unanswered_alimtalk(
+                send_complaint_alimtalk(
                     to=admin.phone,
                     apt_name=apt_name,
-                    question=f"[민원] {complaint.title}",
+                    title=complaint.title,
+                    writer=writer_display,
                     time=complaint_time,
                     url=complaint_url,
                 )
