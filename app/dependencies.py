@@ -34,6 +34,19 @@ def require_admin(request: Request, session_token: str | None = Cookie(None)) ->
     return user
 
 
+def optional_admin(request: Request, session_token: str | None = Cookie(None)) -> dict | None:
+    """Return admin payload if valid admin JWT present, else None (no error)."""
+    token = _extract_token(request, session_token)
+    if not token:
+        return None
+    payload = decode_token(token)
+    if not payload:
+        return None
+    if payload.get("role") not in ("admin", "super_admin"):
+        return None
+    return payload
+
+
 def require_super_admin(request: Request, session_token: str | None = Cookie(None)) -> dict:
     """Require super_admin role."""
     user = require_auth(request, session_token)

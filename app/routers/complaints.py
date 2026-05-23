@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import require_admin, optional_admin
 from app.models.complaint import Complaint
 
 logger = logging.getLogger("acchelper")
@@ -123,10 +123,16 @@ def create_complaint(
 
 
 @router.get("/{complaint_id}")
-def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
+def get_complaint(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    admin: dict | None = Depends(optional_admin),
+):
     c = db.query(Complaint).filter(Complaint.id == complaint_id).first()
     if not c:
         raise HTTPException(status_code=404, detail="민원글을 찾을 수 없습니다.")
+
+    is_admin = admin is not None and admin.get("company_id") == c.company_id
 
     if c.is_deleted:
         return {
@@ -134,6 +140,7 @@ def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
             "is_deleted": True,
             "delete_reason": c.delete_reason,
             "writer": _writer_display(c.dong, c.ho),
+            "writer_name": c.writer_name if is_admin else None,
             "title": "(삭제된 글)",
             "content": "",
             "time_ago": _time_ago(c.created_at),
@@ -144,6 +151,7 @@ def get_complaint(complaint_id: int, db: Session = Depends(get_db)):
         "id": c.id,
         "is_deleted": False,
         "writer": _writer_display(c.dong, c.ho),
+        "writer_name": c.writer_name if is_admin else None,
         "title": c.title,
         "content": c.content,
         "time_ago": _time_ago(c.created_at),
