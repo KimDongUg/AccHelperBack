@@ -136,6 +136,20 @@ def _run_pg_migration(engine: Engine):
         if _pg_table_exists(conn, "complaints"):
             _pg_add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
             _pg_add_column_if_missing(conn, "complaints", "privacy_agreed_at", "TIMESTAMP")
+            # Backfill: writer_phone이 NULL인 민원은 complaint_persons 에서 전화번호 채우기
+            if _pg_table_exists(conn, "complaint_persons"):
+                conn.execute(text("""
+                    UPDATE complaints c
+                    SET writer_phone = cp.phone
+                    FROM complaint_persons cp
+                    WHERE c.writer_phone IS NULL
+                      AND cp.phone IS NOT NULL
+                      AND cp.company_id = c.company_id
+                      AND cp.dong = c.dong
+                      AND cp.ho = c.ho
+                      AND cp.name = c.writer_name
+                """))
+                logger.info("PG: Backfilled writer_phone from complaint_persons")
 
         # complaint_persons 테이블 — 민원인 별도 관리
         if not _pg_table_exists(conn, "complaint_persons"):
