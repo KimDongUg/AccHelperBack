@@ -59,6 +59,15 @@ def _get_market_user(request: Request) -> dict:
     return payload
 
 
+def _get_market_user_optional(request: Request) -> Optional[dict]:
+    """인증 없이도 허용 — 목록 등 공개 엔드포인트용."""
+    auth = request.headers.get("Authorization", "")
+    token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+    if not token:
+        token = request.cookies.get("market_token", "")
+    return _decode_market_token(token) if token else None
+
+
 def _normalize_phone(phone: str) -> str:
     return re.sub(r"\D", "", phone)
 
@@ -248,8 +257,8 @@ def list_posts(
     category: Optional[str] = None,
     page: int = 1,
     size: int = 20,
-    user: dict = Depends(_get_market_user),
     db: Session = Depends(get_db),
+    user: Optional[dict] = Depends(_get_market_user_optional),
 ):
     q = db.query(MarketPost).filter(MarketPost.is_hidden == False)
     if category and category != "전체":
