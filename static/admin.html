@@ -201,6 +201,7 @@
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="statistics" id="tabStatistics">통계</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="questionViews" id="tabQuestionViews">질문 조회 상세</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="complaintPersons" id="tabComplaintPersons">민원인 목록</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="market" id="tabMarket">🥕 당근 관리</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
         </div>
 
@@ -592,6 +593,96 @@
             </div>
         </div>
 
+        <!-- Tab: Market Management -->
+        <div class="tab-content" id="tabContentMarket" role="tabpanel" style="display:none">
+            <!-- 당근 내부 서브탭 -->
+            <div style="display:flex;gap:4px;border-bottom:2px solid var(--gray-200);margin-bottom:16px">
+                <button id="mktSubBtnPosts" onclick="switchMktSubTab('posts')"
+                    style="padding:8px 18px;border:none;border-bottom:3px solid var(--primary);margin-bottom:-2px;background:none;font-size:14px;font-weight:600;color:var(--primary);cursor:pointer">
+                    📋 게시글 관리
+                </button>
+                <button id="mktSubBtnResidents" onclick="switchMktSubTab('residents')"
+                    style="padding:8px 18px;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;background:none;font-size:14px;font-weight:500;color:var(--gray-500);cursor:pointer">
+                    👥 당근회원 관리
+                </button>
+            </div>
+
+            <!-- 서브탭: 게시글 관리 -->
+            <div id="mktSubPosts">
+                <div class="toolbar" style="margin-bottom:12px">
+                    <select id="mktCategoryFilter" class="form-control" style="min-width:110px" onchange="mktPage=1;loadMarketPosts()">
+                        <option value="">전체 카테고리</option>
+                        <option value="중고거래">🛍 중고거래</option>
+                        <option value="무료나눔">🎁 무료나눔</option>
+                        <option value="공동구매">🤝 공동구매</option>
+                        <option value="분실물">🔍 분실물</option>
+                    </select>
+                    <select id="mktHiddenFilter" class="form-control" style="min-width:90px" onchange="mktPage=1;loadMarketPosts()">
+                        <option value="">전체</option>
+                        <option value="false">공개</option>
+                        <option value="true">숨김</option>
+                    </select>
+                </div>
+                <div class="qa-table-wrap">
+                    <div class="table-loading" id="mktTableLoading" role="status" aria-label="데이터 로딩 중">
+                        <div class="table-spinner" aria-hidden="true"></div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="qa-table" aria-label="당근 게시글 목록">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="width:46px">ID</th>
+                                    <th scope="col" style="width:80px">카테고리</th>
+                                    <th scope="col">제목 / 내용</th>
+                                    <th scope="col" style="width:130px">작성자</th>
+                                    <th scope="col" style="width:50px;text-align:center">신고</th>
+                                    <th scope="col" style="width:60px">상태</th>
+                                    <th scope="col" style="width:90px">등록일</th>
+                                    <th scope="col" style="width:130px">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mktTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="mktEmptyState" class="empty-state" style="display:none" role="status">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                        <p>게시글이 없습니다.</p>
+                    </div>
+                    <nav class="pagination" id="mktPagination" aria-label="당근 목록 페이지 내비게이션"></nav>
+                </div>
+            </div>
+
+            <!-- 서브탭: 당근회원 관리 -->
+            <div id="mktSubResidents" style="display:none">
+                <div class="qa-table-wrap">
+                    <div class="table-loading" id="mktResTableLoading" role="status" aria-label="데이터 로딩 중">
+                        <div class="table-spinner" aria-hidden="true"></div>
+                    </div>
+                    <div class="table-wrap">
+                        <table class="qa-table" aria-label="당근회원 목록">
+                            <thead>
+                                <tr>
+                                    <th scope="col" style="width:46px">ID</th>
+                                    <th scope="col" style="width:100px">동호수</th>
+                                    <th scope="col" style="width:90px">이름</th>
+                                    <th scope="col" style="width:130px">전화번호</th>
+                                    <th scope="col" style="width:80px">유형</th>
+                                    <th scope="col" style="width:70px">승인</th>
+                                    <th scope="col" style="width:110px">등록일</th>
+                                    <th scope="col" style="width:120px">관리</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mktResTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="mktResEmptyState" class="empty-state" style="display:none" role="status">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                        <p>등록된 당근회원이 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Tab: Subscription Management -->
         <div class="tab-content" id="tabContentSubscription" role="tabpanel" style="display:none">
             <div class="subscription-wrap">
@@ -902,6 +993,26 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                     PNG 다운로드
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Hide Modal -->
+    <div class="modal-overlay" id="mktHideModal" role="dialog" aria-modal="true" style="display:none" onclick="if(event.target===this)closeMktHideModal()">
+        <div class="modal" style="max-width:420px" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3>게시글 숨김 처리</h3>
+                <button class="modal-close" onclick="closeMktHideModal()" aria-label="닫기">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="mktHideReason">숨김 사유 <span class="required" aria-hidden="true">*</span></label>
+                    <textarea id="mktHideReason" class="form-control" rows="3" placeholder="예: 허위 매물, 욕설 포함, 광고성 게시글 등"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeMktHideModal()">취소</button>
+                <button class="btn btn-primary" onclick="confirmMktHide()" style="background:#E74C3C;border-color:#E74C3C">숨김 처리</button>
             </div>
         </div>
     </div>

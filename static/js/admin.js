@@ -282,6 +282,7 @@ function switchTab(tab) {
     if (tab === 'statistics') initStatistics();
     if (tab === 'questionViews') initQuestionViews();
     if (tab === 'complaintPersons') { cpPage = 1; loadComplaintPersons(); }
+    if (tab === 'market') { mktPage = 1; loadMarketPosts(); }
     if (tab === 'subscription') loadSubscriptionTab();
 }
 
@@ -499,6 +500,7 @@ function renderTable(items) {
             <td>${formatDate(qa.updated_at)}</td>
             <td>
                 <div class="actions">
+                    <button class="btn btn-outline btn-sm" onclick="copyQaLink(${qa.qa_id})" title="챗봇 링크 복사">🔗 링크</button>
                     ${isViewer ? '' : `<button class="btn btn-outline btn-sm" onclick="openEditModal(${qa.qa_id})">수정</button>
                     <button class="btn btn-danger btn-sm" onclick="openDeleteConfirm(${qa.qa_id}, 'qa')">삭제</button>`}
                 </div>
@@ -531,6 +533,25 @@ function renderPagination(page, pages, total) {
 }
 
 function goToPage(page) { currentPage = page; loadQaList(); }
+
+function copyQaLink(qaId) {
+    const sess = AuthSession.get();
+    const companyId = sess?.company_id || sess?.companyId;
+    const base = location.origin;
+    const url = companyId ? `${base}/?company=${companyId}&qa=${qaId}` : `${base}/?qa=${qaId}`;
+    navigator.clipboard.writeText(url).then(() => {
+        showToast('🔗 챗봇 링크가 클립보드에 복사되었습니다.', 'success');
+    }).catch(() => {
+        // 클립보드 API 실패 시 fallback
+        const el = document.createElement('textarea');
+        el.value = url;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast('🔗 챗봇 링크가 복사되었습니다.', 'success');
+    });
+}
 
 async function toggleActive(qaId) {
     if (currentRole === 'viewer') return;
@@ -2891,3 +2912,254 @@ document.addEventListener('DOMContentLoaded', () => {
     const cpSearchEl = document.getElementById('cpSearchInput');
     if (cpSearchEl) cpSearchEl.addEventListener('keydown', e => { if (e.key === 'Enter') { cpPage = 1; loadComplaintPersons(); } });
 });
+
+/* ═══════════════════════════════════════════════
+ *  MARKET (🥕 당근) MANAGEMENT TAB
+ * ═══════════════════════════════════════════════ */
+
+let mktPage = 1;
+let mktHideTargetId = null;
+
+/* ── 당근 서브탭 전환 ──────────────────────────────────────────────────────── */
+
+let mktCurrentSubTab = 'posts';
+
+function switchMktSubTab(tab) {
+    mktCurrentSubTab = tab;
+    const isPost = tab === 'posts';
+
+    document.getElementById('mktSubPosts').style.display     = isPost ? '' : 'none';
+    document.getElementById('mktSubResidents').style.display = isPost ? 'none' : '';
+
+    const btnP = document.getElementById('mktSubBtnPosts');
+    const btnR = document.getElementById('mktSubBtnResidents');
+
+    btnP.style.borderBottomColor = isPost ? 'var(--primary)' : 'transparent';
+    btnP.style.color             = isPost ? 'var(--primary)' : 'var(--gray-500)';
+    btnP.style.fontWeight        = isPost ? '600' : '500';
+
+    btnR.style.borderBottomColor = !isPost ? 'var(--primary)' : 'transparent';
+    btnR.style.color             = !isPost ? 'var(--primary)' : 'var(--gray-500)';
+    btnR.style.fontWeight        = !isPost ? '600' : '500';
+
+    if (!isPost) loadMarketResidents();
+}
+
+async function loadMarketPosts() {
+    const loading = document.getElementById('mktTableLoading');
+    const tbody   = document.getElementById('mktTableBody');
+    const empty   = document.getElementById('mktEmptyState');
+
+    if (loading) loading.classList.add('show');
+    if (empty)   empty.style.display = 'none';
+    if (tbody)   tbody.innerHTML = '';
+
+    const category = document.getElementById('mktCategoryFilter')?.value || '';
+    const hidden   = document.getElementById('mktHiddenFilter')?.value || '';
+
+    let url = `/market/admin/posts?page=${mktPage}&size=20`;
+    if (category) url += `&category=${encodeURIComponent(category)}`;
+    if (hidden !== '') url += `&hidden=${hidden}`;
+
+    try {
+        const data = await apiGet(url);
+
+        if (!data.items || data.items.length === 0) {
+            if (empty) empty.style.display = 'block';
+            renderMktPagination(1, 1);
+            return;
+        }
+
+        if (tbody) tbody.innerHTML = data.items.map(p => {
+            const hiddenBadge = p.is_hidden
+                ? `<span style="background:#FFEBEE;color:#C62828;padding:2px 7px;border-radius:4px;font-size:11px;font-weight:600">숨김</span>`
+                : `<span style="background:#E8F5E9;color:#2E7D32;padding:2px 7px;border-radius:4px;font-size:11px">공개</span>`;
+
+            const reportBadge = p.report_count > 0
+                ? `<span style="background:#FFF3E0;color:#E65100;padding:2px 6px;border-radius:4px;font-size:11px;font-weight:700">${p.report_count}</span>`
+                : `<span style="color:var(--gray-300)">0</span>`;
+
+            const date = new Date(p.created_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+
+            const reasonRow = p.hidden_reason
+                ? `<div style="margin-top:3px;font-size:11px;color:#c62828">📌 ${escapeHtml(p.hidden_reason)}</div>`
+                : '';
+
+            const previewText = p.content ? escapeHtml(p.content.slice(0, 60)) + (p.content.length > 60 ? '…' : '') : '';
+
+            return `<tr style="${p.is_hidden ? 'opacity:0.55' : ''}">
+                <td style="font-size:12px;color:var(--gray-400)">${p.id}</td>
+                <td style="font-size:12px">${escapeHtml(p.category)}</td>
+                <td>
+                    <div style="font-size:13px;font-weight:500">${escapeHtml(p.title)}</div>
+                    <div style="font-size:11px;color:var(--gray-400);margin-top:2px">${previewText}</div>
+                    ${reasonRow}
+                </td>
+                <td style="font-size:12px;line-height:1.6">
+                    <div style="font-weight:500">${escapeHtml((p.writer_building || '') + ' ' + (p.writer_unit || ''))}</div>
+                    ${p.writer_name  ? `<div style="color:var(--gray-600)">${escapeHtml(p.writer_name)}</div>` : ''}
+                    ${p.writer_phone ? `<div style="color:var(--gray-400)">${escapeHtml(p.writer_phone)}</div>` : ''}
+                </td>
+                <td style="text-align:center">${reportBadge}</td>
+                <td>${hiddenBadge}</td>
+                <td style="font-size:11px;color:var(--gray-500)">${date}</td>
+                <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                        ${p.is_hidden
+                            ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:2px 8px" onclick="restoreMktPost(${p.id})">복원</button>`
+                            : `<button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:#E65100;color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="showMktHideModal(${p.id})">숨김</button>`
+                        }
+                        <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:#555;color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="deleteMktPost(${p.id})">삭제</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+        renderMktPagination(data.page, data.pages);
+    } catch (e) {
+        console.error('[MARKET] 게시글 로드 실패:', e);
+        showToast('당근 게시글 로드 실패: ' + e.message, 'error');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:24px;color:#c62828;font-size:13px">
+                ⚠️ 게시글을 불러오지 못했습니다.<br>
+                <span style="font-size:11px;color:var(--gray-500)">${escapeHtml(e.message)}</span>
+            </td></tr>`;
+        }
+    } finally {
+        if (loading) loading.classList.remove('show');
+    }
+}
+
+function renderMktPagination(page, pages) {
+    const nav = document.getElementById('mktPagination');
+    if (!nav) return;
+    if (pages <= 1) { nav.innerHTML = ''; return; }
+    let html = `<button ${page <= 1 ? 'disabled' : ''} onclick="goToMktPage(${page - 1})">&laquo;</button>`;
+    const start = Math.max(1, page - 2);
+    const end   = Math.min(pages, page + 2);
+    for (let i = start; i <= end; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" onclick="goToMktPage(${i})">${i}</button>`;
+    }
+    html += `<button ${page >= pages ? 'disabled' : ''} onclick="goToMktPage(${page + 1})">&raquo;</button>`;
+    nav.innerHTML = html;
+}
+
+function goToMktPage(page) { mktPage = page; loadMarketPosts(); }
+
+function showMktHideModal(id) {
+    mktHideTargetId = id;
+    document.getElementById('mktHideReason').value = '';
+    document.getElementById('mktHideModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('mktHideReason').focus(), 100);
+}
+
+function closeMktHideModal() {
+    document.getElementById('mktHideModal').style.display = 'none';
+    mktHideTargetId = null;
+}
+
+async function confirmMktHide() {
+    const reason = document.getElementById('mktHideReason').value.trim();
+    if (!reason) { showToast('숨김 사유를 입력해주세요.', 'error'); return; }
+    try {
+        await apiPatch(`/market/admin/posts/${mktHideTargetId}/hide`, { hidden: true, reason });
+        showToast('게시글이 숨김 처리되었습니다.');
+        closeMktHideModal();
+        loadMarketPosts();
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function restoreMktPost(id) {
+    if (!confirm('이 게시글을 다시 공개하시겠습니까?')) return;
+    try {
+        await apiPatch(`/market/admin/posts/${id}/hide`, { hidden: false });
+        showToast('게시글이 복원되었습니다.');
+        loadMarketPosts();
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteMktPost(id) {
+    if (!confirm('게시글을 영구 삭제할까요?\n이 작업은 되돌릴 수 없습니다.')) return;
+    try {
+        await apiDelete(`/market/admin/posts/${id}`);
+        showToast('삭제되었습니다.');
+        loadMarketPosts();
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+/* ── 당근회원 관리 ─────────────────────────────────────────────────────────── */
+
+async function loadMarketResidents() {
+    const loading = document.getElementById('mktResTableLoading');
+    const tbody   = document.getElementById('mktResTableBody');
+    const empty   = document.getElementById('mktResEmptyState');
+
+    if (loading) loading.classList.add('show');
+    if (empty)   empty.style.display = 'none';
+    if (tbody)   tbody.innerHTML = '';
+
+    try {
+        const data = await apiGet('/market/admin/residents');
+
+        if (!data || data.length === 0) {
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+
+        tbody.innerHTML = data.map(r => {
+            const typeBadge = r.is_self_registered
+                ? `<span style="background:#E3F2FD;color:#1565C0;padding:2px 7px;border-radius:4px;font-size:11px">자가등록</span>`
+                : `<span style="background:#F3E5F5;color:#6A1B9A;padding:2px 7px;border-radius:4px;font-size:11px">ERP</span>`;
+
+            const verifiedBadge = r.is_verified
+                ? `<span style="background:#E8F5E9;color:#2E7D32;padding:2px 7px;border-radius:4px;font-size:11px">승인</span>`
+                : `<span style="background:#FFF3E0;color:#E65100;padding:2px 7px;border-radius:4px;font-size:11px">대기</span>`;
+
+            const date = r.registered_at
+                ? new Date(r.registered_at).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+                : '-';
+
+            const approveBtn = !r.is_verified
+                ? `<button class="btn btn-outline btn-sm" style="font-size:11px;padding:2px 8px" onclick="approveMktResident(${r.id})">승인</button>`
+                : '';
+
+            return `<tr>
+                <td style="font-size:12px;color:var(--gray-400)">${r.id}</td>
+                <td style="font-size:13px;font-weight:500">${escapeHtml(r.building || '')} ${escapeHtml(r.unit_number || '')}</td>
+                <td style="font-size:13px">${escapeHtml(r.name || '-')}</td>
+                <td style="font-size:12px;color:var(--gray-600)">${escapeHtml(r.phone || '-')}</td>
+                <td>${typeBadge}</td>
+                <td>${verifiedBadge}</td>
+                <td style="font-size:11px;color:var(--gray-500)">${date}</td>
+                <td>
+                    <div style="display:flex;gap:4px;flex-wrap:wrap">
+                        ${approveBtn}
+                        <button class="btn btn-sm" style="font-size:11px;padding:2px 8px;background:#555;color:#fff;border:none;border-radius:4px;cursor:pointer" onclick="deleteMktResident(${r.id})">삭제</button>
+                    </div>
+                </td>
+            </tr>`;
+        }).join('');
+
+    } catch (e) {
+        showToast('당근회원 로드 실패: ' + e.message, 'error');
+    } finally {
+        if (loading) loading.classList.remove('show');
+    }
+}
+
+async function approveMktResident(id) {
+    try {
+        await apiPatch(`/market/admin/residents/${id}/verify`, {});
+        showToast('승인되었습니다.');
+        loadMarketResidents();
+    } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteMktResident(id) {
+    if (!confirm('회원을 삭제할까요?\n해당 입주민은 더 이상 당근 서비스를 이용할 수 없습니다.')) return;
+    try {
+        await apiDelete(`/market/admin/residents/${id}`);
+        showToast('삭제되었습니다.');
+        loadMarketResidents();
+    } catch (e) { showToast(e.message, 'error'); }
+}

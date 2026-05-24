@@ -132,8 +132,9 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
-        # market_posts table — hidden_reason
+        # market_posts table — is_hidden, hidden_reason
         if _pg_table_exists(conn, "market_posts"):
+            _pg_add_column_if_missing(conn, "market_posts", "is_hidden", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "market_posts", "hidden_reason", "VARCHAR(255)")
 
         # apartment_residents — company_id NULL 백필 (company_id=1로 일괄 설정)
@@ -465,10 +466,14 @@ def run_migration(engine: Engine):
                     writer_building VARCHAR(20) NOT NULL,
                     writer_unit VARCHAR(20) NOT NULL,
                     is_hidden BOOLEAN DEFAULT 0,
+                    hidden_reason VARCHAR(255),
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             """))
             logger.info("Created table market_posts")
+        else:
+            _add_column_if_missing(conn, "market_posts", "is_hidden", "BOOLEAN DEFAULT 0")
+            _add_column_if_missing(conn, "market_posts", "hidden_reason", "VARCHAR(255)")
 
         if not _table_exists(conn, "market_images"):
             conn.execute(text("""

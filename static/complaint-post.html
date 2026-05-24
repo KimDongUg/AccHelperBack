@@ -6,7 +6,7 @@
 <title>민원 상세</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
 <link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/complaint.css?v=5">
+<link rel="stylesheet" href="/css/complaint.css?v=6">
 </head>
 <body>
 
@@ -18,7 +18,7 @@
     <nav class="header-nav">
       <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
       <a href="#" id="cpComplaintNav" class="active"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
-      <a href="/market-login.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
+      <a href="/market.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
     </nav>
   </div>
   <div class="header-right">
@@ -120,7 +120,7 @@ function renderPost(p) {
         wrap.innerHTML = `
           <div class="cp-post-body">
             <div class="cp-post-deleted">
-              ${escHtml(p.delete_reason)} 사유로 글이 삭제되었습니다.
+              ${escHtml(p.delete_reason)}
             </div>
           </div>`;
         return;
@@ -134,6 +134,11 @@ function renderPost(p) {
           <span>${p.time_ago}</span>
         </div>
         <div class="cp-post-content">${escHtml(p.content)}</div>
+        ${(p.image1_url || p.image2_url) ? `
+        <div class="cp-post-images">
+          ${p.image1_url ? `<a href="${p.image1_url}" target="_blank"><img src="${p.image1_url}" alt="첨부 이미지 1"></a>` : ''}
+          ${p.image2_url ? `<a href="${p.image2_url}" target="_blank"><img src="${p.image2_url}" alt="첨부 이미지 2"></a>` : ''}
+        </div>` : ''}
         <div style="margin-top:14px;text-align:right">
           <button onclick="showEditVerifyModal()" style="background:none;border:none;font-size:13px;color:var(--gray-500);cursor:pointer;text-decoration:underline">수정</button>
         </div>

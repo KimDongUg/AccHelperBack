@@ -26,6 +26,23 @@ const MarketAuth = {
 
 // ── fetch helper ─────────────────────────────────────────────────────────────
 
+/** 공개 엔드포인트용 — 401 시 redirect 없이 오류만 던짐 */
+async function mktFetchPublic(path, opts = {}) {
+  const token = MarketAuth.getToken();
+  const headers = { ...(opts.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(opts.body);
+  }
+  const res = await fetch(API + path, { ...opts, headers });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: '오류가 발생했습니다.' }));
+    throw new Error(err.detail || '오류가 발생했습니다.');
+  }
+  return res.json();
+}
+
 async function mktFetch(path, opts = {}) {
   const token = MarketAuth.getToken();
   const headers = { ...(opts.headers || {}) };

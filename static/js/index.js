@@ -891,4 +891,22 @@ function showChat(companyData) {
         loadHistory();
     }
     checkAdmin();
+
+    // ── QA 직접 링크: ?qa=ID 파라미터 처리 ─────────────────────────────────
+    (async function () {
+        var qaId = new URLSearchParams(window.location.search).get('qa');
+        if (!qaId) return;
+        try {
+            var companyParam = currentCompanyId ? '?company_id=' + currentCompanyId : '';
+            var qa = await apiGet('/qa/' + qaId + companyParam);
+            if (!qa || !qa.question) return;
+            // 히스토리 로드 대신 해당 Q&A를 바로 표시
+            appendMessage('user', qa.question);
+            appendMessage('bot', qa.answer, qa.category);
+            // URL에서 qa 파라미터 제거 (뒤로가기 UX 개선)
+            var newUrl = window.location.pathname + '?company=' + (currentCompanyCode || currentCompanyId);
+            window.history.replaceState({}, '', newUrl);
+        } catch (e) { /* QA 없으면 무시 */ }
+    })();
+    // ─────────────────────────────────────────────────────────────────────────
 }

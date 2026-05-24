@@ -95,7 +95,7 @@ function escHtml(s) {
 // ── 공통 헤더 초기화 ──────────────────────────────────────────────────────────
 
 function initCpHeader() {
-    const companyId   = sessionStorage.getItem('complaint_company_id');
+    const companyId   = getCompanyParam();   // URL ?company= 파라미터도 읽음
     const companyName = sessionStorage.getItem('market_company_name') || '';
     const sess        = ComplaintAuth.getSession();
 

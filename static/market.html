@@ -13,7 +13,8 @@
   <h1>🥕 우리아파트 당근</h1>
   <div class="mkt-header-right">
     <span id="myUnit" style="font-size:13px;opacity:0.9"></span>
-    <button style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.8" onclick="logout()">로그아웃</button>
+    <button id="logoutBtn" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.8;display:none" onclick="logout()">로그아웃</button>
+    <button id="loginBtn"  style="background:none;border:none;color:#fff;font-size:13px;cursor:pointer;font-weight:600;display:none" onclick="goLogin()">🔐 인증하기</button>
   </div>
 </div>
 
@@ -32,19 +33,49 @@
   <p>아직 게시글이 없어요.<br>첫 번째 글을 올려보세요!</p>
 </div>
 
-<a href="/market-write.html" class="mkt-fab" title="글쓰기">+</a>
+<a href="#" class="mkt-fab" title="글쓰기" onclick="goWrite(); return false;">+</a>
 
-<script src="/js/market.js?v=1"></script>
+<script src="/js/market.js?v=2"></script>
 <script>
 let currentCat = '전체';
 
-MarketAuth.required();
-const user = MarketAuth.getUser();
-if (user) document.getElementById('myUnit').textContent = user.unit;
+// 인증 상태에 따라 헤더 버튼 표시
+(function () {
+  const user = MarketAuth.getUser();
+  if (MarketAuth.getToken() && user) {
+    document.getElementById('myUnit').textContent = user.unit;
+    document.getElementById('logoutBtn').style.display = '';
+  } else {
+    document.getElementById('loginBtn').style.display = '';
+  }
+})();
+
+function goLogin(returnUrl) {
+  const r = returnUrl || location.pathname + location.search;
+  location.href = '/market-login.html?return=' + encodeURIComponent(r);
+}
 
 function logout() {
   MarketAuth.clear();
-  location.href = '/market-login.html';
+  location.reload();
+}
+
+/** 글쓰기: 토큰 없으면 인증, 있으면 바로 이동 */
+function goWrite() {
+  if (!MarketAuth.getToken()) {
+    goLogin('/market-write.html');
+    return;
+  }
+  location.href = '/market-write.html';
+}
+
+/** 게시글 클릭: 인증 없으면 로그인 페이지로 */
+function goPost(id) {
+  if (!MarketAuth.getToken()) {
+    goLogin('/market-post.html?id=' + id);
+    return;
+  }
+  location.href = '/market-post.html?id=' + id;
 }
 
 function selectCat(el) {
@@ -60,7 +91,7 @@ async function loadPosts() {
   list.innerHTML = '<div style="text-align:center;padding:40px;color:#aaa">불러오는 중...</div>';
   try {
     const params = currentCat !== '전체' ? `?category=${encodeURIComponent(currentCat)}` : '';
-    const data = await mktFetch('/posts' + params);
+    const data = await mktFetchPublic('/posts' + params);
     list.innerHTML = '';
     if (!data.items || data.items.length === 0) {
       empty.style.display = 'block';
@@ -72,9 +103,10 @@ async function loadPosts() {
         ? `<img class="mkt-thumb" src="${p.thumbnail}" alt="" loading="lazy">`
         : `<div class="mkt-thumb-placeholder">${categoryEmoji(p.category)}</div>`;
 
-      const div = document.createElement('a');
+      const div = document.createElement('div');
       div.className = 'mkt-item';
-      div.href = `/market-post.html?id=${p.id}`;
+      div.style.cursor = 'pointer';
+      div.onclick = () => goPost(p.id);
       div.innerHTML = `
         ${imgHtml}
         <div class="mkt-info">

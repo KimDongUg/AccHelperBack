@@ -6,7 +6,7 @@
 <title>민원 작성</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
 <link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/complaint.css?v=4">
+<link rel="stylesheet" href="/css/complaint.css?v=6">
 </head>
 <body>
 
@@ -18,7 +18,7 @@
     <nav class="header-nav">
       <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
       <a href="#" id="cpComplaintNav"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
-      <a href="/market-login.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
+      <a href="/market.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
     </nav>
   </div>
   <div class="header-right">
@@ -63,6 +63,17 @@
   <div class="cp-section">
     <div class="cp-section-title">내용 <span style="color:#E74C3C">*</span></div>
     <textarea class="cp-textarea" id="contentInput" placeholder="민원 내용을 상세히 작성해주세요." maxlength="3000"></textarea>
+  </div>
+
+  <div class="cp-section">
+    <div class="cp-section-title">사진 첨부 <span style="color:#9E9E9E;font-weight:400">(선택, 최대 2장)</span></div>
+    <div class="cp-img-upload-area" id="imgUploadArea" onclick="document.getElementById('imgFileInput').click()">
+      <span class="cp-img-upload-icon">📷</span>
+      <span class="cp-img-upload-text">사진을 선택하거나 여기를 탭하세요</span>
+      <span class="cp-img-upload-sub">JPG, PNG, GIF, WEBP · 장당 5MB 이하</span>
+    </div>
+    <input type="file" id="imgFileInput" accept="image/*" multiple style="display:none" onchange="handleImageSelect(this)">
+    <div class="cp-img-preview-row" id="imgPreviewRow"></div>
   </div>
 
   <div class="cp-section">
@@ -115,6 +126,58 @@
 <script src="/js/complaint.js?v=2"></script>
 <script>initCpHeader();</script>
 <script>
+// ── 이미지 업로드 처리 ────────────────────────────────────────────────────────
+const selectedImages = []; // { file, previewUrl }
+
+function handleImageSelect(input) {
+    const files = Array.from(input.files);
+    const remaining = 2 - selectedImages.length;
+    if (remaining <= 0) { showCpToast('최대 2장까지 첨부할 수 있습니다.'); input.value = ''; return; }
+    const toAdd = files.slice(0, remaining);
+    if (files.length > remaining) showCpToast(`${remaining}장만 추가됩니다. (최대 2장)`);
+    toAdd.forEach(f => {
+        if (f.size > 5 * 1024 * 1024) { showCpToast(`${f.name}: 5MB 이하만 가능합니다.`); return; }
+        const url = URL.createObjectURL(f);
+        selectedImages.push({ file: f, previewUrl: url });
+    });
+    input.value = '';
+    renderImagePreviews();
+}
+
+function renderImagePreviews() {
+    const row = document.getElementById('imgPreviewRow');
+    const area = document.getElementById('imgUploadArea');
+    row.innerHTML = '';
+    selectedImages.forEach((img, i) => {
+        const div = document.createElement('div');
+        div.className = 'cp-img-preview-item';
+        div.innerHTML = `<img src="${img.previewUrl}" alt="첨부 이미지">
+          <button type="button" class="cp-img-remove" onclick="removeImage(${i})">✕</button>`;
+        row.appendChild(div);
+    });
+    area.style.display = selectedImages.length >= 2 ? 'none' : 'flex';
+}
+
+function removeImage(i) {
+    URL.revokeObjectURL(selectedImages[i].previewUrl);
+    selectedImages.splice(i, 1);
+    renderImagePreviews();
+}
+
+async function uploadImages() {
+    const urls = [];
+    for (const img of selectedImages) {
+        const fd = new FormData();
+        fd.append('file', img.file);
+        const res = await fetch('/api/complaints/upload-image', { method: 'POST', body: fd });
+        if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.detail || '이미지 업로드 실패'); }
+        const data = await res.json();
+        urls.push(data.url);
+    }
+    return urls;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const companyId = getCompanyParam();
 if (!companyId) { alert('잘못된 접근입니다.'); location.href = '/'; }
 
@@ -158,9 +221,19 @@ async function submitComplaint() {
     btn.textContent = '등록 중...';
 
     try {
+        // 이미지 먼저 업로드
+        let image1_url = null, image2_url = null;
+        if (selectedImages.length > 0) {
+            btn.textContent = '이미지 업로드 중...';
+            const imgUrls = await uploadImages();
+            image1_url = imgUrls[0] || null;
+            image2_url = imgUrls[1] || null;
+        }
+        btn.textContent = '등록 중...';
+
         const data = await cpFetch('', {
             method: 'POST',
-            body: { company_id: parseInt(companyId), dong, ho, name, phone, title, content },
+            body: { company_id: parseInt(companyId), dong, ho, name, phone, title, content, image1_url, image2_url },
         });
         location.href = `/complaint-post.html?id=${data.complaint_id}&company=${companyId}`;
     } catch (e) {
