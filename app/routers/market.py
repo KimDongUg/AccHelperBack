@@ -190,13 +190,10 @@ def list_residents(
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """자가등록 입주민 목록 (관리자용)"""
+    """당근회원 목록 — 인증한 입주민 전체 (자가등록 + ERP 등록)."""
     residents = (
         db.query(ApartmentResident)
-        .filter(
-            ApartmentResident.company_id == admin["company_id"],
-            ApartmentResident.is_self_registered == True,
-        )
+        .filter(ApartmentResident.company_id == admin["company_id"])
         .order_by(ApartmentResident.registered_at.desc())
         .all()
     )
@@ -207,6 +204,7 @@ def list_residents(
             "unit_number": r.unit_number,
             "name": r.resident_name,
             "phone": r.resident_phone,
+            "is_self_registered": r.is_self_registered,
             "is_verified": r.is_verified,
             "registered_at": r.registered_at.isoformat() if r.registered_at else None,
         }
