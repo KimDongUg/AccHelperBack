@@ -4,9 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>게시글 — 우리아파트 당근</title>
+<link rel="icon" type="image/png" href="/assets/images/logo.png">
+<link rel="stylesheet" href="/css/common.css?v=15">
 <link rel="stylesheet" href="/css/market.css?v=1">
 </head>
 <body>
+
+<header class="header" role="banner">
+  <div class="header-left">
+    <a href="/" class="header-logo" aria-label="AI Helper 홈으로 이동">
+      <img src="/assets/images/logo.png" alt="AI Helper 로고">
+    </a>
+    <nav class="header-nav">
+      <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
+      <a href="#" id="mktComplaintNav" style="display:none"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
+      <a href="/market.html" class="active"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
+    </nav>
+  </div>
+  <div class="header-right">
+    <span id="mktHeaderCompanyLabel" class="company-label" style="display:none"></span>
+    <a href="/login.html" class="btn btn-outline btn-sm" id="mktHeaderLoginLink" data-short="🔐">관리자 로그인</a>
+    <a href="/admin.html" class="btn btn-outline btn-sm" id="mktHeaderAdminLink" data-short="관리자" style="display:none">관리자</a>
+  </div>
+</header>
 
 <div class="mkt-header">
   <button class="mkt-back" onclick="location.href='/market.html'">←</button>
@@ -55,8 +75,28 @@
   </div>
 </div>
 
-<script src="/js/market.js?v=1"></script>
+<script src="/js/market.js?v=2"></script>
 <script>
+// ── 공통 헤더 초기화 ─────────────────────────────────────────────────────────
+(function () {
+    var companyName = sessionStorage.getItem('market_company_name') || '';
+    var companyId   = sessionStorage.getItem('market_company_id') || sessionStorage.getItem('complaint_company_id') || '';
+    var labelEl = document.getElementById('mktHeaderCompanyLabel');
+    if (labelEl && companyName) { labelEl.textContent = companyName; labelEl.style.display = ''; }
+    var complaintNav = document.getElementById('mktComplaintNav');
+    if (complaintNav && companyId) { complaintNav.href = '/complaint.html?company=' + companyId; complaintNav.style.display = ''; }
+    try {
+        var authRaw = sessionStorage.getItem('acc_auth_session') || localStorage.getItem('acc_auth_session');
+        var sess = authRaw ? JSON.parse(authRaw) : null;
+        var loginBtn = document.getElementById('mktHeaderLoginLink');
+        var adminBtn = document.getElementById('mktHeaderAdminLink');
+        if (sess && sess.isLoggedIn && sess.token) {
+            if (loginBtn) loginBtn.style.display = 'none';
+            if (adminBtn) { adminBtn.style.display = ''; adminBtn.textContent = '관리자 (' + (sess.fullName || sess.username || '') + ')'; }
+        }
+    } catch (e) {}
+})();
+
 MarketAuth.required();
 const user = MarketAuth.getUser();
 const postId = new URLSearchParams(location.search).get('id');
