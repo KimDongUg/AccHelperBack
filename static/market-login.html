@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>우리아파트 당근 — 입주민 인증</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
-<link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/market.css?v=1">
+<link rel="stylesheet" href="/css/common.css?v=15">
+<link rel="stylesheet" href="/css/market.css?v=2">
 </head>
 <body>
 
@@ -58,18 +58,39 @@
       <input class="mkt-input" id="phone" type="tel" placeholder="예: 010-1234-5678" required>
     </div>
 
+    <!-- 개인정보 수집·이용 동의 -->
+    <div style="margin-top:18px;margin-bottom:4px">
+      <div class="mkt-privacy-section-title">개인정보 수집·이용 동의 <span style="color:#c62828">*</span></div>
+      <div class="mkt-privacy-box">
+        <table class="mkt-privacy-table">
+          <tr><th>수집 항목</th><td>동/호수, 이름, 전화번호</td></tr>
+          <tr><th>수집 목적</th><td>입주민 자격 인증 및 우리아파트 당근 서비스 이용</td></tr>
+          <tr><th>보유 기간</th><td>서비스 탈퇴 또는 회사 계약 종료 시까지</td></tr>
+          <tr><th>제3자 제공</th><td>없음 (관리사무소 입주민 확인 목적으로만 사용)</td></tr>
+        </table>
+        <p class="mkt-privacy-note">
+          ※ 위 개인정보 수집·이용에 동의하지 않을 권리가 있으나,<br>
+          동의하지 않으실 경우 서비스 이용이 제한될 수 있습니다.<br>
+          ※ 동/호수만 게시글에 표시되며, 이름·전화번호는 외부에 공개되지 않습니다.
+        </p>
+      </div>
+      <label class="mkt-checkbox-label" id="privacyLabel" for="mktPrivacyAgree">
+        <input type="checkbox" id="mktPrivacyAgree" onchange="this.closest('label').classList.toggle('is-checked', this.checked)">
+        <span>위 개인정보 수집·이용에 <strong>동의합니다</strong>. (필수)</span>
+      </label>
+    </div>
+
     <div id="errMsg" class="mkt-error" style="display:none"></div>
 
     <button class="mkt-btn" id="loginBtn" type="submit" onclick="doLogin()">인증하기</button>
   </form>
 
   <p style="text-align:center;font-size:12px;color:#aaa;margin-top:20px">
-    관리비 납부 시 등록한 정보와 동일하게 입력해주세요.<br>
-    이름·전화번호는 서버에 저장되지 않으며 동/호수만 게시됩니다.
+    관리비 납부 시 등록한 정보와 동일하게 입력해주세요.
   </p>
 </div>
 
-<script src="/js/market.js?v=1"></script>
+<script src="/js/market.js?v=2"></script>
 <script>
 // ── 공통 헤더 초기화 ─────────────────────────────────────────────────────────
 (function () {
@@ -131,6 +152,12 @@ async function doLogin() {
     if (!building || !unit || !name || !phone) {
         errEl.textContent = '모든 항목을 입력해주세요.';
         errEl.style.display = 'block';
+        return;
+    }
+    if (!document.getElementById('mktPrivacyAgree').checked) {
+        errEl.textContent = '개인정보 수집·이용에 동의해주세요.';
+        errEl.style.display = 'block';
+        document.getElementById('privacyLabel').scrollIntoView({ behavior: 'smooth', block: 'center' });
         return;
     }
 

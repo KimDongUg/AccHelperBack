@@ -421,6 +421,77 @@ body {
 .mkt-empty .emoji { font-size: 48px; display: block; margin-bottom: 12px; }
 .mkt-empty p { font-size: 15px; }
 
+/* Privacy consent (market-login) */
+.mkt-privacy-box {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.mkt-privacy-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+.mkt-privacy-table th,
+.mkt-privacy-table td {
+  padding: 5px 8px;
+  border: 1px solid var(--gray-200);
+  vertical-align: top;
+}
+.mkt-privacy-table th {
+  background: var(--gray-100);
+  font-weight: 600;
+  white-space: nowrap;
+  width: 6em;
+  color: var(--gray-900);
+}
+.mkt-privacy-table td {
+  color: var(--gray-600);
+}
+.mkt-privacy-note {
+  font-size: 11px;
+  color: var(--gray-400);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.mkt-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-900);
+  cursor: pointer;
+  padding: 10px 14px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  background: #fff;
+  margin-bottom: 14px;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.mkt-checkbox-label input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--orange);
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.mkt-checkbox-label.is-checked {
+  border-color: var(--orange);
+  background: var(--orange-light);
+}
+.mkt-privacy-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 8px;
+}
+
 /* Report modal */
 .mkt-modal-overlay {
   position: fixed; inset: 0;
