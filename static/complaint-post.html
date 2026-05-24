@@ -151,18 +151,19 @@ function renderPost(p) {
         wrap.after(replyDiv);
     }
 
-    // 관리자 패널
-    if (ComplaintAuth.isAdmin()) {
+    // 관리자 패널 — p.is_admin 은 서버가 직접 판단 (JS 세션 role 체크 불필요)
+    if (p.is_admin) {
         const panel = document.createElement('div');
         panel.className = 'cp-admin-panel';
         panel.id = 'adminPanel';
         panel.innerHTML = `
-          <div class="cp-admin-panel-title">관리자 기능</div>
+          <div class="cp-admin-panel-title">🔧 관리자 기능</div>
           <div class="cp-admin-btns">
             <button class="cp-btn cp-btn-outline" onclick="toggleReplyForm()" id="replyToggleBtn">
-              ${p.reply ? '답변 수정' : '답변 작성'}
+              ${p.reply ? '✏️ 답변 수정' : '✏️ 답변 작성'}
             </button>
-            <button class="cp-btn cp-btn-danger" onclick="showDeleteModal()">글 삭제</button>
+            ${p.reply ? `<button class="cp-btn cp-btn-gray" onclick="deleteReply()">🗑 답변 삭제</button>` : ''}
+            <button class="cp-btn cp-btn-danger" onclick="showDeleteModal()">🗑 글 삭제</button>
           </div>
           <div class="cp-reply-form" id="replyForm" style="display:none">
             <textarea id="replyInput" placeholder="답변 내용을 입력하세요...">${p.reply ? escHtml(p.reply.content) : ''}</textarea>
@@ -172,7 +173,6 @@ function renderPost(p) {
             </div>
           </div>`;
 
-        // 답변 영역 다음에 또는 post-body 다음에 삽입
         const replyArea = document.getElementById('replyArea');
         if (replyArea) {
             replyArea.after(panel);
@@ -194,6 +194,15 @@ async function submitReply() {
     try {
         await cpFetch(`/${postId}/reply`, { method: 'POST', body: { content } });
         showCpToast('답변이 등록되었습니다.');
+        loadPost();
+    } catch (e) { showCpToast(e.message); }
+}
+
+async function deleteReply() {
+    if (!confirm('답변을 삭제하시겠습니까?')) return;
+    try {
+        await cpFetch(`/${postId}/reply`, { method: 'DELETE' });
+        showCpToast('답변이 삭제되었습니다.');
         loadPost();
     } catch (e) { showCpToast(e.message); }
 }

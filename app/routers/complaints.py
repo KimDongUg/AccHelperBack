@@ -253,6 +253,7 @@ def get_complaint(
     if c.is_deleted:
         return {
             "id": c.id,
+            "is_admin": is_admin,
             "is_deleted": True,
             "delete_reason": c.delete_reason,
             "writer": _writer_display(c.dong, c.ho),
@@ -266,6 +267,7 @@ def get_complaint(
 
     return {
         "id": c.id,
+        "is_admin": is_admin,
         "is_deleted": False,
         "writer": _writer_display(c.dong, c.ho),
         "writer_name": c.writer_name if is_admin else None,
@@ -319,6 +321,29 @@ def reply_complaint(
     c.reply_content = body.content.strip()
     c.replied_at = datetime.now(timezone.utc)
     db.commit()
+    return {"ok": True}
+
+
+@router.delete("/{complaint_id}/reply")
+def delete_reply(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자 답변 삭제."""
+    c = db.query(Complaint).filter(
+        Complaint.id == complaint_id,
+        Complaint.company_id == admin["company_id"],
+    ).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="민원글을 찾을 수 없습니다.")
+    if not c.reply_content:
+        raise HTTPException(status_code=404, detail="삭제할 답변이 없습니다.")
+
+    c.reply_content = None
+    c.replied_at = None
+    db.commit()
+    logger.info("Reply deleted: complaint_id=%d by admin=%d", complaint_id, admin["user_id"])
     return {"ok": True}
 
 
