@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>민원 상세</title>
+<link rel="icon" type="image/png" href="/assets/images/logo.png">
+<link rel="stylesheet" href="/css/common.css?v=13">
+<link rel="stylesheet" href="/css/complaint.css?v=5">
+</head>
+<body>
+
+<header class="header" role="banner">
+  <div class="header-left">
+    <a href="/" class="header-logo" aria-label="AI Helper 홈으로 이동">
+      <img src="/assets/images/logo.png" alt="AI Helper 로고">
+    </a>
+    <nav class="header-nav">
+      <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
+      <a href="#" id="cpComplaintNav" class="active"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
+      <a href="/market-login.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
+    </nav>
+  </div>
+  <div class="header-right">
+    <span id="cpCompanyLabel" class="company-label" style="display:none"></span>
+    <a href="/login.html" class="btn btn-outline btn-sm" id="cpHeaderLoginLink" data-short="🔐">관리자 로그인</a>
+    <a href="/admin.html" class="btn btn-outline btn-sm" id="cpAdminLink" data-short="관리자" style="display:none">관리자</a>
+  </div>
+</header>
+
+<div class="cp-page">
+
+<div class="cp-header">
+  <button class="cp-back" id="backBtn">←</button>
+  <h1>민원 내용</h1>
+  <div id="adminBadge"></div>
+</div>
+
+<div id="postContent">
+  <div style="text-align:center;padding:60px;color:#aaa">불러오는 중...</div>
+</div>
+
+<!-- 수정 본인확인 모달 -->
+<div class="cp-modal-overlay" id="editVerifyModal" style="display:none" onclick="closeEditVerifyModal(event)">
+  <div class="cp-modal" onclick="event.stopPropagation()">
+    <h3>본인 확인</h3>
+    <p style="font-size:13px;color:#666;margin-bottom:12px">작성 시 입력한 이름을 입력해주세요.</p>
+    <input class="cp-write-input" id="editVerifyName" type="text" placeholder="이름" maxlength="50" style="width:100%;margin-bottom:8px">
+    <div id="editVerifyErr" style="color:#c62828;font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="cp-modal-btns">
+      <button style="background:#E0E0E0;color:#212121" onclick="closeEditVerifyModal()">취소</button>
+      <button style="background:var(--primary);color:#fff" id="editVerifyBtn" onclick="openEditForm()">확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수정 폼 모달 -->
+<div class="cp-modal-overlay" id="editFormModal" style="display:none" onclick="closeEditFormModal(event)">
+  <div class="cp-modal" onclick="event.stopPropagation()">
+    <h3>민원 수정</h3>
+    <input class="cp-write-input" id="editTitle" type="text" placeholder="제목" maxlength="255" style="width:100%;margin-bottom:8px">
+    <textarea class="cp-write-textarea" id="editContent" placeholder="내용" maxlength="3000" style="width:100%;min-height:140px;margin-bottom:8px"></textarea>
+    <div id="editFormErr" style="color:#c62828;font-size:13px;margin-bottom:8px;display:none"></div>
+    <div class="cp-modal-btns">
+      <button style="background:#E0E0E0;color:#212121" onclick="closeEditFormModal()">취소</button>
+      <button style="background:var(--primary);color:#fff" id="editSubmitBtn" onclick="submitEdit()">수정 완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- 삭제 모달 -->
+<div class="cp-modal-overlay" id="deleteModal" style="display:none" onclick="closeDeleteModal(event)">
+  <div class="cp-modal" onclick="event.stopPropagation()">
+    <h3>삭제 사유를 입력하세요</h3>
+    <textarea id="deleteReasonInput" placeholder="삭제 사유">민원글이 아니어서 삭제 되었습니다!</textarea>
+    <div class="cp-modal-btns">
+      <button style="background:#E0E0E0;color:#212121" onclick="closeDeleteModal()">취소</button>
+      <button style="background:#E74C3C;color:#fff" onclick="confirmDelete()">삭제</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.cp-page -->
+
+<script src="/js/complaint.js?v=2"></script>
+<script>
+initCpHeader();
+const companyId = getCompanyParam();
+const postId = new URLSearchParams(location.search).get('id');
+
+
+
+document.getElementById('backBtn').onclick = () => {
+    location.href = `/complaint.html?company=${companyId}`;
+};
+
+if (!postId) { location.href = '/'; }
+
+let post = null;
+let replyFormVisible = false;
+
+async function loadPost() {
+    try {
+        post = await cpFetch(`/${postId}`);
+        renderPost(post);
+    } catch (e) {
+        document.getElementById('postContent').innerHTML =
+            `<div class="cp-empty"><p>${e.message}</p></div>`;
+    }
+}
+
+function renderPost(p) {
+    // 이전 렌더링 잔여 요소 제거 (loadPost 재호출 시 중복 방지)
+    document.getElementById('replyArea')?.remove();
+    document.getElementById('adminPanel')?.remove();
+
+    const wrap = document.getElementById('postContent');
+
+    if (p.is_deleted) {
+        wrap.innerHTML = `
+          <div class="cp-post-body">
+            <div class="cp-post-deleted">
+              ${escHtml(p.delete_reason)} 사유로 글이 삭제되었습니다.
+            </div>
+          </div>`;
+        return;
+    }
+
+    wrap.innerHTML = `
+      <div class="cp-post-body">
+        <div class="cp-post-title">${escHtml(p.title)}</div>
+        <div class="cp-post-meta">
+          <span class="cp-post-writer">📍 ${escHtml(p.writer)}${p.writer_name ? ` <span class="cp-post-writer-name">(${escHtml(p.writer_name)})</span>` : ''}${p.writer_phone ? ` <span class="cp-post-writer-phone">📞 ${escHtml(p.writer_phone)}</span>` : ''}</span>
+          <span>${p.time_ago}</span>
+        </div>
+        <div class="cp-post-content">${escHtml(p.content)}</div>
+        <div style="margin-top:14px;text-align:right">
+          <button onclick="showEditVerifyModal()" style="background:none;border:none;font-size:13px;color:var(--gray-500);cursor:pointer;text-decoration:underline">수정</button>
+        </div>
+      </div>`;
+
+    // 답변 표시
+    if (p.reply) {
+        const replyDiv = document.createElement('div');
+        replyDiv.className = 'cp-reply-wrap';
+        replyDiv.id = 'replyArea';
+        replyDiv.innerHTML = `
+          <div class="cp-reply-label">🏢 관리자 답변</div>
+          <div class="cp-reply-content">${escHtml(p.reply.content)}</div>
+          <div class="cp-reply-time">${p.reply.time_ago}</div>`;
+        wrap.after(replyDiv);
+    }
+
+    // 관리자 패널 — p.is_admin 은 서버가 직접 판단 (JS 세션 role 체크 불필요)
+    if (p.is_admin) {
+        const panel = document.createElement('div');
+        panel.className = 'cp-admin-panel';
+        panel.id = 'adminPanel';
+        panel.innerHTML = `
+          <div class="cp-admin-panel-title">🔧 관리자 기능</div>
+          <div class="cp-admin-btns">
+            <button class="cp-btn cp-btn-outline" onclick="toggleReplyForm()" id="replyToggleBtn">
+              ${p.reply ? '✏️ 답변 수정' : '✏️ 답변 작성'}
+            </button>
+            ${p.reply ? `<button class="cp-btn cp-btn-gray" onclick="deleteReply()">🗑 답변 삭제</button>` : ''}
+            <button class="cp-btn cp-btn-danger" onclick="showDeleteModal()">🗑 글 삭제</button>
+          </div>
+          <div class="cp-reply-form" id="replyForm" style="display:none">
+            <textarea id="replyInput" placeholder="답변 내용을 입력하세요...">${p.reply ? escHtml(p.reply.content) : ''}</textarea>
+            <div style="display:flex;gap:8px">
+              <button class="cp-btn cp-btn-gray" style="flex:1" onclick="toggleReplyForm()">취소</button>
+              <button class="cp-btn" style="flex:1" onclick="submitReply()">답변 등록</button>
+            </div>
+          </div>`;
+
+        const replyArea = document.getElementById('replyArea');
+        if (replyArea) {
+            replyArea.after(panel);
+        } else {
+            wrap.after(panel);
+        }
+    }
+}
+
+function toggleReplyForm() {
+    replyFormVisible = !replyFormVisible;
+    document.getElementById('replyForm').style.display = replyFormVisible ? 'block' : 'none';
+    document.getElementById('replyToggleBtn').textContent = replyFormVisible ? '취소' : (post.reply ? '답변 수정' : '답변 작성');
+}
+
+async function submitReply() {
+    const content = document.getElementById('replyInput').value.trim();
+    if (!content) { showCpToast('답변 내용을 입력하세요.'); return; }
+    try {
+        await cpFetch(`/${postId}/reply`, { method: 'POST', body: { content } });
+        showCpToast('답변이 등록되었습니다.');
+        loadPost();
+    } catch (e) { showCpToast(e.message); }
+}
+
+async function deleteReply() {
+    if (!confirm('답변을 삭제하시겠습니까?')) return;
+    try {
+        await cpFetch(`/${postId}/reply`, { method: 'DELETE' });
+        showCpToast('답변이 삭제되었습니다.');
+        loadPost();
+    } catch (e) { showCpToast(e.message); }
+}
+
+// 수정 본인확인
+function showEditVerifyModal() {
+    document.getElementById('editVerifyName').value = '';
+    document.getElementById('editVerifyErr').style.display = 'none';
+    document.getElementById('editVerifyModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('editVerifyName').focus(), 100);
+}
+function closeEditVerifyModal(e) {
+    if (!e || e.target === document.getElementById('editVerifyModal'))
+        document.getElementById('editVerifyModal').style.display = 'none';
+}
+
+// 이름 확인 후 수정 폼 열기
+function openEditForm() {
+    const name = document.getElementById('editVerifyName').value.trim();
+    const errEl = document.getElementById('editVerifyErr');
+    if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+    // 서버에서 이름 검증 (수정 요청으로 확인)
+    document.getElementById('editVerifyBtn').disabled = true;
+    errEl.style.display = 'none';
+
+    // 임시로 이름만 저장 후 폼 열기
+    document.getElementById('editVerifyModal').style.display = 'none';
+    document.getElementById('editVerifyBtn').disabled = false;
+    document.getElementById('editTitle').value = post.title;
+    document.getElementById('editContent').value = post.content;
+    document.getElementById('editFormErr').style.display = 'none';
+    document.getElementById('editFormModal').style.display = 'flex';
+    document.getElementById('editFormModal').dataset.verifiedName = name;
+}
+function closeEditFormModal(e) {
+    if (!e || e.target === document.getElementById('editFormModal'))
+        document.getElementById('editFormModal').style.display = 'none';
+}
+
+async function submitEdit() {
+    const name = document.getElementById('editFormModal').dataset.verifiedName;
+    const title = document.getElementById('editTitle').value.trim();
+    const content = document.getElementById('editContent').value.trim();
+    const errEl = document.getElementById('editFormErr');
+    const btn = document.getElementById('editSubmitBtn');
+
+    if (!title) { errEl.textContent = '제목을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!content) { errEl.textContent = '내용을 입력해주세요.'; errEl.style.display = 'block'; return; }
+
+    btn.disabled = true; btn.textContent = '수정 중...'; errEl.style.display = 'none';
+    try {
+        await cpFetch(`/${postId}`, { method: 'PATCH', body: { name, title, content } });
+        document.getElementById('editFormModal').style.display = 'none';
+        showCpToast('수정되었습니다.');
+        loadPost();
+    } catch (e) {
+        errEl.textContent = e.message; errEl.style.display = 'block';
+        btn.disabled = false; btn.textContent = '수정 완료';
+    }
+}
+
+function showDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+function closeDeleteModal(e) {
+    if (!e || e.target === document.getElementById('deleteModal')) {
+        document.getElementById('deleteModal').style.display = 'none';
+    }
+}
+async function confirmDelete() {
+    const reason = document.getElementById('deleteReasonInput').value.trim() || '민원글이 아니어서 삭제 되었습니다!';
+    try {
+        await cpFetch(`/${postId}`, { method: 'DELETE', body: { reason } });
+        showCpToast('삭제되었습니다.');
+        closeDeleteModal();
+        setTimeout(() => location.href = `/complaint.html?company=${companyId}`, 800);
+    } catch (e) { showCpToast(e.message); }
+}
+
+loadPost();
+</script>
+</body>
+</html>

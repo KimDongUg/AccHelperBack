@@ -107,7 +107,7 @@ body {
 .cp-fab {
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  right: max(24px, calc(50% - 340px + 24px));
   width: 52px;
   height: 52px;
   border-radius: 50%;
@@ -230,6 +230,11 @@ body {
   font-size: 18px;
   font-weight: 500;
   color: var(--primary-dark);
+}
+.cp-post-writer-phone {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-600);
 }
 .cp-post-content {
   font-size: 15px;
@@ -363,6 +368,69 @@ body {
 .cp-modal textarea:focus { outline: none; border-color: var(--primary); }
 .cp-modal-btns { display: flex; gap: 8px; }
 .cp-modal-btns button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; }
+
+/* ── 개인정보 동의 ──────────────────────────────────────────── */
+.cp-privacy-box {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.cp-privacy-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+.cp-privacy-table th,
+.cp-privacy-table td {
+  padding: 5px 6px;
+  font-size: 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--gray-200);
+  line-height: 1.5;
+}
+.cp-privacy-table th {
+  width: 72px;
+  color: var(--gray-600);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cp-privacy-table tr:last-child th,
+.cp-privacy-table tr:last-child td { border-bottom: none; }
+.cp-privacy-note {
+  font-size: 11px;
+  color: var(--gray-500);
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.cp-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 11px 13px;
+  background: #fff;
+  border: 1.5px solid var(--gray-300);
+  border-radius: 8px;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+.cp-checkbox-label:hover { border-color: var(--primary); }
+.cp-checkbox-label.is-checked {
+  border-color: var(--primary);
+  background: var(--primary-bg);
+}
+.cp-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
 
 /* 토스트 */
 .cp-toast {
