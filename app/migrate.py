@@ -136,6 +136,14 @@ def _run_pg_migration(engine: Engine):
         if _pg_table_exists(conn, "market_posts"):
             _pg_add_column_if_missing(conn, "market_posts", "hidden_reason", "VARCHAR(255)")
 
+        # apartment_residents — company_id NULL 백필 (company_id=1로 일괄 설정)
+        if _pg_table_exists(conn, "apartment_residents"):
+            result = conn.execute(text(
+                "UPDATE apartment_residents SET company_id = 1 WHERE company_id IS NULL"
+            ))
+            if result.rowcount:
+                logger.info("PG: Backfilled %d apartment_residents with company_id=1", result.rowcount)
+
         # complaints table — writer_phone, privacy_agreed_at, image urls
         if _pg_table_exists(conn, "complaints"):
             _pg_add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
