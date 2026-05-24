@@ -110,6 +110,22 @@ def create_complaint(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
+    # ── 중복 민원 체크 ────────────────────────────────────────────────────────
+    # 같은 업체에 동/호수 + 이름 + 전화번호가 동일한 미삭제 민원이 있으면 거부
+    existing = db.query(Complaint).filter(
+        Complaint.company_id == body.company_id,
+        Complaint.dong == body.dong.strip(),
+        Complaint.ho == body.ho.strip(),
+        Complaint.writer_name == body.name.strip(),
+        Complaint.writer_phone == (body.phone.strip() if body.phone else None),
+        Complaint.is_deleted == False,
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="이미 접수된 민원이 있습니다. 기존 민원이 처리된 후 다시 등록해주세요.",
+        )
+
     c = Complaint(
         company_id=body.company_id,
         dong=body.dong.strip(),
