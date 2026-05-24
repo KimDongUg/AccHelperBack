@@ -31,6 +31,7 @@ class MarketPost(Base):
     writer_building = Column(String(20), nullable=False)
     writer_unit = Column(String(20), nullable=False)
     is_hidden = Column(Boolean, default=False)
+    hidden_reason = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 

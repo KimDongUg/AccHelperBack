@@ -132,6 +132,10 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
+        # market_posts table — hidden_reason
+        if _pg_table_exists(conn, "market_posts"):
+            _pg_add_column_if_missing(conn, "market_posts", "hidden_reason", "VARCHAR(255)")
+
         # complaints table — writer_phone, privacy_agreed_at, image urls
         if _pg_table_exists(conn, "complaints"):
             _pg_add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")

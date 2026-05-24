@@ -1,5 +1,6 @@
 """우리아파트 당근 — 입주민 중고거래 커뮤니티 API."""
 
+import math
 import re
 import logging
 from datetime import datetime, timedelta, timezone
@@ -483,6 +484,82 @@ def report_post(
     db.add(report)
     db.commit()
     return {"success": True}
+
+
+# ── 관리자: 게시글 관리 ───────────────────────────────────────────────────────
+
+@router.get("/admin/posts")
+def admin_list_posts(
+    page: int = 1,
+    size: int = 20,
+    category: Optional[str] = None,
+    hidden: Optional[bool] = None,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자용 전체 게시글 목록 (숨김 포함)."""
+    q = db.query(MarketPost)
+    if hidden is not None:
+        q = q.filter(MarketPost.is_hidden == hidden)
+    if category:
+        q = q.filter(MarketPost.category == category)
+    total = q.count()
+    posts = q.order_by(MarketPost.created_at.desc()).offset((page - 1) * size).limit(size).all()
+
+    items = []
+    for p in posts:
+        images = db.query(MarketImage).filter(MarketImage.post_id == p.id).all()
+        cnt = db.query(MarketComment).filter(MarketComment.post_id == p.id).count()
+        report_cnt = db.query(MarketReport).filter(MarketReport.post_id == p.id).count()
+        d = _post_to_dict(p, images, cnt)
+        d["is_hidden"] = p.is_hidden
+        d["hidden_reason"] = p.hidden_reason
+        d["report_count"] = report_cnt
+        items.append(d)
+
+    return {
+        "total": total,
+        "page": page,
+        "pages": math.ceil(total / size) if total else 1,
+        "items": items,
+    }
+
+
+class AdminHideBody(BaseModel):
+    hidden: bool
+    reason: Optional[str] = None
+
+
+@router.patch("/admin/posts/{post_id}/hide")
+def admin_hide_post(
+    post_id: int,
+    body: AdminHideBody,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """게시글 숨김 / 복원 (사유 포함)."""
+    post = db.query(MarketPost).filter(MarketPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    post.is_hidden = body.hidden
+    post.hidden_reason = body.reason if body.hidden else None
+    db.commit()
+    return {"ok": True}
+
+
+@router.delete("/admin/posts/{post_id}")
+def admin_delete_post(
+    post_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자 게시글 영구 삭제."""
+    post = db.query(MarketPost).filter(MarketPost.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+    db.delete(post)
+    db.commit()
+    return {"ok": True}
 
 
 # ── helper ────────────────────────────────────────────────────────────────────
