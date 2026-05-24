@@ -132,10 +132,12 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
-        # complaints table — writer_phone, privacy_agreed_at
+        # complaints table — writer_phone, privacy_agreed_at, image urls
         if _pg_table_exists(conn, "complaints"):
             _pg_add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
             _pg_add_column_if_missing(conn, "complaints", "privacy_agreed_at", "TIMESTAMP")
+            _pg_add_column_if_missing(conn, "complaints", "image1_url", "VARCHAR(500)")
+            _pg_add_column_if_missing(conn, "complaints", "image2_url", "VARCHAR(500)")
             # Backfill: writer_phone이 NULL인 민원은 complaint_persons 에서 전화번호 채우기
             if _pg_table_exists(conn, "complaint_persons"):
                 conn.execute(text("""
@@ -381,6 +383,8 @@ def run_migration(engine: Engine):
         if _table_exists(conn, "complaints"):
             _add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
             _add_column_if_missing(conn, "complaints", "privacy_agreed_at", "DATETIME")
+            _add_column_if_missing(conn, "complaints", "image1_url", "VARCHAR(500)")
+            _add_column_if_missing(conn, "complaints", "image2_url", "VARCHAR(500)")
 
         # --- complaint_persons 테이블 ---
         if not _table_exists(conn, "complaint_persons"):

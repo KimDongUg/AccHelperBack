@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -31,6 +31,8 @@ class ComplaintCreate(BaseModel):
     phone: str = Field(default="", max_length=30)
     title: str = Field(..., max_length=255)
     content: str = Field(..., max_length=3000)
+    image1_url: Optional[str] = Field(default=None, max_length=500)
+    image2_url: Optional[str] = Field(default=None, max_length=500)
 
 
 class ReplyCreate(BaseModel):
@@ -69,6 +71,24 @@ def _writer_display(dong: str, ho: str) -> str:
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.post("/upload-image")
+async def upload_complaint_image(
+    request: Request,
+    file: UploadFile = File(...),
+):
+    """민원 이미지 업로드 — 인증 불필요, 5MB 이하, jpg/png/gif/webp"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="파일이 없습니다.")
+    file_bytes = await file.read()
+    try:
+        from app.services.image_upload import save_image
+        filename = save_image(file_bytes, file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    base_url = str(request.base_url).rstrip("/")
+    return {"url": f"{base_url}/uploads/{filename}"}
+
 
 @router.get("/debug/{complaint_id}")
 def debug_complaint(
@@ -215,6 +235,8 @@ def create_complaint(
         privacy_agreed_at=datetime.now(timezone.utc),  # 개인정보 동의 시각 서버 기록
         title=body.title.strip(),
         content=body.content.strip(),
+        image1_url=body.image1_url or None,
+        image2_url=body.image2_url or None,
     )
     db.add(c)
     db.commit()
@@ -315,6 +337,8 @@ def get_complaint(
         "writer_phone": writer_phone if is_admin else None,
         "title": c.title,
         "content": c.content,
+        "image1_url": c.image1_url,
+        "image2_url": c.image2_url,
         "time_ago": _time_ago(c.created_at),
         "reply": {
             "content": c.reply_content,

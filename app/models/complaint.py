@@ -17,6 +17,10 @@ class Complaint(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
+    # 첨부 이미지 (선택, 최대 2장)
+    image1_url = Column(String(500), nullable=True)
+    image2_url = Column(String(500), nullable=True)
+
     # 관리자 답변
     reply_content = Column(Text, nullable=True)
     replied_at = Column(DateTime, nullable=True)
