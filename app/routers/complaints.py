@@ -250,6 +250,18 @@ def get_complaint(
 
     is_admin = admin is not None and admin.get("company_id") == c.company_id
 
+    # complaints.writer_phone 이 NULL인 경우 complaint_persons 에서 fallback 조회
+    writer_phone = c.writer_phone
+    if is_admin and not writer_phone:
+        person = db.query(ComplaintPerson).filter(
+            ComplaintPerson.company_id == c.company_id,
+            ComplaintPerson.dong == c.dong,
+            ComplaintPerson.ho == c.ho,
+            ComplaintPerson.name == c.writer_name,
+        ).first()
+        if person:
+            writer_phone = person.phone
+
     if c.is_deleted:
         return {
             "id": c.id,
@@ -258,7 +270,7 @@ def get_complaint(
             "delete_reason": c.delete_reason,
             "writer": _writer_display(c.dong, c.ho),
             "writer_name": c.writer_name if is_admin else None,
-            "writer_phone": c.writer_phone if is_admin else None,
+            "writer_phone": writer_phone if is_admin else None,
             "title": "(삭제된 글)",
             "content": "",
             "time_ago": _time_ago(c.created_at),
@@ -271,7 +283,7 @@ def get_complaint(
         "is_deleted": False,
         "writer": _writer_display(c.dong, c.ho),
         "writer_name": c.writer_name if is_admin else None,
-        "writer_phone": c.writer_phone if is_admin else None,
+        "writer_phone": writer_phone if is_admin else None,
         "title": c.title,
         "content": c.content,
         "time_ago": _time_ago(c.created_at),
