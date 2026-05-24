@@ -8,6 +8,7 @@ from typing import Optional
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from sqlalchemy import or_
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -190,10 +191,17 @@ def list_residents(
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """당근회원 목록 — 인증한 입주민 전체 (자가등록 + ERP 등록)."""
+    """당근회원 목록 — 인증한 입주민 전체 (자가등록 + ERP 등록).
+    company_id 미설정(NULL) 레코드도 포함 (이전 버전 데이터 호환).
+    """
     residents = (
         db.query(ApartmentResident)
-        .filter(ApartmentResident.company_id == admin["company_id"])
+        .filter(
+            or_(
+                ApartmentResident.company_id == admin["company_id"],
+                ApartmentResident.company_id == None,   # noqa: E711
+            )
+        )
         .order_by(ApartmentResident.registered_at.desc())
         .all()
     )
