@@ -200,6 +200,7 @@
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="statistics" id="tabStatistics">통계</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="questionViews" id="tabQuestionViews">질문 조회 상세</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="complaintPersons" id="tabComplaintPersons">민원인 목록</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
         </div>
 
@@ -544,6 +545,50 @@
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     <p>해당 기간의 질문 조회 데이터가 없습니다.</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Tab: Complaint Persons -->
+        <div class="tab-content" id="tabContentComplaintPersons" role="tabpanel" style="display:none">
+            <div class="toolbar" style="flex-wrap:wrap;gap:0.5rem">
+                <h3 style="margin:0;font-size:var(--text-base)">민원인 목록</h3>
+                <div class="search-wrap" style="margin-left:auto">
+                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" id="cpSearchInput" class="form-control search-input" placeholder="동/호수·이름·전화번호 검색..." aria-label="민원인 검색">
+                </div>
+                <select id="cpSortSelect" class="form-control" style="min-width:130px" aria-label="정렬 기준">
+                    <option value="last_complained_at">최근 민원일순</option>
+                    <option value="first_complained_at">최초 민원일순</option>
+                    <option value="complaint_count">민원 건수순</option>
+                    <option value="dong">동/호수순</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="loadComplaintPersons()">조회</button>
+            </div>
+            <div class="qa-table-wrap">
+                <div class="table-loading" id="cpTableLoading" role="status" aria-label="데이터 로딩 중">
+                    <div class="table-spinner" aria-hidden="true"></div>
+                </div>
+                <div class="table-wrap">
+                    <table class="qa-table" aria-label="민원인 목록">
+                        <thead>
+                            <tr>
+                                <th scope="col" style="width:80px">동</th>
+                                <th scope="col" style="width:80px">호수</th>
+                                <th scope="col" style="width:90px">이름</th>
+                                <th scope="col" style="width:130px">전화번호</th>
+                                <th scope="col" style="width:60px;text-align:center">민원 수</th>
+                                <th scope="col" style="width:130px">최초 민원일</th>
+                                <th scope="col" style="width:130px">최근 민원일</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cpTableBody"></tbody>
+                    </table>
+                </div>
+                <div id="cpEmptyState" class="empty-state" style="display:none" role="status">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <p>등록된 민원인이 없습니다.</p>
+                </div>
+                <nav class="pagination" id="cpPagination" aria-label="민원인 목록 페이지 내비게이션"></nav>
             </div>
         </div>
 

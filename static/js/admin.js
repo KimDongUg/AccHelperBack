@@ -281,6 +281,7 @@ function switchTab(tab) {
     if (tab === 'logs') { logPage = 1; loadActivityLogs(); }
     if (tab === 'statistics') initStatistics();
     if (tab === 'questionViews') initQuestionViews();
+    if (tab === 'complaintPersons') { cpPage = 1; loadComplaintPersons(); }
     if (tab === 'subscription') loadSubscriptionTab();
 }
 
@@ -2807,3 +2808,86 @@ async function cancelSubscription() {
         showToast('해지 오류: ' + (e.message || e), 'error');
     }
 }
+
+/* ═══════════════════════════════════════════════
+ *  COMPLAINT PERSONS (민원인 목록)
+ * ═══════════════════════════════════════════════ */
+function escHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+let cpPage = 1;
+const CP_PAGE_SIZE = 20;
+
+async function loadComplaintPersons() {
+    const search = (document.getElementById('cpSearchInput')?.value || '').trim();
+    const sort   = document.getElementById('cpSortSelect')?.value || 'last_complained_at';
+    const loading = document.getElementById('cpTableLoading');
+    const tbody   = document.getElementById('cpTableBody');
+    const empty   = document.getElementById('cpEmptyState');
+
+    if (loading) loading.classList.add('show');
+    if (empty)   empty.style.display = 'none';
+
+    try {
+        const params = new URLSearchParams({ page: cpPage, size: CP_PAGE_SIZE, sort, order: 'desc' });
+        if (search) params.append('search', search);
+
+        const data = await apiGet(`/complaints/persons?${params}`);
+
+        if (!data.items || data.items.length === 0) {
+            tbody.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+            renderCpPagination(1, 1);
+            return;
+        }
+
+        tbody.innerHTML = data.items.map(p => `
+            <tr>
+                <td>${escHtml(p.dong)}</td>
+                <td>${escHtml(p.ho)}</td>
+                <td>${escHtml(p.name)}</td>
+                <td>${escHtml(p.phone)}</td>
+                <td style="text-align:center">
+                    <span style="
+                        display:inline-block;padding:2px 8px;border-radius:12px;font-size:12px;font-weight:600;
+                        background:${p.complaint_count >= 3 ? '#FFEBEE' : '#E8F5E9'};
+                        color:${p.complaint_count >= 3 ? '#C62828' : '#2E7D32'}
+                    ">${p.complaint_count}건</span>
+                </td>
+                <td style="font-size:12px;color:var(--gray-500)">${p.first_complained_at}</td>
+                <td style="font-size:12px;color:var(--gray-500)">${p.last_complained_at}</td>
+            </tr>
+        `).join('');
+
+        renderCpPagination(data.page, data.pages);
+    } catch (e) {
+        showToast('민원인 목록 로드 실패: ' + e.message, 'error');
+    } finally {
+        if (loading) loading.classList.remove('show');
+    }
+}
+
+function renderCpPagination(page, pages) {
+    const nav = document.getElementById('cpPagination');
+    if (!nav) return;
+    if (pages <= 1) { nav.innerHTML = ''; return; }
+    let html = `<button ${page <= 1 ? 'disabled' : ''} onclick="goToCpPage(${page - 1})">&laquo;</button>`;
+    const start = Math.max(1, page - 2);
+    const end   = Math.min(pages, page + 2);
+    for (let i = start; i <= end; i++) {
+        html += `<button class="${i === page ? 'active' : ''}" onclick="goToCpPage(${i})">${i}</button>`;
+    }
+    html += `<button ${page >= pages ? 'disabled' : ''} onclick="goToCpPage(${page + 1})">&raquo;</button>`;
+    nav.innerHTML = html;
+}
+
+function goToCpPage(page) { cpPage = page; loadComplaintPersons(); }
+
+// 검색창 Enter 키 지원
+document.addEventListener('DOMContentLoaded', () => {
+    const cpSearchEl = document.getElementById('cpSearchInput');
+    if (cpSearchEl) cpSearchEl.addEventListener('keydown', e => { if (e.key === 'Enter') { cpPage = 1; loadComplaintPersons(); } });
+});

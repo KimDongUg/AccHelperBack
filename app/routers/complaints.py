@@ -70,6 +70,72 @@ def _writer_display(dong: str, ho: str) -> str:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+@router.get("/persons")
+def list_complaint_persons(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    search: str = Query("", description="동/호수·이름·전화번호 검색"),
+    sort: str = Query("last_complained_at", description="정렬 기준 컬럼"),
+    order: str = Query("desc", description="asc / desc"),
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """민원인 목록 조회 (관리자 전용)."""
+    company_id = admin["company_id"]
+
+    q = db.query(ComplaintPerson).filter(ComplaintPerson.company_id == company_id)
+
+    if search:
+        like = f"%{search}%"
+        from sqlalchemy import or_
+        q = q.filter(or_(
+            ComplaintPerson.dong.ilike(like),
+            ComplaintPerson.ho.ilike(like),
+            ComplaintPerson.name.ilike(like),
+            ComplaintPerson.phone.ilike(like),
+        ))
+
+    # 정렬
+    sort_col = {
+        "last_complained_at": ComplaintPerson.last_complained_at,
+        "first_complained_at": ComplaintPerson.first_complained_at,
+        "complaint_count": ComplaintPerson.complaint_count,
+        "dong": ComplaintPerson.dong,
+    }.get(sort, ComplaintPerson.last_complained_at)
+    if order == "asc":
+        q = q.order_by(sort_col.asc())
+    else:
+        q = q.order_by(sort_col.desc())
+
+    total = q.count()
+    items = q.offset((page - 1) * size).limit(size).all()
+
+    def _fmt(dt):
+        if not dt:
+            return ""
+        aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+        return aware.strftime("%Y-%m-%d %H:%M")
+
+    return {
+        "total": total,
+        "pages": math.ceil(total / size) if total else 1,
+        "page": page,
+        "items": [
+            {
+                "id": p.id,
+                "dong": p.dong,
+                "ho": p.ho,
+                "name": p.name,
+                "phone": p.phone or "-",
+                "complaint_count": p.complaint_count or 1,
+                "first_complained_at": _fmt(p.first_complained_at),
+                "last_complained_at": _fmt(p.last_complained_at),
+            }
+            for p in items
+        ],
+    }
+
+
 @router.get("")
 def list_complaints(
     company_id: int = Query(...),
