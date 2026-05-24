@@ -6,7 +6,7 @@
 <title>민원 작성</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
 <link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/complaint.css?v=2">
+<link rel="stylesheet" href="/css/complaint.css?v=3">
 </head>
 <body>
 
@@ -65,6 +65,40 @@
     <textarea class="cp-textarea" id="contentInput" placeholder="민원 내용을 상세히 작성해주세요." maxlength="3000"></textarea>
   </div>
 
+  <div class="cp-section">
+    <div class="cp-section-title">개인정보 수집·이용 동의 <span style="color:#E74C3C">*</span></div>
+    <div class="cp-privacy-box">
+      <table class="cp-privacy-table">
+        <tbody>
+          <tr>
+            <th>수집 항목</th>
+            <td>동/호수, 이름, 전화번호</td>
+          </tr>
+          <tr>
+            <th>수집 목적</th>
+            <td>민원 접수·처리 및 민원인 본인 확인</td>
+          </tr>
+          <tr>
+            <th>보유 기간</th>
+            <td>민원 처리 완료 후 1년, 이후 즉시 파기</td>
+          </tr>
+          <tr>
+            <th>제3자 제공</th>
+            <td>없음 (관리사무소 내부 처리 목적으로만 사용)</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="cp-privacy-note">
+        ※ 위 개인정보 수집·이용에 동의하지 않을 권리가 있으나,<br>
+        동의하지 않으실 경우 민원 등록이 제한될 수 있습니다.
+      </p>
+    </div>
+    <label class="cp-checkbox-label" id="privacyLabel" for="privacyAgree">
+      <input type="checkbox" id="privacyAgree" onchange="this.closest('label').classList.toggle('is-checked', this.checked)">
+      <span>위 개인정보 수집·이용에 <strong>동의합니다</strong>. (필수)</span>
+    </label>
+  </div>
+
   <p style="font-size:12px;color:#9E9E9E;margin-bottom:12px;line-height:1.6">
     ※ 이름·전화번호는 저장되지만 게시판에는 동/호수만 표시됩니다.<br>
     ※ 허위 민원이나 욕설 등 부적절한 글은 관리자에 의해 삭제될 수 있습니다.
@@ -114,9 +148,11 @@ async function submitComplaint() {
     if (!dong) { errEl.textContent = '동을 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!ho) { errEl.textContent = '호수를 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    const privacyAgree = document.getElementById('privacyAgree').checked;
     if (!phone) { errEl.textContent = '전화번호를 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!title) { errEl.textContent = '제목을 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!content) { errEl.textContent = '내용을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!privacyAgree) { errEl.textContent = '개인정보 수집·이용에 동의해주세요.'; errEl.style.display = 'block'; document.getElementById('privacyAgree').focus(); return; }
 
     btn.disabled = true;
     btn.textContent = '등록 중...';

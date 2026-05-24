@@ -132,9 +132,10 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
-        # complaints table — writer_phone
+        # complaints table — writer_phone, privacy_agreed_at
         if _pg_table_exists(conn, "complaints"):
             _pg_add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
+            _pg_add_column_if_missing(conn, "complaints", "privacy_agreed_at", "TIMESTAMP")
 
         # feedbacks table — status + session_id
         if _pg_table_exists(conn, "feedbacks"):
@@ -348,6 +349,7 @@ def run_migration(engine: Engine):
         # --- complaints table ---
         if _table_exists(conn, "complaints"):
             _add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
+            _add_column_if_missing(conn, "complaints", "privacy_agreed_at", "DATETIME")
 
         # --- feedbacks table ---
         if _table_exists(conn, "feedbacks"):

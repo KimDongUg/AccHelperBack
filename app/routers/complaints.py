@@ -116,6 +116,7 @@ def create_complaint(
         ho=body.ho.strip(),
         writer_name=body.name.strip(),
         writer_phone=body.phone.strip() if body.phone else None,
+        privacy_agreed_at=datetime.now(timezone.utc),  # 개인정보 동의 시각 서버 기록
         title=body.title.strip(),
         content=body.content.strip(),
     )
