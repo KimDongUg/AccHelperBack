@@ -231,6 +231,11 @@ body {
   font-weight: 500;
   color: var(--primary-dark);
 }
+.cp-post-writer-phone {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gray-600);
+}
 .cp-post-content {
   font-size: 15px;
   line-height: 1.7;

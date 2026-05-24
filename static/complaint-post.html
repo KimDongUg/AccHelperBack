@@ -6,7 +6,7 @@
 <title>민원 상세</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
 <link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/complaint.css?v=4">
+<link rel="stylesheet" href="/css/complaint.css?v=5">
 </head>
 <body>
 
@@ -130,7 +130,7 @@ function renderPost(p) {
       <div class="cp-post-body">
         <div class="cp-post-title">${escHtml(p.title)}</div>
         <div class="cp-post-meta">
-          <span class="cp-post-writer">📍 ${escHtml(p.writer)}${p.writer_name ? ` <span class="cp-post-writer-name">(${escHtml(p.writer_name)})</span>` : ''}</span>
+          <span class="cp-post-writer">📍 ${escHtml(p.writer)}${p.writer_name ? ` <span class="cp-post-writer-name">(${escHtml(p.writer_name)})</span>` : ''}${p.writer_phone ? ` <span class="cp-post-writer-phone">📞 ${escHtml(p.writer_phone)}</span>` : ''}</span>
           <span>${p.time_ago}</span>
         </div>
         <div class="cp-post-content">${escHtml(p.content)}</div>
