@@ -511,7 +511,19 @@ def admin_list_posts(
         images = db.query(MarketImage).filter(MarketImage.post_id == p.id).all()
         cnt = db.query(MarketComment).filter(MarketComment.post_id == p.id).count()
         report_cnt = db.query(MarketReport).filter(MarketReport.post_id == p.id).count()
+
+        # 입주민 정보 (이름·전화번호)
+        resident = db.query(ApartmentResident).filter(
+            ApartmentResident.building == p.writer_building,
+            ApartmentResident.unit_number == p.writer_unit,
+        ).first()
+        writer_name = resident.resident_name if resident else None
+        writer_phone = resident.resident_phone if resident else None
+
         d = _post_to_dict(p, images, cnt)
+        d["writer_building"] = p.writer_building
+        d["writer_name"] = writer_name
+        d["writer_phone"] = writer_phone
         d["is_hidden"] = p.is_hidden
         d["hidden_reason"] = p.hidden_reason
         d["report_count"] = report_cnt
