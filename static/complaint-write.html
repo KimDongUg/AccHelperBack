@@ -51,6 +51,11 @@
   </div>
 
   <div class="cp-section">
+    <div class="cp-section-title">전화번호 <span style="color:#E74C3C">*</span></div>
+    <input class="cp-input" id="phoneInput" type="tel" placeholder="예: 010-1234-5678" maxlength="20">
+  </div>
+
+  <div class="cp-section">
     <div class="cp-section-title">제목 <span style="color:#E74C3C">*</span></div>
     <input class="cp-input" id="titleInput" type="text" placeholder="제목을 입력하세요" maxlength="100">
   </div>
@@ -61,7 +66,7 @@
   </div>
 
   <p style="font-size:12px;color:#9E9E9E;margin-bottom:12px;line-height:1.6">
-    ※ 이름은 저장되지만 게시판에는 동/호수만 표시됩니다.<br>
+    ※ 이름·전화번호는 저장되지만 게시판에는 동/호수만 표시됩니다.<br>
     ※ 허위 민원이나 욕설 등 부적절한 글은 관리자에 의해 삭제될 수 있습니다.
   </p>
 
@@ -99,6 +104,7 @@ async function submitComplaint() {
     const dong = document.getElementById('dongInput').value.trim();
     const ho = document.getElementById('hoInput').value.trim();
     const name = document.getElementById('nameInput').value.trim();
+    const phone = document.getElementById('phoneInput').value.trim();
     const title = document.getElementById('titleInput').value.trim();
     const content = document.getElementById('contentInput').value.trim();
     const errEl = document.getElementById('errMsg');
@@ -108,6 +114,7 @@ async function submitComplaint() {
     if (!dong) { errEl.textContent = '동을 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!ho) { errEl.textContent = '호수를 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+    if (!phone) { errEl.textContent = '전화번호를 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!title) { errEl.textContent = '제목을 입력해주세요.'; errEl.style.display = 'block'; return; }
     if (!content) { errEl.textContent = '내용을 입력해주세요.'; errEl.style.display = 'block'; return; }
 
@@ -117,7 +124,7 @@ async function submitComplaint() {
     try {
         const data = await cpFetch('', {
             method: 'POST',
-            body: { company_id: parseInt(companyId), dong, ho, name, title, content },
+            body: { company_id: parseInt(companyId), dong, ho, name, phone, title, content },
         });
         location.href = `/complaint-post.html?id=${data.complaint_id}&company=${companyId}`;
     } catch (e) {

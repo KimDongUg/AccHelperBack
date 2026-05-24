@@ -11,6 +11,7 @@ class Complaint(Base):
     dong = Column(String(20), nullable=False)
     ho = Column(String(20), nullable=False)
     writer_name = Column(String(100), nullable=False)   # 비공개 — API 응답에서 제외
+    writer_phone = Column(String(30), nullable=True)    # 비공개 — 관리자만 확인 가능
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, server_default=func.now())

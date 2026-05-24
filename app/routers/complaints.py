@@ -27,6 +27,7 @@ class ComplaintCreate(BaseModel):
     dong: str = Field(..., max_length=20)
     ho: str = Field(..., max_length=20)
     name: str = Field(..., max_length=100)
+    phone: str = Field(default="", max_length=30)
     title: str = Field(..., max_length=255)
     content: str = Field(..., max_length=3000)
 
@@ -114,6 +115,7 @@ def create_complaint(
         dong=body.dong.strip(),
         ho=body.ho.strip(),
         writer_name=body.name.strip(),
+        writer_phone=body.phone.strip() if body.phone else None,
         title=body.title.strip(),
         content=body.content.strip(),
     )
@@ -144,6 +146,7 @@ def get_complaint(
             "delete_reason": c.delete_reason,
             "writer": _writer_display(c.dong, c.ho),
             "writer_name": c.writer_name if is_admin else None,
+            "writer_phone": c.writer_phone if is_admin else None,
             "title": "(삭제된 글)",
             "content": "",
             "time_ago": _time_ago(c.created_at),
@@ -155,6 +158,7 @@ def get_complaint(
         "is_deleted": False,
         "writer": _writer_display(c.dong, c.ho),
         "writer_name": c.writer_name if is_admin else None,
+        "writer_phone": c.writer_phone if is_admin else None,
         "title": c.title,
         "content": c.content,
         "time_ago": _time_ago(c.created_at),
