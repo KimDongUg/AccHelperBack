@@ -70,6 +70,35 @@ def _writer_display(dong: str, ho: str) -> str:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+@router.get("/debug/{complaint_id}")
+def debug_complaint(
+    complaint_id: int,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """임시 디버그: DB 실제 저장 값 확인"""
+    c = db.query(Complaint).filter(Complaint.id == complaint_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="없음")
+    persons = db.query(ComplaintPerson).filter(
+        ComplaintPerson.company_id == c.company_id
+    ).all()
+    return {
+        "complaint": {
+            "id": c.id,
+            "company_id": c.company_id,
+            "dong": repr(c.dong),
+            "ho": repr(c.ho),
+            "writer_name": repr(c.writer_name),
+            "writer_phone": repr(c.writer_phone),
+        },
+        "complaint_persons": [
+            {"dong": repr(p.dong), "ho": repr(p.ho), "name": repr(p.name), "phone": repr(p.phone)}
+            for p in persons
+        ],
+    }
+
+
 @router.get("/persons")
 def list_complaint_persons(
     page: int = Query(1, ge=1),
