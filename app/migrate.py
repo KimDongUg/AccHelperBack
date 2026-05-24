@@ -137,6 +137,23 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
             _pg_add_column_if_missing(conn, "complaints", "privacy_agreed_at", "TIMESTAMP")
 
+        # complaint_persons 테이블 — 민원인 별도 관리
+        if not _pg_table_exists(conn, "complaint_persons"):
+            conn.execute(text("""
+                CREATE TABLE complaint_persons (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER REFERENCES companies(company_id) ON DELETE CASCADE,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    phone VARCHAR(30),
+                    first_complained_at TIMESTAMP DEFAULT NOW(),
+                    last_complained_at TIMESTAMP DEFAULT NOW(),
+                    complaint_count INTEGER DEFAULT 1
+                )
+            """))
+            logger.info("PG: Created table complaint_persons")
+
         # feedbacks table — status + session_id
         if _pg_table_exists(conn, "feedbacks"):
             _pg_add_column_if_missing(conn, "feedbacks", "session_id", "VARCHAR(100)")
@@ -350,6 +367,23 @@ def run_migration(engine: Engine):
         if _table_exists(conn, "complaints"):
             _add_column_if_missing(conn, "complaints", "writer_phone", "VARCHAR(30)")
             _add_column_if_missing(conn, "complaints", "privacy_agreed_at", "DATETIME")
+
+        # --- complaint_persons 테이블 ---
+        if not _table_exists(conn, "complaint_persons"):
+            conn.execute(text("""
+                CREATE TABLE complaint_persons (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER REFERENCES companies(company_id) ON DELETE CASCADE,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    name VARCHAR(100) NOT NULL,
+                    phone VARCHAR(30),
+                    first_complained_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_complained_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    complaint_count INTEGER DEFAULT 1
+                )
+            """))
+            logger.info("Created table complaint_persons")
 
         # --- feedbacks table ---
         if _table_exists(conn, "feedbacks"):

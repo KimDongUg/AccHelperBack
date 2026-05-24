@@ -13,6 +13,7 @@ from app.models.unanswered_question import UnansweredQuestion
 from app.models.cta_click_log import CtaClickLog
 from app.models.market import ApartmentResident, MarketPost, MarketImage, MarketComment, MarketReport
 from app.models.complaint import Complaint
+from app.models.complaint_person import ComplaintPerson
 
 __all__ = [
     "Company",
@@ -35,4 +36,5 @@ __all__ = [
     "MarketComment",
     "MarketReport",
     "Complaint",
+    "ComplaintPerson",
 ]

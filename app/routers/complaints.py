@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.dependencies import require_admin, optional_admin
 from app.models.complaint import Complaint
+from app.models.complaint_person import ComplaintPerson
 from app.services.alert_service import trigger_complaint_alert
 
 logger = logging.getLogger("acchelper")
@@ -110,22 +111,6 @@ def create_complaint(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    # ── 중복 민원 체크 ────────────────────────────────────────────────────────
-    # 같은 업체에 동/호수 + 이름 + 전화번호가 동일한 미삭제 민원이 있으면 거부
-    existing = db.query(Complaint).filter(
-        Complaint.company_id == body.company_id,
-        Complaint.dong == body.dong.strip(),
-        Complaint.ho == body.ho.strip(),
-        Complaint.writer_name == body.name.strip(),
-        Complaint.writer_phone == (body.phone.strip() if body.phone else None),
-        Complaint.is_deleted == False,
-    ).first()
-    if existing:
-        raise HTTPException(
-            status_code=409,
-            detail="이미 접수된 민원이 있습니다. 기존 민원이 처리된 후 다시 등록해주세요.",
-        )
-
     c = Complaint(
         company_id=body.company_id,
         dong=body.dong.strip(),
@@ -140,8 +125,51 @@ def create_complaint(
     db.commit()
     db.refresh(c)
     logger.info("Complaint created: id=%d company_id=%d", c.id, c.company_id)
+
+    # ── 민원인 테이블 자동 등록 (동일인 있으면 카운트·최근일만 갱신) ─────────
+    _upsert_complaint_person(db, body)
+
     background_tasks.add_task(trigger_complaint_alert, c.id)
     return {"complaint_id": c.id}
+
+
+def _upsert_complaint_person(db: Session, body: ComplaintCreate):
+    """민원인 테이블에 등록. 동일인(company+dong+ho+name+phone)이 있으면 갱신, 없으면 신규 등록."""
+    dong = body.dong.strip()
+    ho = body.ho.strip()
+    name = body.name.strip()
+    phone = body.phone.strip() if body.phone else None
+
+    person = db.query(ComplaintPerson).filter(
+        ComplaintPerson.company_id == body.company_id,
+        ComplaintPerson.dong == dong,
+        ComplaintPerson.ho == ho,
+        ComplaintPerson.name == name,
+        ComplaintPerson.phone == phone,
+    ).first()
+
+    now = datetime.now(timezone.utc)
+    if person:
+        # 동일인 — 최근 민원일·건수만 갱신
+        person.last_complained_at = now
+        person.complaint_count = (person.complaint_count or 0) + 1
+        logger.info("ComplaintPerson updated: id=%d count=%d", person.id, person.complaint_count)
+    else:
+        # 신규 민원인 등록
+        person = ComplaintPerson(
+            company_id=body.company_id,
+            dong=dong,
+            ho=ho,
+            name=name,
+            phone=phone,
+            first_complained_at=now,
+            last_complained_at=now,
+            complaint_count=1,
+        )
+        db.add(person)
+        logger.info("ComplaintPerson registered: company_id=%d dong=%s ho=%s", body.company_id, dong, ho)
+
+    db.commit()
 
 
 @router.get("/{complaint_id}")
