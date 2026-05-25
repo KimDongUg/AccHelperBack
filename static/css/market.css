@@ -21,8 +21,6 @@ body {
   font-family: 'Malgun Gothic','맑은 고딕', sans-serif;
   background: var(--gray-50);
   color: var(--gray-900);
-  max-width: 480px;
-  margin: 0 auto;
   min-height: 100vh;
 }
 
@@ -128,7 +126,7 @@ body {
 .mkt-fab {
   position: fixed;
   bottom: 24px;
-  right: calc(50% - 240px + 16px);
+  right: max(16px, calc(50% - 240px + 16px));
   width: 52px;
   height: 52px;
   background: var(--orange);
