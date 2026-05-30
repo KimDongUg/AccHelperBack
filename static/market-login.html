@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>우리아파트 당근 — 입주민 인증</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
-<link rel="stylesheet" href="/css/common.css?v=15">
-<link rel="stylesheet" href="/css/market.css?v=3">
+<link rel="stylesheet" href="/css/common.css?v=13">
+<link rel="stylesheet" href="/css/market.css?v=4">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
       <img src="/assets/images/logo.png" alt="AI Helper 로고">
     </a>
     <nav class="header-nav">
-      <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
+      <a href="/" id="mktChatbotNav"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
       <a href="#" id="mktComplaintNav" style="display:none"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
       <a href="/market-login.html" class="active"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
     </nav>
@@ -29,37 +29,42 @@
 </header>
 
 <div class="mkt-header">
-  <button class="mkt-back" onclick="history.back()">←</button>
+  <button class="mkt-back" onclick="history.back()">&#8249;</button>
   <h1>입주민 인증</h1>
+  <div style="width:28px"></div>
 </div>
 
 <div class="mkt-login-wrap">
   <div class="mkt-login-logo">
-    <div class="emoji">🥕</div>
+    <span class="emoji">🥕</span>
     <h2>우리아파트 당근</h2>
     <p id="aptSubtitle">입주민 전용 중고거래·나눔</p>
   </div>
 
   <form class="mkt-form" id="loginForm" onsubmit="return false">
-    <div>
-      <label>동 <span id="dongRequired" style="color:#c62828">*</span></label>
-      <input class="mkt-input" id="buildingInput" type="text" placeholder="예: 1동" maxlength="10">
+    <div class="mkt-form-row">
+      <div>
+        <label>동 <span id="dongRequired" style="color:#c62828">*</span></label>
+        <input class="mkt-input" id="buildingInput" type="text" placeholder="1동" maxlength="10">
+      </div>
+      <div>
+        <label>호수 <span style="color:#c62828">*</span></label>
+        <input class="mkt-input" id="unit" type="text" placeholder="예: 501호" required>
+      </div>
     </div>
-    <div>
-      <label>호수 <span style="color:#c62828">*</span></label>
-      <input class="mkt-input" id="unit" type="text" placeholder="예: 501호" required>
-    </div>
+
     <div>
       <label>이름 <span style="color:#c62828">*</span></label>
-      <input class="mkt-input" id="name" type="text" placeholder="입주자명" required>
+      <input class="mkt-input" id="name" type="text" placeholder="이름을 입력하세요 (목록에는 표시되지 않습니다)" required>
     </div>
+
     <div>
       <label>전화번호 <span style="color:#c62828">*</span></label>
       <input class="mkt-input" id="phone" type="tel" placeholder="예: 010-1234-5678" required>
     </div>
 
     <!-- 개인정보 수집·이용 동의 -->
-    <div style="margin-top:18px;margin-bottom:4px">
+    <div>
       <div class="mkt-privacy-section-title">개인정보 수집·이용 동의 <span style="color:#c62828">*</span></div>
       <div class="mkt-privacy-box">
         <table class="mkt-privacy-table">
@@ -80,14 +85,15 @@
       </label>
     </div>
 
+    <p style="font-size:12px;color:#9E9E9E;line-height:1.6;margin-top:-8px">
+      ※ 이름·전화번호는 저장되지만 게시판에는 동/호수만 표시됩니다.<br>
+      ※ 허위 민원이나 욕설 등 부적절한 글은 관리자에 의해 삭제될 수 있습니다.
+    </p>
+
     <div id="errMsg" class="mkt-error" style="display:none"></div>
 
     <button class="mkt-btn" id="loginBtn" type="submit" onclick="doLogin()">인증하기</button>
   </form>
-
-  <p style="text-align:center;font-size:12px;color:#aaa;margin-top:20px">
-    관리비 납부 시 등록한 정보와 동일하게 입력해주세요.
-  </p>
 </div>
 
 <script src="/js/market.js?v=2"></script>
@@ -102,6 +108,8 @@
 
     var complaintNav = document.getElementById('mktComplaintNav');
     if (complaintNav && companyId) { complaintNav.href = '/complaint.html?company=' + companyId; complaintNav.style.display = ''; }
+    var chatbotNav = document.getElementById('mktChatbotNav');
+    if (chatbotNav && companyId) { chatbotNav.href = '/?company=' + companyId; }
 
     try {
         var authRaw = sessionStorage.getItem('acc_auth_session') || localStorage.getItem('acc_auth_session');
@@ -115,7 +123,7 @@
     } catch (e) {}
 })();
 
-// 이미 로그인된 경우 바로 이동 (return 파라미터 있으면 그 페이지로)
+// 이미 로그인된 경우 바로 이동
 (function () {
   if (!MarketAuth.getToken()) return;
   const ret = new URLSearchParams(location.search).get('return');
@@ -127,13 +135,10 @@
     const companyName = sessionStorage.getItem('market_company_name') || '';
     const buildingInput = document.getElementById('buildingInput');
 
-    // 세종푸르지오시티 2차 → 1동 고정
     if (companyName.includes('세종푸르지오시티') && companyName.includes('2차') ||
         companyName.includes('세종푸르지오2차')) {
         buildingInput.value = '1동';
         buildingInput.readOnly = true;
-        buildingInput.style.background = '#f4f4f4';
-        buildingInput.style.color = '#666';
         document.getElementById('dongRequired').textContent = '';
         document.getElementById('aptSubtitle').textContent = companyName + ' 입주민 전용 중고거래·나눔';
     } else if (companyName) {
@@ -177,7 +182,6 @@ async function doLogin() {
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || '인증 실패');
 
-        // 이름도 세션에 저장 (수정 시 본인 확인용)
         MarketAuth.save(data.token, {
             unit: data.unit,
             building: data.building,

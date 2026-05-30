@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>게시글 — 우리아파트 당근</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
-<link rel="stylesheet" href="/css/common.css?v=15">
-<link rel="stylesheet" href="/css/market.css?v=3">
+<link rel="stylesheet" href="/css/common.css?v=13">
+<link rel="stylesheet" href="/css/market.css?v=4">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
       <img src="/assets/images/logo.png" alt="AI Helper 로고">
     </a>
     <nav class="header-nav">
-      <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
+      <a href="/" id="mktChatbotNav"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
       <a href="#" id="mktComplaintNav" style="display:none"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
       <a href="/market.html" class="active"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
     </nav>
@@ -29,10 +29,10 @@
 </header>
 
 <div class="mkt-header">
-  <button class="mkt-back" onclick="location.href='/market.html'">←</button>
+  <button class="mkt-back" onclick="location.href='/market.html'">&#8249;</button>
   <h1 id="pageTitle">게시글</h1>
   <div class="mkt-header-right">
-    <button id="reportBtn" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;opacity:0.8" onclick="showReportModal()">신고</button>
+    <button id="reportBtn" style="background:none;border:none;color:#666;font-size:12px;cursor:pointer" onclick="showReportModal()">신고</button>
   </div>
 </div>
 
@@ -85,6 +85,8 @@
     if (labelEl && companyName) { labelEl.textContent = companyName; labelEl.style.display = ''; }
     var complaintNav = document.getElementById('mktComplaintNav');
     if (complaintNav && companyId) { complaintNav.href = '/complaint.html?company=' + companyId; complaintNav.style.display = ''; }
+    var chatbotNav = document.getElementById('mktChatbotNav');
+    if (chatbotNav && companyId) { chatbotNav.href = '/?company=' + companyId; }
     try {
         var authRaw = sessionStorage.getItem('acc_auth_session') || localStorage.getItem('acc_auth_session');
         var sess = authRaw ? JSON.parse(authRaw) : null;
@@ -298,3 +300,5 @@ loadPost();
 </script>
 </body>
 </html>
+
+
