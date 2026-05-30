@@ -6,7 +6,7 @@
 <title>민원게시판</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
 <link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/complaint.css?v=4">
+<link rel="stylesheet" href="/css/complaint.css?v=7">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
       <img src="/assets/images/logo.png" alt="AI Helper 로고">
     </a>
     <nav class="header-nav">
-      <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
+      <a href="/" id="cpChatbotNav"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
       <a href="#" id="cpComplaintNav" class="active"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
       <a href="/market.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
     </nav>
@@ -31,9 +31,9 @@
 <div class="cp-page">
 
 <div class="cp-header">
-  <button class="cp-back" onclick="location.href='/'">←</button>
-  <h1>📋 민원게시판</h1>
-  <div id="adminBadge"></div>
+  <button class="cp-back" onclick="history.back()">&#8249;</button>
+  <h1>민원</h1>
+  <div id="adminBadge" style="width:28px"></div>
 </div>
 
 <div id="postList" class="cp-list"></div>
@@ -93,13 +93,13 @@ async function loadPosts(page) {
             a.className = 'cp-item';
             a.href = `/complaint-post.html?id=${p.id}&company=${companyId}`;
             a.innerHTML = `
-              <div class="cp-item-top">
-                <div class="cp-item-title">${escHtml(p.title)}</div>
-                ${p.has_reply ? '<span class="cp-badge cp-badge-reply">답변완료</span>' : ''}
-              </div>
               <div class="cp-item-meta">
                 <span>${escHtml(p.writer)}</span>
                 <span>${p.time_ago}</span>
+              </div>
+              <div class="cp-item-top">
+                <div class="cp-item-title">${escHtml(p.title)}</div>
+                ${p.has_reply ? '<span class="cp-badge cp-badge-reply">답변완료</span>' : ''}
               </div>
               ${p.preview ? `<div class="cp-item-preview">${escHtml(p.preview)}</div>` : ''}`;
             list.appendChild(a);
@@ -123,3 +123,4 @@ loadPosts(1);
 </script>
 </body>
 </html>
+

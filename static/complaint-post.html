@@ -6,7 +6,7 @@
 <title>민원 상세</title>
 <link rel="icon" type="image/png" href="/assets/images/logo.png">
 <link rel="stylesheet" href="/css/common.css?v=13">
-<link rel="stylesheet" href="/css/complaint.css?v=6">
+<link rel="stylesheet" href="/css/complaint.css?v=7">
 </head>
 <body>
 
@@ -16,7 +16,7 @@
       <img src="/assets/images/logo.png" alt="AI Helper 로고">
     </a>
     <nav class="header-nav">
-      <a href="/"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
+      <a href="/" id="cpChatbotNav"><span class="nav-long">AI 챗봇</span><span class="nav-short">챗봇</span></a>
       <a href="#" id="cpComplaintNav" class="active"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
       <a href="/market.html" id="cpDaangnNav" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
     </nav>
@@ -31,9 +31,10 @@
 <div class="cp-page">
 
 <div class="cp-header">
-  <button class="cp-back" id="backBtn">←</button>
-  <h1>민원 내용</h1>
-  <div id="adminBadge"></div>
+  <button class="cp-back" id="backBtn">&#8249;</button>
+  <h1></h1>
+  <button class="cp-header-right" id="moreBtn" style="display:none">&#8942;</button>
+  <div id="adminBadge" style="display:none"></div>
 </div>
 
 <div id="postContent">
@@ -127,12 +128,19 @@ function renderPost(p) {
     }
 
     wrap.innerHTML = `
+      <div class="cp-post-info-bar">
+        <span class="info-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          ${escHtml(p.writer)}${p.writer_name ? ` · ${escHtml(p.writer_name)}` : ''}
+        </span>
+        ${p.writer_phone ? `<span class="info-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E74C3C" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          ${escHtml(p.writer_phone)}
+        </span>` : ''}
+        <span class="info-time">${p.time_ago}</span>
+      </div>
       <div class="cp-post-body">
         <div class="cp-post-title">${escHtml(p.title)}</div>
-        <div class="cp-post-meta">
-          <span class="cp-post-writer">📍 ${escHtml(p.writer)}${p.writer_name ? ` <span class="cp-post-writer-name">(${escHtml(p.writer_name)})</span>` : ''}${p.writer_phone ? ` <span class="cp-post-writer-phone">📞 ${escHtml(p.writer_phone)}</span>` : ''}</span>
-          <span>${p.time_ago}</span>
-        </div>
         <div class="cp-post-content">${escHtml(p.content)}</div>
         ${(p.image1_url || p.image2_url) ? `
         <div class="cp-post-images">
@@ -292,3 +300,4 @@ loadPost();
 </script>
 </body>
 </html>
+
