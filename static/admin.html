@@ -14,17 +14,18 @@
     <header class="header" role="banner">
         <div class="header-left">
             <a href="/" id="headerLogo" class="header-logo" aria-label="AI Helper 홈으로 이동">
-                <img src="/assets/images/logo.png" alt="AI Helper 로고" aria-hidden="true">
+                <img src="/assets/images/robot.png" alt="AI Helper 로고" aria-hidden="true">
+                <span class="logo-text">AI Helper</span>
             </a>
         </div>
         <div class="header-right">
-            <span id="headerCompanyName" style="font-size:var(--text-sm);color:var(--primary);font-weight:600"></span>
-            <span id="adminUsername" style="font-size:var(--text-sm);color:var(--gray-600)"></span>
-            <span id="roleBadge" class="role-badge" style="display:none"></span>
-            <button id="profileBtn" class="btn btn-outline btn-sm" aria-label="내 정보">내 정보</button>
+            <span id="headerCompanyName" class="company-label" style="font-size:var(--text-sm);color:var(--primary);font-weight:600"></span>
+            <span id="adminUsername" class="admin-header-user" style="font-size:var(--text-sm);color:var(--gray-600)"></span>
+            <span id="roleBadge" class="role-badge admin-header-role" style="display:none"></span>
+            <button id="profileBtn" class="btn btn-outline btn-sm" data-short="내정보" aria-label="내 정보">내 정보</button>
             <a href="/super-admin.html" id="superAdminLink" class="btn btn-outline btn-sm" style="display:none">수퍼관리</a>
-            <a href="/" id="chatBotLink" class="btn btn-outline btn-sm">챗봇</a>
-            <button id="logoutBtn" class="btn btn-sm" style="color:var(--gray-600)" aria-label="로그아웃">로그아웃</button>
+            <a href="/" id="chatBotLink" class="btn btn-outline btn-sm" data-short="챗봇">챗봇</a>
+            <button id="logoutBtn" class="btn btn-sm admin-logout-btn" style="color:var(--gray-600)" aria-label="로그아웃">로그아웃</button>
         </div>
     </header>
 

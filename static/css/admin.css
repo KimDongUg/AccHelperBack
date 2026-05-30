@@ -779,6 +779,16 @@
 
 /* Mobile */
 @media (max-width: 767px) {
+    /* 헤더: 사용자명·역할배지 숨기기, 로그아웃 축약 */
+    .admin-header-user,
+    .admin-header-role {
+        display: none !important;
+    }
+    .admin-logout-btn {
+        font-size: 11px !important;
+        padding: 4px 7px !important;
+    }
+
     .admin-container {
         padding: var(--space-md);
     }
