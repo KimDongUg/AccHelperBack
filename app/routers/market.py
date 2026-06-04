@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import jwt
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form, Request
 from sqlalchemy import or_
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -437,6 +437,7 @@ class CommentCreate(BaseModel):
 @router.post("/comments")
 def create_comment(
     body: CommentCreate,
+    background_tasks: BackgroundTasks,
     user: dict = Depends(_get_market_user),
     db: Session = Depends(get_db),
 ):
@@ -454,6 +455,15 @@ def create_comment(
     db.add(comment)
     db.commit()
     db.refresh(comment)
+
+    from app.services.alert_service import trigger_market_comment_alert
+    background_tasks.add_task(
+        trigger_market_comment_alert,
+        post_id=body.post_id,
+        comment_content=body.content,
+        commenter_unit=user["unit"],
+    )
+
     return {
         "success": True,
         "comment": {

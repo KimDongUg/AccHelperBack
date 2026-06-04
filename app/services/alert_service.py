@@ -15,7 +15,7 @@ from app.database import SessionLocal
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.unanswered_question import UnansweredQuestion
-from app.services.solapi_service import send_unanswered_alimtalk, send_complaint_alimtalk
+from app.services.solapi_service import send_unanswered_alimtalk, send_complaint_alimtalk, send_market_comment_alimtalk
 
 logger = logging.getLogger(__name__)
 
@@ -192,6 +192,54 @@ def trigger_complaint_alert(complaint_id: int) -> None:
         logger.error(
             "[ComplaintAlert] trigger_complaint_alert 오류 | complaint_id=%s | %s",
             complaint_id, e,
+        )
+    finally:
+        db.close()
+
+
+def trigger_market_comment_alert(post_id: int, comment_content: str, commenter_unit: str) -> None:
+    """당근마켓 댓글 알림톡 트리거 — 게시글 작성자에게 발송."""
+    from app.models.market import MarketPost, ApartmentResident
+
+    db = SessionLocal()
+    try:
+        post = db.query(MarketPost).get(post_id)
+        if not post:
+            return
+
+        # 본인 댓글은 알림 불필요
+        if post.writer_unit == commenter_unit:
+            return
+
+        resident = db.query(ApartmentResident).filter(
+            ApartmentResident.building == post.writer_building,
+            ApartmentResident.unit_number == post.writer_unit,
+        ).first()
+
+        if not resident or not resident.resident_phone:
+            logger.warning(
+                "[MarketAlert] 게시글 작성자 전화번호 없음 | post_id=%d | unit=%s",
+                post_id, post.writer_unit,
+            )
+            return
+
+        unit_display = f"{post.writer_building} {post.writer_unit}호"
+        send_market_comment_alimtalk(
+            to=resident.resident_phone,
+            name=resident.resident_name,
+            unit=unit_display,
+            title=post.title,
+            comment=comment_content,
+        )
+        logger.info(
+            "[MarketAlert] 알림톡 발송 성공 | post_id=%d | to=%s",
+            post_id, resident.resident_phone,
+        )
+
+    except Exception as e:
+        logger.error(
+            "[MarketAlert] trigger_market_comment_alert 오류 | post_id=%s | %s",
+            post_id, e,
         )
     finally:
         db.close()

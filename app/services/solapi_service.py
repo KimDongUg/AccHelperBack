@@ -74,6 +74,50 @@ def send_unanswered_alimtalk(
         return True
 
 
+def send_market_comment_alimtalk(
+    to: str,
+    name: str,
+    unit: str,
+    title: str,
+    comment: str,
+) -> bool:
+    """
+    당근마켓 댓글 알림톡 발송
+    템플릿 변수: #{이름}, #{동호수}, #{제목}, #{댓글내용}
+    """
+    if not config.SOLAPI_MARKET_COMMENT_TEMPLATE_ID:
+        logger.warning("[Solapi] SOLAPI_MARKET_COMMENT_TEMPLATE_ID 미설정 — 당근 댓글 알림톡 생략")
+        return False
+
+    payload = {
+        "message": {
+            "to": to.replace("-", ""),
+            "kakaoOptions": {
+                "pfId": config.SOLAPI_PF_ID,
+                "templateId": config.SOLAPI_MARKET_COMMENT_TEMPLATE_ID,
+                "variables": {
+                    "#{이름}": name,
+                    "#{동호수}": unit,
+                    "#{제목}": title,
+                    "#{댓글내용}": comment,
+                },
+            },
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": _make_auth_header(),
+    }
+
+    with httpx.Client(timeout=10.0) as client:
+        resp = client.post(SOLAPI_SEND_URL, json=payload, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("[Solapi] %s %s | payload=%s", resp.status_code, resp.text, payload)
+        resp.raise_for_status()
+        return True
+
+
 def send_complaint_alimtalk(
     to: str,
     apt_name: str,
