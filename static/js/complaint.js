@@ -106,6 +106,10 @@ function initCpHeader() {
         labelEl.style.display = '';
     }
 
+    // 챗봇 링크에 company 파라미터 삽입
+    const chatbotNav = document.getElementById('cpChatbotNav');
+    if (chatbotNav && companyId) chatbotNav.href = `/?company=${companyId}`;
+
     // 민원게시판 링크에 company 파라미터 삽입
     const cpNav = document.getElementById('cpComplaintNav');
     if (cpNav && companyId) cpNav.href = `/complaint.html?company=${companyId}`;
