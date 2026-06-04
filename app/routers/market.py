@@ -153,6 +153,10 @@ def market_login(req: LoginRequest, db: Session = Depends(get_db)):
                 status_code=401,
                 detail="입주민 정보가 일치하지 않습니다. 관리비 등록 정보와 동일하게 입력해주세요.",
             )
+        # 전화번호가 없거나 다를 경우 업데이트 (ERP 임포트 시 빈값이었던 경우 보완)
+        if req.phone and _normalize_phone(resident.resident_phone or "") != phone_norm:
+            resident.resident_phone = req.phone
+            db.commit()
         is_new = False
     else:
         # 미등록 입주민: 자동 등록 (관리자 확인 대기)
