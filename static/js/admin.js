@@ -20,14 +20,17 @@ function applyAlimtalkRestriction() {
     const sess = AuthSession.get();
     const restricted = isFacilityManagementCompany(sess && sess.companyName);
     const toggle = document.getElementById('adminAlertToggle');
+    const complaintToggle = document.getElementById('adminComplaintAlertToggle');
     const hint = document.getElementById('adminAlertHint');
     if (!toggle) return restricted;
     if (restricted) {
         toggle.checked = false;
         toggle.disabled = true;
+        if (complaintToggle) { complaintToggle.checked = false; complaintToggle.disabled = true; }
         if (hint) hint.style.display = '';
     } else {
         toggle.disabled = false;
+        if (complaintToggle) complaintToggle.disabled = false;
         if (hint) hint.style.display = 'none';
     }
     return restricted;
@@ -765,6 +768,7 @@ function openAdminModal() {
     document.getElementById('adminDepartment').value = '';
     document.getElementById('adminPosition').value = '';
     document.getElementById('adminAlertToggle').checked = true;
+    document.getElementById('adminComplaintAlertToggle').checked = true;
     document.getElementById('adminPasswordGroup').style.display = '';
     document.getElementById('adminPassword').setAttribute('required', '');
     applyAlimtalkRestriction();
@@ -783,6 +787,7 @@ async function openEditAdminModal(userId) {
         document.getElementById('adminDepartment').value = admin.department || '';
         document.getElementById('adminPosition').value = admin.position || '';
         document.getElementById('adminAlertToggle').checked = admin.receive_unanswered_alert !== false;
+        document.getElementById('adminComplaintAlertToggle').checked = admin.receive_complaint_alert !== false;
         document.getElementById('adminPasswordGroup').style.display = 'none';
         document.getElementById('adminPassword').removeAttribute('required');
         applyAlimtalkRestriction();
@@ -804,6 +809,7 @@ async function saveAdmin() {
     const sess = AuthSession.get();
     const alimtalkBlocked = isFacilityManagementCompany(sess && sess.companyName);
     const receiveAlert = alimtalkBlocked ? false : document.getElementById('adminAlertToggle').checked;
+    const receiveComplaintAlert = alimtalkBlocked ? false : document.getElementById('adminComplaintAlertToggle').checked;
 
     try {
         if (adminId) {
@@ -815,6 +821,7 @@ async function saveAdmin() {
                 department: document.getElementById('adminDepartment').value.trim() || null,
                 position: document.getElementById('adminPosition').value.trim() || null,
                 receive_unanswered_alert: receiveAlert,
+                receive_complaint_alert: receiveComplaintAlert,
                 role: 'admin',
             };
             await apiPut(`/admins/${adminId}`, data);
@@ -831,6 +838,7 @@ async function saveAdmin() {
                 department: document.getElementById('adminDepartment').value.trim() || null,
                 position: document.getElementById('adminPosition').value.trim() || null,
                 receive_unanswered_alert: receiveAlert,
+                receive_complaint_alert: receiveComplaintAlert,
                 role: 'admin',
             };
             await apiPost('/admins', data);

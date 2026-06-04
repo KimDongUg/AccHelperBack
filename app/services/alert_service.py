@@ -152,7 +152,7 @@ def trigger_complaint_alert(complaint_id: int) -> None:
 
         admins = db.query(AdminUser).filter(
             AdminUser.company_id == complaint.company_id,
-            AdminUser.receive_unanswered_alert == True,
+            AdminUser.receive_complaint_alert == True,
             AdminUser.is_active == True,
         ).all()
 

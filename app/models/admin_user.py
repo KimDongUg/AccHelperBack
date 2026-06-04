@@ -25,5 +25,6 @@ class AdminUser(Base):
     permissions: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     receive_unanswered_alert: Mapped[bool] = mapped_column(Boolean, default=True)
+    receive_complaint_alert: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

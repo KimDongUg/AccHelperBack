@@ -195,6 +195,7 @@ def _run_pg_migration(engine: Engine):
 
         # admin_users table — 알림톡 수신 여부
         _pg_add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT TRUE")
+        _pg_add_column_if_missing(conn, "admin_users", "receive_complaint_alert", "BOOLEAN DEFAULT TRUE")
 
         # --- 우리아파트 당근 market 테이블 (PostgreSQL) ---
         if not _pg_table_exists(conn, "apartment_residents"):
@@ -429,6 +430,7 @@ def run_migration(engine: Engine):
         # --- admin_users table: 알림톡 수신 여부 ---
         if _table_exists(conn, "admin_users"):
             _add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT 1")
+            _add_column_if_missing(conn, "admin_users", "receive_complaint_alert", "BOOLEAN DEFAULT 1")
 
         # --- 우리아파트 당근 market 테이블 ---
         if not _table_exists(conn, "apartment_residents"):

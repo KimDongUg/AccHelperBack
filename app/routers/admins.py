@@ -136,10 +136,12 @@ def create_admin(
 
     # 시설관리 회사는 카카오 알림톡 미지원 → 수신 플래그 강제 해제
     receive_alert = data.receive_unanswered_alert
+    receive_complaint = data.receive_complaint_alert
     if company_id != 0:
         target_company = db.query(Company).filter(Company.company_id == company_id).first()
         if target_company and is_facility_management_company(target_company.company_name):
             receive_alert = False
+            receive_complaint = False
 
     admin = AdminUser(
         company_id=company_id,
@@ -151,6 +153,7 @@ def create_admin(
         position=data.position,
         role=data.role,
         receive_unanswered_alert=receive_alert,
+        receive_complaint_alert=receive_complaint,
     )
     db.add(admin)
     db.commit()
@@ -191,10 +194,13 @@ def update_admin(
             raise HTTPException(status_code=400, detail="이미 등록된 이메일입니다.")
 
     # 시설관리 회사는 카카오 알림톡 미지원 → 수신 플래그 강제 해제
-    if "receive_unanswered_alert" in update_data and admin.company_id:
+    if ("receive_unanswered_alert" in update_data or "receive_complaint_alert" in update_data) and admin.company_id:
         target_company = db.query(Company).filter(Company.company_id == admin.company_id).first()
         if target_company and is_facility_management_company(target_company.company_name):
-            update_data["receive_unanswered_alert"] = False
+            if "receive_unanswered_alert" in update_data:
+                update_data["receive_unanswered_alert"] = False
+            if "receive_complaint_alert" in update_data:
+                update_data["receive_complaint_alert"] = False
 
     for key, value in update_data.items():
         setattr(admin, key, value)
