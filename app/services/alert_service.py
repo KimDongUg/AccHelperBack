@@ -223,7 +223,8 @@ def trigger_market_comment_alert(post_id: int, comment_content: str, commenter_u
             )
             return
 
-        unit_display = f"{post.writer_building} {post.writer_unit}호"
+        unit_str = post.writer_unit if post.writer_unit.endswith('호') else post.writer_unit + '호'
+        unit_display = f"{post.writer_building} {unit_str}"
         send_market_comment_alimtalk(
             to=resident.resident_phone,
             name=resident.resident_name,

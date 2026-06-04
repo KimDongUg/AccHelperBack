@@ -361,11 +361,14 @@ body {
 .mkt-detail-imgs {
   position: relative;
   width: 100%;
-  height: 280px;
-  overflow: hidden;
+  max-height: 420px;
   background: var(--gray-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
 }
-.mkt-detail-imgs img { width: 100%; height: 100%; object-fit: cover; }
+.mkt-detail-imgs img { width: 100%; height: auto; max-height: 420px; object-fit: contain; }
 .mkt-img-nav {
   position: absolute;
   bottom: 10px;
