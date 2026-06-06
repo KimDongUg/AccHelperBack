@@ -10,7 +10,9 @@ from app.dependencies import require_auth, require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.chat_log import ChatLog
 from app.models.company import Company
+from app.models.complaint import Complaint
 from app.models.feedback import Feedback
+from app.models.market import ApartmentResident, MarketComment, MarketPost, MarketReport
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
 from app.models.tenant_usage import TenantUsageMonthly
@@ -445,3 +447,119 @@ def _quarter_expr(timestamp_col):
         else_="-Q4",
     )
     return func.concat(year_part, quarter)
+
+
+@router.get("/complaints")
+def get_complaint_stats(
+    date_from: str = Query(..., alias="from"),
+    date_to: str = Query(..., alias="to"),
+    period: str = Query("monthly", regex="^(daily|monthly|quarterly|yearly)$"),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """민원 통계 — 기간별 접수·답변 현황."""
+    company_id = user["company_id"]
+    try:
+        dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+        dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return {"summary": {}, "items": []}
+
+    base = db.query(Complaint)
+    if company_id != 0:
+        base = base.filter(Complaint.company_id == company_id)
+
+    all_time_total = base.count()
+    in_range = base.filter(Complaint.created_at >= dt_from, Complaint.created_at <= dt_to)
+
+    total_in_range = in_range.count()
+    answered = in_range.filter(Complaint.reply_content != None).count()  # noqa: E711
+    deleted = in_range.filter(Complaint.is_deleted == True).count()  # noqa: E712
+
+    pe = _period_expr(period, Complaint.created_at)
+    rows = (
+        in_range.with_entities(
+            pe.label("period"),
+            func.count(Complaint.id).label("total"),
+            func.sum(case((Complaint.reply_content != None, 1), else_=0)).label("answered"),  # noqa: E711
+        )
+        .group_by(pe)
+        .order_by(pe)
+        .all()
+    )
+
+    return {
+        "summary": {
+            "total_in_range": total_in_range,
+            "answered": answered,
+            "unanswered": max(0, total_in_range - answered - deleted),
+            "deleted": deleted,
+            "all_time_total": all_time_total,
+        },
+        "items": [
+            {"period": str(r.period), "total": r.total, "answered": int(r.answered or 0)}
+            for r in rows
+        ],
+    }
+
+
+@router.get("/market")
+def get_market_stats(
+    date_from: str = Query(..., alias="from"),
+    date_to: str = Query(..., alias="to"),
+    period: str = Query("monthly", regex="^(daily|monthly|quarterly|yearly)$"),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """당근마켓 통계 — 기간별 게시글·댓글 현황."""
+    try:
+        dt_from = datetime.strptime(date_from, "%Y-%m-%d")
+        dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+    except ValueError:
+        return {"summary": {}, "items": [], "by_category": {}}
+
+    base = db.query(MarketPost)
+    all_time_total = base.count()
+    in_range = base.filter(MarketPost.created_at >= dt_from, MarketPost.created_at <= dt_to)
+
+    total_in_range = in_range.count()
+    active = in_range.filter(MarketPost.is_hidden == False).count()  # noqa: E712
+    hidden = in_range.filter(MarketPost.is_hidden == True).count()   # noqa: E712
+
+    post_ids = [r[0] for r in in_range.with_entities(MarketPost.id).all()]
+    total_comments = (
+        db.query(MarketComment).filter(MarketComment.post_id.in_(post_ids)).count()
+        if post_ids else 0
+    )
+    total_reports = (
+        db.query(MarketReport).filter(MarketReport.post_id.in_(post_ids)).count()
+        if post_ids else 0
+    )
+
+    cats = (
+        in_range.with_entities(MarketPost.category, func.count(MarketPost.id).label("cnt"))
+        .group_by(MarketPost.category)
+        .all()
+    )
+    by_category = {r.category: r.cnt for r in cats}
+
+    pe = _period_expr(period, MarketPost.created_at)
+    rows = (
+        in_range.with_entities(pe.label("period"), func.count(MarketPost.id).label("total"))
+        .group_by(pe)
+        .order_by(pe)
+        .all()
+    )
+
+    return {
+        "summary": {
+            "total_in_range": total_in_range,
+            "active": active,
+            "hidden": hidden,
+            "total_comments": total_comments,
+            "total_reports": total_reports,
+            "all_time_total": all_time_total,
+        },
+        "by_category": by_category,
+        "items": [{"period": str(r.period), "total": r.total} for r in rows],
+    }

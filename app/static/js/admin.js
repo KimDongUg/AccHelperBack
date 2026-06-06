@@ -2332,6 +2332,207 @@ function renderStatsTable(data, periodType) {
 
 
 /* ═══════════════════════════════════════════════
+ *  STATISTICS SUB-TABS (민원 / 당근)
+ * ═══════════════════════════════════════════════ */
+
+let cpTrendChartInstance = null;
+let mktCategoryChartInstance = null;
+let mktTrendChartInstance = null;
+let cpStatsInitialized = false;
+let mktStatsInitialized = false;
+
+const ST_SUB_TABS = ['chatbot', 'complaint', 'market'];
+
+function switchStatsSubTab(tab) {
+    ST_SUB_TABS.forEach(t => {
+        const btn = document.getElementById('stSubBtn' + t.charAt(0).toUpperCase() + t.slice(1));
+        const panel = document.getElementById('stSub' + t.charAt(0).toUpperCase() + t.slice(1));
+        const active = t === tab;
+        if (btn) {
+            btn.style.borderBottomColor = active ? 'var(--primary)' : 'transparent';
+            btn.style.color = active ? 'var(--primary)' : 'var(--gray-500)';
+            btn.style.fontWeight = active ? '600' : '500';
+        }
+        if (panel) panel.style.display = active ? '' : 'none';
+    });
+    if (tab === 'complaint' && !cpStatsInitialized) initComplaintStats();
+    if (tab === 'market' && !mktStatsInitialized) initMarketStats();
+}
+
+function _defaultStatsDates(monthsBack) {
+    const today = new Date();
+    const from = new Date(today);
+    from.setMonth(today.getMonth() - monthsBack);
+    return { from: formatDateISO(from), to: formatDateISO(today) };
+}
+
+function initComplaintStats() {
+    const d = _defaultStatsDates(6);
+    document.getElementById('cpStatsDateFrom').value = d.from;
+    document.getElementById('cpStatsDateTo').value = d.to;
+    document.getElementById('cpStatsPeriodType').addEventListener('change', loadComplaintStats);
+    cpStatsInitialized = true;
+    loadComplaintStats();
+}
+
+async function loadComplaintStats() {
+    const period = document.getElementById('cpStatsPeriodType').value;
+    const from = document.getElementById('cpStatsDateFrom').value;
+    const to = document.getElementById('cpStatsDateTo').value;
+    if (!from || !to) { showToast('조회 기간을 선택해주세요.', 'warning'); return; }
+    try {
+        const data = await apiGet(`/stats/complaints?period=${period}&from=${from}&to=${to}`);
+        const s = data.summary || {};
+        document.getElementById('cpStatTotal').textContent = (s.total_in_range || 0).toLocaleString();
+        document.getElementById('cpStatAnswered').textContent = (s.answered || 0).toLocaleString();
+        document.getElementById('cpStatUnanswered').textContent = (s.unanswered || 0).toLocaleString();
+        document.getElementById('cpStatAllTime').textContent = (s.all_time_total || 0).toLocaleString();
+        _renderCpTrendChart(data.items || [], period);
+        _renderCpTable(data.items || [], period);
+    } catch (e) {
+        showToast('민원 통계를 불러오지 못했습니다.', 'error');
+    }
+}
+
+function _renderCpTrendChart(items, period) {
+    if (cpTrendChartInstance) { cpTrendChartInstance.destroy(); cpTrendChartInstance = null; }
+    const ctx = document.getElementById('cpTrendChart');
+    if (!ctx) return;
+    const labels = items.map(r => formatStatLabel(r.period, period));
+    const totals = items.map(r => r.total || 0);
+    const answered = items.map(r => r.answered || 0);
+    cpTrendChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                { label: '신규 접수', data: totals, backgroundColor: 'rgba(99,102,241,0.7)', borderRadius: 4 },
+                { label: '답변 완료', data: answered, backgroundColor: 'rgba(34,197,94,0.7)', borderRadius: 4 },
+            ],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top' } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        },
+    });
+}
+
+function _renderCpTable(items, period) {
+    const tbody = document.getElementById('cpStatsTableBody');
+    const empty = document.getElementById('cpStatsEmptyState');
+    const colHeader = document.getElementById('cpStatsColPeriod');
+    const labels = { daily: '날짜', monthly: '월', quarterly: '분기', yearly: '연도' };
+    if (colHeader) colHeader.textContent = labels[period] || '기간';
+    if (!items.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = items.map(r => `
+        <tr>
+            <td>${formatStatLabel(r.period, period)}</td>
+            <td style="text-align:right">${(r.total || 0).toLocaleString()}</td>
+            <td style="text-align:right">${(r.answered || 0).toLocaleString()}</td>
+            <td style="text-align:right">${((r.total || 0) - (r.answered || 0)).toLocaleString()}</td>
+        </tr>
+    `).join('');
+}
+
+function initMarketStats() {
+    const d = _defaultStatsDates(6);
+    document.getElementById('mktStatsDateFrom').value = d.from;
+    document.getElementById('mktStatsDateTo').value = d.to;
+    document.getElementById('mktStatsPeriodType').addEventListener('change', loadMarketStats);
+    mktStatsInitialized = true;
+    loadMarketStats();
+}
+
+async function loadMarketStats() {
+    const period = document.getElementById('mktStatsPeriodType').value;
+    const from = document.getElementById('mktStatsDateFrom').value;
+    const to = document.getElementById('mktStatsDateTo').value;
+    if (!from || !to) { showToast('조회 기간을 선택해주세요.', 'warning'); return; }
+    try {
+        const data = await apiGet(`/stats/market?period=${period}&from=${from}&to=${to}`);
+        const s = data.summary || {};
+        document.getElementById('mktStatTotal').textContent = (s.total_in_range || 0).toLocaleString();
+        document.getElementById('mktStatComments').textContent = (s.total_comments || 0).toLocaleString();
+        document.getElementById('mktStatReports').textContent = (s.total_reports || 0).toLocaleString();
+        document.getElementById('mktStatAllTime').textContent = (s.all_time_total || 0).toLocaleString();
+        _renderMktCategoryChart(data.by_category || {});
+        _renderMktTrendChart(data.items || [], period);
+        _renderMktTable(data.items || [], period);
+    } catch (e) {
+        showToast('당근 통계를 불러오지 못했습니다.', 'error');
+    }
+}
+
+const MKT_CATEGORY_COLORS = {
+    '중고거래': 'rgba(99,102,241,0.8)',
+    '무료나눔': 'rgba(34,197,94,0.8)',
+    '공동구매': 'rgba(251,146,60,0.8)',
+    '분실물': 'rgba(239,68,68,0.8)',
+};
+
+function _renderMktCategoryChart(byCategory) {
+    if (mktCategoryChartInstance) { mktCategoryChartInstance.destroy(); mktCategoryChartInstance = null; }
+    const ctx = document.getElementById('mktCategoryChart');
+    if (!ctx) return;
+    const labels = Object.keys(byCategory);
+    const values = Object.values(byCategory);
+    const colors = labels.map(l => MKT_CATEGORY_COLORS[l] || 'rgba(156,163,175,0.8)');
+    if (!values.length) return;
+    mktCategoryChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 2 }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'right' } },
+        },
+    });
+}
+
+function _renderMktTrendChart(items, period) {
+    if (mktTrendChartInstance) { mktTrendChartInstance.destroy(); mktTrendChartInstance = null; }
+    const ctx = document.getElementById('mktTrendChart');
+    if (!ctx) return;
+    const labels = items.map(r => formatStatLabel(r.period, period));
+    const values = items.map(r => r.total || 0);
+    mktTrendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: '게시글 수', data: values,
+                borderColor: '#f97316', backgroundColor: 'rgba(249,115,22,0.1)',
+                fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 6,
+            }],
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        },
+    });
+}
+
+function _renderMktTable(items, period) {
+    const tbody = document.getElementById('mktStatsTableBody');
+    const empty = document.getElementById('mktStatsEmptyState');
+    const colHeader = document.getElementById('mktStatsColPeriod');
+    const labels = { daily: '날짜', monthly: '월', quarterly: '분기', yearly: '연도' };
+    if (colHeader) colHeader.textContent = labels[period] || '기간';
+    if (!items.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = items.map(r => `
+        <tr>
+            <td>${formatStatLabel(r.period, period)}</td>
+            <td style="text-align:right">${(r.total || 0).toLocaleString()}</td>
+        </tr>
+    `).join('');
+}
+
+/* ═══════════════════════════════════════════════
  *  QUESTION VIEWS DETAIL (질문 조회 상세)
  * ═══════════════════════════════════════════════ */
 let qvChartInstance = null;

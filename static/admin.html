@@ -408,78 +408,206 @@
 
         <!-- Tab: Statistics -->
         <div class="tab-content" id="tabContentStatistics" role="tabpanel" style="display:none">
-            <!-- Period Selector -->
-            <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
-                <h3 style="margin:0;font-size:var(--text-base)">이용 통계</h3>
-                <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto">
-                    <select id="statsPeriodType" class="form-control" aria-label="통계 기간 유형" style="min-width:100px">
-                        <option value="daily">일별</option>
-                        <option value="monthly">월별</option>
-                        <option value="quarterly">분기별</option>
-                        <option value="yearly">연도별</option>
-                    </select>
-                    <input type="date" id="statsDateFrom" class="form-control" style="min-width:140px">
-                    <span style="color:var(--gray-500)">~</span>
-                    <input type="date" id="statsDateTo" class="form-control" style="min-width:140px">
-                    <button class="btn btn-primary btn-sm" onclick="loadStatistics()">조회</button>
-                </div>
+            <!-- Stats 서브탭 -->
+            <div style="display:flex;gap:4px;border-bottom:2px solid var(--gray-200);margin-bottom:16px">
+                <button id="stSubBtnChatbot" onclick="switchStatsSubTab('chatbot')"
+                    style="padding:8px 18px;border:none;border-bottom:3px solid var(--primary);margin-bottom:-2px;background:none;font-size:14px;font-weight:600;color:var(--primary);cursor:pointer">
+                    💬 챗봇 통계
+                </button>
+                <button id="stSubBtnComplaint" onclick="switchStatsSubTab('complaint')"
+                    style="padding:8px 18px;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;background:none;font-size:14px;font-weight:500;color:var(--gray-500);cursor:pointer">
+                    📋 민원 통계
+                </button>
+                <button id="stSubBtnMarket" onclick="switchStatsSubTab('market')"
+                    style="padding:8px 18px;border:none;border-bottom:3px solid transparent;margin-bottom:-2px;background:none;font-size:14px;font-weight:500;color:var(--gray-500);cursor:pointer">
+                    🥕 당근 통계
+                </button>
             </div>
 
-            <!-- Summary Cards -->
-            <div class="stats-summary-grid" id="statsSummaryGrid">
-                <div class="stats-summary-card">
-                    <div class="stats-summary-label">총 접속자</div>
-                    <div class="stats-summary-value" id="statsTotalVisitors">-</div>
-                </div>
-                <div class="stats-summary-card">
-                    <div class="stats-summary-label">총 질문 조회</div>
-                    <div class="stats-summary-value" id="statsTotalQuestions">-</div>
-                </div>
-                <div class="stats-summary-card">
-                    <div class="stats-summary-label">총 답변 조회</div>
-                    <div class="stats-summary-value" id="statsTotalAnswers">-</div>
-                </div>
-                <div class="stats-summary-card">
-                    <div class="stats-summary-label">일평균 접속자</div>
-                    <div class="stats-summary-value" id="statsAvgVisitors">-</div>
-                </div>
-            </div>
-
-            <!-- Charts -->
-            <div class="stats-charts-grid">
-                <div class="stats-chart-card">
-                    <h4 class="stats-chart-title">접속자 추이</h4>
-                    <div class="stats-chart-wrap">
-                        <canvas id="visitorsChart"></canvas>
+            <!-- ── 서브탭: 챗봇 통계 ── -->
+            <div id="stSubChatbot">
+                <!-- Period Selector -->
+                <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                    <h3 style="margin:0;font-size:var(--text-base)">챗봇 이용 통계</h3>
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto">
+                        <select id="statsPeriodType" class="form-control" aria-label="통계 기간 유형" style="min-width:100px">
+                            <option value="daily">일별</option>
+                            <option value="monthly">월별</option>
+                            <option value="quarterly">분기별</option>
+                            <option value="yearly">연도별</option>
+                        </select>
+                        <input type="date" id="statsDateFrom" class="form-control" style="min-width:140px">
+                        <span style="color:var(--gray-500)">~</span>
+                        <input type="date" id="statsDateTo" class="form-control" style="min-width:140px">
+                        <button class="btn btn-primary btn-sm" onclick="loadStatistics()">조회</button>
                     </div>
                 </div>
-                <div class="stats-chart-card">
-                    <h4 class="stats-chart-title">질문/답변 조회 추이</h4>
-                    <div class="stats-chart-wrap">
-                        <canvas id="qaViewsChart"></canvas>
+                <div class="stats-summary-grid" id="statsSummaryGrid">
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">총 접속자</div>
+                        <div class="stats-summary-value" id="statsTotalVisitors">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">총 질문 조회</div>
+                        <div class="stats-summary-value" id="statsTotalQuestions">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">총 답변 조회</div>
+                        <div class="stats-summary-value" id="statsTotalAnswers">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">일평균 접속자</div>
+                        <div class="stats-summary-value" id="statsAvgVisitors">-</div>
                     </div>
                 </div>
-            </div>
-
-            <!-- Detail Table -->
-            <div class="qa-table-wrap" style="margin-top:1rem">
-                <div class="table-wrap">
-                    <table class="qa-table" aria-label="통계 상세">
-                        <thead>
-                            <tr>
+                <div class="stats-charts-grid">
+                    <div class="stats-chart-card">
+                        <h4 class="stats-chart-title">접속자 추이</h4>
+                        <div class="stats-chart-wrap"><canvas id="visitorsChart"></canvas></div>
+                    </div>
+                    <div class="stats-chart-card">
+                        <h4 class="stats-chart-title">질문/답변 조회 추이</h4>
+                        <div class="stats-chart-wrap"><canvas id="qaViewsChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="qa-table-wrap" style="margin-top:1rem">
+                    <div class="table-wrap">
+                        <table class="qa-table" aria-label="챗봇 통계 상세">
+                            <thead><tr>
                                 <th scope="col" id="statsColPeriod">기간</th>
                                 <th scope="col" style="width:120px">접속자 수</th>
                                 <th scope="col" style="width:120px">질문 조회</th>
                                 <th scope="col" style="width:120px">답변 조회</th>
-                            </tr>
-                        </thead>
-                        <tbody id="statsTableBody">
-                        </tbody>
-                    </table>
+                            </tr></thead>
+                            <tbody id="statsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="statsEmptyState" class="empty-state" style="display:none" role="status">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3v18h18"/><polyline points="18 9 13 14 9 10 3 16"/></svg>
+                        <p>해당 기간의 통계 데이터가 없습니다.</p>
+                    </div>
                 </div>
-                <div id="statsEmptyState" class="empty-state" style="display:none" role="status">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3v18h18"/><polyline points="18 9 13 14 9 10 3 16"/></svg>
-                    <p>해당 기간의 통계 데이터가 없습니다.</p>
+            </div>
+
+            <!-- ── 서브탭: 민원 통계 ── -->
+            <div id="stSubComplaint" style="display:none">
+                <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                    <h3 style="margin:0;font-size:var(--text-base)">민원 통계</h3>
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto">
+                        <select id="cpStatsPeriodType" class="form-control" style="min-width:100px">
+                            <option value="daily">일별</option>
+                            <option value="monthly" selected>월별</option>
+                            <option value="quarterly">분기별</option>
+                            <option value="yearly">연도별</option>
+                        </select>
+                        <input type="date" id="cpStatsDateFrom" class="form-control" style="min-width:140px">
+                        <span style="color:var(--gray-500)">~</span>
+                        <input type="date" id="cpStatsDateTo" class="form-control" style="min-width:140px">
+                        <button class="btn btn-primary btn-sm" onclick="loadComplaintStats()">조회</button>
+                    </div>
+                </div>
+                <div class="stats-summary-grid" style="margin-top:1rem">
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">기간 내 총 민원</div>
+                        <div class="stats-summary-value" id="cpStatTotal">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">답변 완료</div>
+                        <div class="stats-summary-value" id="cpStatAnswered">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">미답변</div>
+                        <div class="stats-summary-value" id="cpStatUnanswered">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">전체 누적 민원</div>
+                        <div class="stats-summary-value" id="cpStatAllTime">-</div>
+                    </div>
+                </div>
+                <div class="stats-charts-grid" style="margin-top:1rem">
+                    <div class="stats-chart-card" style="grid-column:1/-1">
+                        <h4 class="stats-chart-title">민원 접수 추이</h4>
+                        <div class="stats-chart-wrap"><canvas id="cpTrendChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="qa-table-wrap" style="margin-top:1rem">
+                    <div class="table-wrap">
+                        <table class="qa-table" aria-label="민원 통계 상세">
+                            <thead><tr>
+                                <th scope="col" id="cpStatsColPeriod">기간</th>
+                                <th scope="col" style="width:120px;text-align:right">신규 접수</th>
+                                <th scope="col" style="width:120px;text-align:right">답변 완료</th>
+                                <th scope="col" style="width:120px;text-align:right">미답변</th>
+                            </tr></thead>
+                            <tbody id="cpStatsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="cpStatsEmptyState" class="empty-state" style="display:none" role="status">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3v18h18"/><polyline points="18 9 13 14 9 10 3 16"/></svg>
+                        <p>해당 기간의 민원 데이터가 없습니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 서브탭: 당근 통계 ── -->
+            <div id="stSubMarket" style="display:none">
+                <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                    <h3 style="margin:0;font-size:var(--text-base)">🥕 당근 통계</h3>
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-left:auto">
+                        <select id="mktStatsPeriodType" class="form-control" style="min-width:100px">
+                            <option value="daily">일별</option>
+                            <option value="monthly" selected>월별</option>
+                            <option value="quarterly">분기별</option>
+                            <option value="yearly">연도별</option>
+                        </select>
+                        <input type="date" id="mktStatsDateFrom" class="form-control" style="min-width:140px">
+                        <span style="color:var(--gray-500)">~</span>
+                        <input type="date" id="mktStatsDateTo" class="form-control" style="min-width:140px">
+                        <button class="btn btn-primary btn-sm" onclick="loadMarketStats()">조회</button>
+                    </div>
+                </div>
+                <div class="stats-summary-grid" style="margin-top:1rem">
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">기간 내 게시글</div>
+                        <div class="stats-summary-value" id="mktStatTotal">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">댓글 수</div>
+                        <div class="stats-summary-value" id="mktStatComments">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">신고 건수</div>
+                        <div class="stats-summary-value" id="mktStatReports">-</div>
+                    </div>
+                    <div class="stats-summary-card">
+                        <div class="stats-summary-label">전체 누적 게시글</div>
+                        <div class="stats-summary-value" id="mktStatAllTime">-</div>
+                    </div>
+                </div>
+                <div class="stats-charts-grid" style="margin-top:1rem">
+                    <div class="stats-chart-card">
+                        <h4 class="stats-chart-title">카테고리별 분포</h4>
+                        <div class="stats-chart-wrap"><canvas id="mktCategoryChart"></canvas></div>
+                    </div>
+                    <div class="stats-chart-card">
+                        <h4 class="stats-chart-title">게시글 등록 추이</h4>
+                        <div class="stats-chart-wrap"><canvas id="mktTrendChart"></canvas></div>
+                    </div>
+                </div>
+                <div class="qa-table-wrap" style="margin-top:1rem">
+                    <div class="table-wrap">
+                        <table class="qa-table" aria-label="당근 통계 상세">
+                            <thead><tr>
+                                <th scope="col" id="mktStatsColPeriod">기간</th>
+                                <th scope="col" style="width:120px;text-align:right">게시글 수</th>
+                            </tr></thead>
+                            <tbody id="mktStatsTableBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="mktStatsEmptyState" class="empty-state" style="display:none" role="status">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 3v18h18"/><polyline points="18 9 13 14 9 10 3 16"/></svg>
+                        <p>해당 기간의 당근 데이터가 없습니다.</p>
+                    </div>
                 </div>
             </div>
         </div>
