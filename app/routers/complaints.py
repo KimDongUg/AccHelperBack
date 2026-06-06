@@ -5,15 +5,19 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
+import jwt
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, Request, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.config import SECRET_KEY
 from app.database import get_db
 from app.dependencies import require_admin, optional_admin
 from app.models.complaint import Complaint
 from app.models.complaint_person import ComplaintPerson
 from app.services.alert_service import trigger_complaint_alert
+
+MARKET_JWT_SECRET = SECRET_KEY + "_market"
 
 logger = logging.getLogger("acchelper")
 router = APIRouter(prefix="/api/complaints", tags=["complaints"])
@@ -289,11 +293,32 @@ def _upsert_complaint_person(db: Session, body: ComplaintCreate):
     db.commit()
 
 
+def _require_resident_or_admin(
+    request: Request,
+    admin: dict | None = Depends(optional_admin),
+) -> dict | None:
+    """관리자 또는 입주민(market JWT) 둘 중 하나만 있으면 허용."""
+    if admin is not None:
+        return admin
+    auth = request.headers.get("Authorization", "")
+    token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
+    if not token:
+        token = request.cookies.get("market_token", "")
+    if token:
+        try:
+            payload = jwt.decode(token, MARKET_JWT_SECRET, algorithms=["HS256"])
+            if payload.get("verified"):
+                return None  # 입주민 — admin 아님
+        except jwt.PyJWTError:
+            pass
+    raise HTTPException(status_code=401, detail="입주민 인증이 필요합니다.")
+
+
 @router.get("/{complaint_id}")
 def get_complaint(
     complaint_id: int,
     db: Session = Depends(get_db),
-    admin: dict | None = Depends(optional_admin),
+    admin: dict | None = Depends(_require_resident_or_admin),
 ):
     c = db.query(Complaint).filter(Complaint.id == complaint_id).first()
     if not c:

@@ -84,7 +84,7 @@
 
 </div><!-- /.cp-page -->
 
-<script src="/js/complaint.js?v=2"></script>
+<script src="/js/complaint.js?v=3"></script>
 <script>
 initCpHeader();
 const companyId = getCompanyParam();
@@ -97,6 +97,10 @@ document.getElementById('backBtn').onclick = () => {
 };
 
 if (!postId) { location.href = '/'; }
+
+if (!ComplaintAuth.isAdmin() && !sessionStorage.getItem('market_token')) {
+    location.href = `/market-login.html?return=${encodeURIComponent(location.href)}`;
+}
 
 let post = null;
 let replyFormVisible = false;
