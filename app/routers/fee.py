@@ -66,10 +66,14 @@ def verify_fee(req: FeeVerifyRequest, db: Session = Depends(get_db)):
     all_items = json.loads(matched.fee_json or "{}")
 
     # ─── 항목별 부과내역 (prefix '항목_') ─────────────────────
+    import re as _re
+    _ibsheet_id = _re.compile(r'^[A-Z]\d+$')  # A5, B6, C0 등 IBSheet 내부 코드 제외
     billing_items = {}
     for k, v in all_items.items():
         if k.startswith("항목_"):
             label = k[3:]  # '항목_' 제거
+            if _ibsheet_id.match(label):  # IBSheet 코드 필터링
+                continue
             billing_items[label] = v
 
     # ─── 검침내역 (prefix '검침_') ────────────────────────────
