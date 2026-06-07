@@ -208,27 +208,35 @@
     </div>
 
     <div class="bill-total">
-      <span class="label">당월 납부금액</span>
-      <span class="amount" id="billTotal"></span>
+      <div>
+        <div style="font-size:12px;color:#1565c0;font-weight:600;margin-bottom:2px">납기내 납부금액</div>
+        <div class="amount" id="billTotal"></div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:12px;color:#888;margin-bottom:2px">납기후</div>
+        <div style="font-size:16px;font-weight:700;color:#555" id="billTotalAfter"></div>
+      </div>
     </div>
 
-    <!-- 항목별 관리비 -->
-    <div class="bill-section">
-      <div class="section-title">항목별 관리비</div>
-      <table class="fee-table" id="feeTable">
-        <tbody id="feeTableBody"></tbody>
-      </table>
+    <!-- 고지내역 요약 -->
+    <div class="bill-section" id="summarySection">
+      <div class="section-title">고지내역</div>
+      <table class="fee-table"><tbody id="summaryTableBody"></tbody></table>
     </div>
 
     <!-- 검침내역 -->
     <div class="bill-section" id="meterSection" style="display:none">
       <div class="section-title">검침내역</div>
       <table class="meter-table">
-        <thead>
-          <tr><th>항목</th><th>전월</th><th>당월</th><th>요금(원)</th></tr>
-        </thead>
+        <thead><tr><th>검침항목</th><th>전월지침</th><th>당월지침</th><th>사용량(요금)</th></tr></thead>
         <tbody id="meterTableBody"></tbody>
       </table>
+    </div>
+
+    <!-- 항목별 부과내역 -->
+    <div class="bill-section" id="itemSection" style="display:none">
+      <div class="section-title">항목별 부과내역</div>
+      <table class="fee-table"><tbody id="itemTableBody"></tbody></table>
     </div>
 
   </div>
@@ -322,45 +330,67 @@ document.getElementById('btnVerify').addEventListener('click', async () => {
     const d = await res.json();
 
     // 헤더
-    document.getElementById('billUnit').textContent = `${d.dong}동 ${d.ho}호 (${d.name})`;
+    document.getElementById('billUnit').textContent   = `${d.dong}동 ${d.ho}호  ${d.name}`;
     document.getElementById('billPeriod').textContent = ym(d.year_month);
-    document.getElementById('billTotal').textContent = d.total ? fmt(d.total) + '원' : '—';
+    document.getElementById('billTotal').textContent      = d.total       ? fmt(d.total) + '원' : '—';
+    document.getElementById('billTotalAfter').textContent = d.total_after ? fmt(d.total_after) + '원' : '';
 
-    // 항목별 관리비
-    const tbody = document.getElementById('feeTableBody');
-    tbody.innerHTML = '';
-    let sum = 0;
-    const items = Object.entries(d.billing || {});
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="2" class="no-data">항목 데이터 없음</td></tr>';
+    // ── 고지내역 요약 ─────────────────────────────────────────
+    const summaryBody = document.getElementById('summaryTableBody');
+    summaryBody.innerHTML = '';
+    const summaryEntries = Object.entries(d.summary || {});
+    if (summaryEntries.length === 0) {
+      summaryBody.innerHTML = '<tr><td colspan="2" class="no-data">데이터 없음</td></tr>';
+      document.getElementById('summarySection').style.display = 'none';
     } else {
-      for (const [k, v] of items) {
-        const n = parseInt(String(v).replace(/,/g, ''), 10);
-        if (n > 0) sum += n;
+      document.getElementById('summarySection').style.display = '';
+      for (const [k, v] of summaryEntries) {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td>${k}</td><td>${fmt(v)}원</td>`;
-        tbody.appendChild(tr);
+        summaryBody.appendChild(tr);
       }
-      const trTotal = document.createElement('tr');
-      trTotal.className = 'total-row';
-      trTotal.innerHTML = `<td>합 계</td><td>${fmt(d.total || sum)}원</td>`;
-      tbody.appendChild(trTotal);
     }
 
-    // 검침내역
+    // ── 검침내역 ─────────────────────────────────────────────
     const meterEntries = Object.entries(d.meter || {});
-    const meterSec = document.getElementById('meterSection');
-    const mBody = document.getElementById('meterTableBody');
+    const meterSec  = document.getElementById('meterSection');
+    const mBody     = document.getElementById('meterTableBody');
     mBody.innerHTML = '';
     if (meterEntries.length > 0) {
       meterSec.style.display = '';
       for (const [item, fields] of meterEntries) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(fields['요금'] || '0')}원</td>`;
+        const 요금 = fields['요금'] || '0';
+        tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(요금)}원</td>`;
         mBody.appendChild(tr);
       }
     } else {
       meterSec.style.display = 'none';
+    }
+
+    // ── 항목별 부과내역 ───────────────────────────────────────
+    const itemEntries = Object.entries(d.billing_items || {});
+    const itemSec   = document.getElementById('itemSection');
+    const itemBody  = document.getElementById('itemTableBody');
+    itemBody.innerHTML = '';
+    if (itemEntries.length > 0) {
+      itemSec.style.display = '';
+      let itemSum = 0;
+      for (const [k, v] of itemEntries) {
+        const n = parseInt(String(v).replace(/,/g, ''), 10);
+        if (!isNaN(n) && n > 0) itemSum += n;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${k}</td><td>${fmt(v)}원</td>`;
+        itemBody.appendChild(tr);
+      }
+      if (itemSum > 0) {
+        const tr = document.createElement('tr');
+        tr.className = 'total-row';
+        tr.innerHTML = `<td>부과항목 합계</td><td>${fmt(itemSum)}원</td>`;
+        itemBody.appendChild(tr);
+      }
+    } else {
+      itemSec.style.display = 'none';
     }
 
     document.getElementById('billCard').classList.add('show');
