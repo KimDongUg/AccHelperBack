@@ -153,8 +153,8 @@
         <nav class="header-nav" aria-label="메인 내비게이션">
             <a href="/">AI 챗봇</a>
             <a href="/fee.html" class="active">관리비</a>
-            <a href="/complaint.html" id="complaintNavLink" style="display:none">민원게시판</a>
-            <a href="/market.html" id="daangnNavLink" style="display:none">🥕 당근</a>
+            <a href="/complaint.html" id="complaintNavLink" style="display:none"><span class="nav-long">민원게시판</span><span class="nav-short">민원</span></a>
+            <a href="/market.html" id="daangnNavLink" style="display:none"><span class="nav-long">🥕 우리아파트 당근</span><span class="nav-short">🥕당근</span></a>
         </nav>
     </div>
     <div class="header-right">
@@ -169,13 +169,9 @@
   <!-- 인증 폼 -->
   <div class="verify-card">
     <h2>관리비 조회</h2>
-    <p>동호수, 이름, 전화번호를 입력하시면 당월 관리비를 확인할 수 있습니다.<br>이름은 일부만 입력해도 됩니다.</p>
+    <p>호수, 입주자명, 휴대폰 번호를 입력하시면 당월 관리비를 확인할 수 있습니다.<br>입주자명은 일부만 입력해도 됩니다.</p>
 
     <div class="form-row">
-      <div class="form-group">
-        <label for="inp-dong">동</label>
-        <input type="number" id="inp-dong" placeholder="예: 122" inputmode="numeric">
-      </div>
       <div class="form-group">
         <label for="inp-ho">호</label>
         <input type="number" id="inp-ho" placeholder="예: 1203" inputmode="numeric">
@@ -183,14 +179,18 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label for="inp-name">이름</label>
-        <input type="text" id="inp-name" placeholder="예: 홍길동">
+        <label for="inp-name">입주자명</label>
+        <input type="text" id="inp-name" placeholder="홍길동">
       </div>
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label for="inp-phone">전화번호</label>
-        <input type="tel" id="inp-phone" placeholder="예: 010-1234-5678" inputmode="tel">
+        <label for="inp-phone">휴대폰</label>
+        <div style="display:flex; align-items:center; gap:0; border:1.5px solid #dde1e7; border-radius:8px; overflow:hidden; transition:border-color 0.2s;" id="phoneWrap">
+          <span style="padding:10px 10px 10px 12px; background:#f5f7fa; color:#333; font-size:14px; font-weight:600; border-right:1px solid #dde1e7; white-space:nowrap;">010</span>
+          <input type="tel" id="inp-phone" placeholder="1234-5678" inputmode="tel"
+                 style="border:none; outline:none; padding:10px 12px; font-size:14px; font-family:inherit; flex:1; width:100%;">
+        </div>
       </div>
     </div>
 
@@ -253,11 +253,27 @@
       const cl = document.getElementById('companyLabel');
       cl.textContent = c.company_name || '';
       cl.style.display = c.company_name ? '' : 'none';
+      // 민원/당근: 비활성화로 명시된 경우만 숨김
       if (c.enable_complaint !== false) document.getElementById('complaintNavLink').style.display = '';
-      if (c.enable_market !== false)    document.getElementById('daangnNavLink').style.display = '';
+      if (c.enable_market    !== false) document.getElementById('daangnNavLink').style.display = '';
+    } else {
+      // API 실패 시 기본적으로 링크 표시
+      document.getElementById('complaintNavLink').style.display = '';
+      document.getElementById('daangnNavLink').style.display = '';
     }
-  } catch {}
+  } catch {
+    document.getElementById('complaintNavLink').style.display = '';
+    document.getElementById('daangnNavLink').style.display = '';
+  }
 })();
+
+// 전화번호 입력칸 포커스 시 테두리 색상 변경
+document.getElementById('inp-phone').addEventListener('focus', () => {
+  document.getElementById('phoneWrap').style.borderColor = '#1565c0';
+});
+document.getElementById('inp-phone').addEventListener('blur', () => {
+  document.getElementById('phoneWrap').style.borderColor = '#dde1e7';
+});
 
 function fmt(v) {
   const n = parseInt(String(v).replace(/,/g, ''), 10);
@@ -270,18 +286,18 @@ function ym(ym6) {
 }
 
 document.getElementById('btnVerify').addEventListener('click', async () => {
-  const dong  = document.getElementById('inp-dong').value.trim();
+  const dong  = '1'; // 세종푸르지오시티 2차는 1동 고정
   const ho    = document.getElementById('inp-ho').value.trim();
   const name  = document.getElementById('inp-name').value.trim();
-  const phone = document.getElementById('inp-phone').value.trim();
+  const phone = '010' + document.getElementById('inp-phone').value.trim().replace(/[-\s]/g, '');
   const errEl = document.getElementById('errorMsg');
   const btn   = document.getElementById('btnVerify');
 
   errEl.classList.remove('show');
   document.getElementById('billCard').classList.remove('show');
 
-  if (!dong || !ho || !name || !phone) {
-    errEl.textContent = '모든 항목을 입력해 주세요.';
+  if (!ho || !name || phone.length < 10) {
+    errEl.textContent = '호, 입주자명, 휴대폰 번호를 모두 입력해 주세요.';
     errEl.classList.add('show');
     return;
   }
@@ -360,7 +376,7 @@ document.getElementById('btnVerify').addEventListener('click', async () => {
 });
 
 // 엔터키 제출
-['inp-dong','inp-ho','inp-name','inp-phone'].forEach(id => {
+['inp-ho','inp-name','inp-phone'].forEach(id => {
   document.getElementById(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btnVerify').click();
   });
