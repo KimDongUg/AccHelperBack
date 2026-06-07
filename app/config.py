@@ -78,6 +78,9 @@ CONFIDENCE_THRESHOLD = float(os.getenv("CONFIDENCE_THRESHOLD", "0.7"))
 # 관리자 페이지 베이스 URL (알림톡 링크용)
 ADMIN_BASE_URL = os.getenv("ADMIN_BASE_URL", "https://acchelper.kr")
 
+# Collector API (ERP 수집기 → 서버 업로드)
+COLLECTOR_API_KEY = os.getenv("COLLECTOR_API_KEY", "")
+
 # Upload
 UPLOAD_DIR = Path(os.getenv("UPLOAD_DIR", str(DATA_DIR / "uploads")))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
