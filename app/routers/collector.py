@@ -1,15 +1,32 @@
 import logging
 from datetime import datetime
+from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import UploadFile
+from fastapi import File
 
 from app.config import COLLECTOR_API_KEY, DATA_DIR
 
 logger = logging.getLogger("acchelper")
 router = APIRouter(prefix="/api/collector", tags=["collector"])
 
-COLLECTOR_DIR = DATA_DIR / "collector"
-COLLECTOR_DIR.mkdir(parents=True, exist_ok=True)
+# 영구 디스크(/data/uploads)가 있으면 그 하위에, 없으면 DATA_DIR 하위에 저장
+_PERSISTENT = Path("/data/uploads/collector")
+_FALLBACK   = DATA_DIR / "collector"
+
+
+def _collector_dir() -> Path:
+    try:
+        _PERSISTENT.mkdir(parents=True, exist_ok=True)
+        return _PERSISTENT
+    except Exception:
+        pass
+    try:
+        _FALLBACK.mkdir(parents=True, exist_ok=True)
+        return _FALLBACK
+    except Exception:
+        return Path("/tmp")
 
 
 def _verify_api_key(authorization: str = Header(...)):
@@ -19,10 +36,15 @@ def _verify_api_key(authorization: str = Header(...)):
         raise HTTPException(status_code=401, detail="API 키 인증 실패")
 
 
+@router.get("/health")
+def health():
+    return {"ok": True}
+
+
 @router.post("/upload")
 async def upload_fee_excel(
     file: UploadFile = File(...),
-    _: None = Depends(_verify_api_key),
+    _=Depends(_verify_api_key),
 ):
     """ERP 수집기 → 관리비 엑셀 업로드 (API 키 인증)"""
     if not file.filename or not file.filename.lower().endswith((".xlsx", ".xls")):
@@ -32,8 +54,9 @@ async def upload_fee_excel(
     if len(content) > 50 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="파일 크기 초과 (최대 50MB).")
 
+    save_dir  = _collector_dir()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    save_path = COLLECTOR_DIR / f"fee_{timestamp}.xlsx"
+    save_path = save_dir / f"fee_{timestamp}.xlsx"
     save_path.write_bytes(content)
 
     logger.info("관리비 엑셀 업로드: %s (%d bytes)", save_path.name, len(content))
