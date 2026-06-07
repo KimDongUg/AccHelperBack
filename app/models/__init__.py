@@ -14,6 +14,7 @@ from app.models.cta_click_log import CtaClickLog
 from app.models.market import ApartmentResident, MarketPost, MarketImage, MarketComment, MarketReport
 from app.models.complaint import Complaint
 from app.models.complaint_person import ComplaintPerson
+from app.models.fee_data import FeeEntry
 
 __all__ = [
     "Company",
@@ -37,4 +38,5 @@ __all__ = [
     "MarketReport",
     "Complaint",
     "ComplaintPerson",
+    "FeeEntry",
 ]

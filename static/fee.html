@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리비 조회 — AI Helper</title>
+    <link rel="icon" type="image/png" href="/assets/images/robot.png">
+    <link rel="stylesheet" href="/css/common.css?v=16">
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { background: #f5f7fa; font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #1a1a2e; min-height: 100vh; }
+
+      .fee-wrap { max-width: 560px; margin: 0 auto; padding: 20px 16px 60px; }
+
+      /* 인증 카드 */
+      .verify-card {
+        background: white;
+        border-radius: 14px;
+        padding: 24px 20px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+      }
+      .verify-card h2 { font-size: 17px; font-weight: 700; color: #0d47a1; margin-bottom: 6px; }
+      .verify-card p  { font-size: 12.5px; color: #888; margin-bottom: 18px; line-height: 1.5; }
+
+      .form-row { display: flex; gap: 10px; margin-bottom: 12px; }
+      .form-group { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+      .form-group.full { flex: none; width: 100%; }
+      .form-group label { font-size: 12px; font-weight: 600; color: #555; }
+      .form-group input {
+        border: 1.5px solid #dde1e7;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.2s;
+        width: 100%;
+      }
+      .form-group input:focus { border-color: #1565c0; }
+
+      .btn-verify {
+        width: 100%;
+        padding: 13px;
+        background: linear-gradient(135deg, #1565c0, #0d47a1);
+        color: white;
+        border: none;
+        border-radius: 9px;
+        font-size: 15px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        margin-top: 6px;
+        transition: opacity 0.15s;
+      }
+      .btn-verify:hover { opacity: 0.9; }
+      .btn-verify:disabled { opacity: 0.5; cursor: not-allowed; }
+
+      .error-msg {
+        display: none;
+        margin-top: 12px;
+        padding: 10px 14px;
+        background: #ffebee;
+        border-radius: 8px;
+        color: #c62828;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .error-msg.show { display: block; }
+
+      /* 관리비 고지서 */
+      .bill-card {
+        display: none;
+        background: white;
+        border-radius: 14px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        overflow: hidden;
+      }
+      .bill-card.show { display: block; }
+
+      .bill-header {
+        background: linear-gradient(135deg, #1565c0, #0d47a1);
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .bill-header .apt-name { font-size: 13px; opacity: 0.85; margin-bottom: 4px; }
+      .bill-header .unit     { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
+      .bill-header .period   { font-size: 13px; opacity: 0.85; }
+
+      .bill-total {
+        background: #e3f2fd;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #bbdefb;
+      }
+      .bill-total .label { font-size: 13px; color: #1565c0; font-weight: 600; }
+      .bill-total .amount {
+        font-size: 24px;
+        font-weight: 800;
+        color: #0d47a1;
+        letter-spacing: -0.5px;
+      }
+
+      .bill-section { padding: 16px 20px; border-bottom: 1px solid #f0f0f0; }
+      .bill-section:last-child { border-bottom: none; }
+      .section-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #1565c0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 10px;
+      }
+
+      /* 항목 테이블 */
+      .fee-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+      .fee-table tr { border-bottom: 1px solid #f5f5f5; }
+      .fee-table tr:last-child { border-bottom: none; }
+      .fee-table td { padding: 7px 4px; }
+      .fee-table td:first-child { color: #555; }
+      .fee-table td:last-child  { text-align: right; font-weight: 600; color: #1a1a2e; }
+      .fee-table tr.total-row td { font-weight: 700; color: #0d47a1; font-size: 14px; border-top: 1.5px solid #bbdefb; padding-top: 10px; margin-top: 4px; }
+
+      /* 검침내역 테이블 */
+      .meter-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      .meter-table th {
+        background: #e8eaf6;
+        color: #3949ab;
+        font-weight: 700;
+        padding: 7px 8px;
+        text-align: center;
+        font-size: 12px;
+      }
+      .meter-table td { padding: 7px 8px; text-align: center; border-bottom: 1px solid #f0f0f0; color: #444; }
+      .meter-table td:first-child { text-align: left; color: #555; font-weight: 600; }
+      .meter-table tr:last-child td { border-bottom: none; }
+
+      .no-data { color: #aaa; font-size: 13px; text-align: center; padding: 10px 0; }
+    </style>
+</head>
+<body>
+
+<header class="header" role="banner">
+    <div class="header-left">
+        <a href="/" id="headerLogo" class="header-logo" aria-label="AI Helper 홈으로 이동">
+            <img src="/assets/images/robot.png" alt="AI Helper 로봇" aria-hidden="true"
+                 srcset="/assets/images/robot@2x.png 2x, /assets/images/robot@3x.png 3x">
+            <span class="logo-text">AI Helper</span>
+        </a>
+        <nav class="header-nav" aria-label="메인 내비게이션">
+            <a href="/">AI 챗봇</a>
+            <a href="/fee.html" class="active">관리비</a>
+            <a href="/complaint.html" id="complaintNavLink" style="display:none">민원게시판</a>
+            <a href="/market.html" id="daangnNavLink" style="display:none">🥕 당근</a>
+        </nav>
+    </div>
+    <div class="header-right">
+        <span id="companyLabel" class="company-label" style="display:none;"></span>
+        <a href="/login.html" class="btn btn-outline btn-sm" id="headerLoginLink" data-short="🔐">관리자 로그인</a>
+        <a href="/admin.html" class="btn btn-outline btn-sm" id="adminLink" data-short="관리자" style="display:none">관리자</a>
+    </div>
+</header>
+
+<main class="fee-wrap">
+
+  <!-- 인증 폼 -->
+  <div class="verify-card">
+    <h2>관리비 조회</h2>
+    <p>동호수, 이름, 전화번호를 입력하시면 당월 관리비를 확인할 수 있습니다.<br>이름은 일부만 입력해도 됩니다.</p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="inp-dong">동</label>
+        <input type="number" id="inp-dong" placeholder="예: 122" inputmode="numeric">
+      </div>
+      <div class="form-group">
+        <label for="inp-ho">호</label>
+        <input type="number" id="inp-ho" placeholder="예: 1203" inputmode="numeric">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="inp-name">이름</label>
+        <input type="text" id="inp-name" placeholder="예: 홍길동">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="inp-phone">전화번호</label>
+        <input type="tel" id="inp-phone" placeholder="예: 010-1234-5678" inputmode="tel">
+      </div>
+    </div>
+
+    <button class="btn-verify" id="btnVerify">조회하기</button>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <!-- 고지서 -->
+  <div class="bill-card" id="billCard">
+
+    <div class="bill-header">
+      <div class="apt-name" id="billAptName">가온마을1단지</div>
+      <div class="unit" id="billUnit"></div>
+      <div class="period" id="billPeriod"></div>
+    </div>
+
+    <div class="bill-total">
+      <span class="label">당월 납부금액</span>
+      <span class="amount" id="billTotal"></span>
+    </div>
+
+    <!-- 항목별 관리비 -->
+    <div class="bill-section">
+      <div class="section-title">항목별 관리비</div>
+      <table class="fee-table" id="feeTable">
+        <tbody id="feeTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 검침내역 -->
+    <div class="bill-section" id="meterSection" style="display:none">
+      <div class="section-title">검침내역</div>
+      <table class="meter-table">
+        <thead>
+          <tr><th>항목</th><th>전월</th><th>당월</th><th>요금(원)</th></tr>
+        </thead>
+        <tbody id="meterTableBody"></tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<script>
+(async () => {
+  // 공통 헤더 상태 (로그인/회사)
+  try {
+    const r = await fetch('/api/auth/me');
+    if (r.ok) {
+      const u = await r.json();
+      document.getElementById('headerLoginLink').style.display = 'none';
+      document.getElementById('adminLink').style.display = '';
+    }
+  } catch {}
+  try {
+    const r = await fetch('/api/companies/1/public');
+    if (r.ok) {
+      const c = await r.json();
+      if (c.company_name) document.getElementById('billAptName').textContent = c.company_name;
+      const cl = document.getElementById('companyLabel');
+      cl.textContent = c.company_name || '';
+      cl.style.display = c.company_name ? '' : 'none';
+      if (c.enable_complaint !== false) document.getElementById('complaintNavLink').style.display = '';
+      if (c.enable_market !== false)    document.getElementById('daangnNavLink').style.display = '';
+    }
+  } catch {}
+})();
+
+function fmt(v) {
+  const n = parseInt(String(v).replace(/,/g, ''), 10);
+  return isNaN(n) ? (v || '0') : n.toLocaleString('ko-KR');
+}
+
+function ym(ym6) {
+  if (!ym6 || ym6.length < 6) return '';
+  return `${ym6.slice(0,4)}년 ${parseInt(ym6.slice(4,6))}월분`;
+}
+
+document.getElementById('btnVerify').addEventListener('click', async () => {
+  const dong  = document.getElementById('inp-dong').value.trim();
+  const ho    = document.getElementById('inp-ho').value.trim();
+  const name  = document.getElementById('inp-name').value.trim();
+  const phone = document.getElementById('inp-phone').value.trim();
+  const errEl = document.getElementById('errorMsg');
+  const btn   = document.getElementById('btnVerify');
+
+  errEl.classList.remove('show');
+  document.getElementById('billCard').classList.remove('show');
+
+  if (!dong || !ho || !name || !phone) {
+    errEl.textContent = '모든 항목을 입력해 주세요.';
+    errEl.classList.add('show');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '조회 중...';
+
+  try {
+    const res = await fetch('/api/fee/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dong, ho, name, phone }),
+    });
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      errEl.textContent = d.detail || '조회 실패. 입력 정보를 확인해 주세요.';
+      errEl.classList.add('show');
+      return;
+    }
+
+    const d = await res.json();
+
+    // 헤더
+    document.getElementById('billUnit').textContent = `${d.dong}동 ${d.ho}호 (${d.name})`;
+    document.getElementById('billPeriod').textContent = ym(d.year_month);
+    document.getElementById('billTotal').textContent = d.total ? fmt(d.total) + '원' : '—';
+
+    // 항목별 관리비
+    const tbody = document.getElementById('feeTableBody');
+    tbody.innerHTML = '';
+    let sum = 0;
+    const items = Object.entries(d.billing || {});
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="2" class="no-data">항목 데이터 없음</td></tr>';
+    } else {
+      for (const [k, v] of items) {
+        const n = parseInt(String(v).replace(/,/g, ''), 10);
+        if (n > 0) sum += n;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${k}</td><td>${fmt(v)}원</td>`;
+        tbody.appendChild(tr);
+      }
+      const trTotal = document.createElement('tr');
+      trTotal.className = 'total-row';
+      trTotal.innerHTML = `<td>합 계</td><td>${fmt(d.total || sum)}원</td>`;
+      tbody.appendChild(trTotal);
+    }
+
+    // 검침내역
+    const meterEntries = Object.entries(d.meter || {});
+    const meterSec = document.getElementById('meterSection');
+    const mBody = document.getElementById('meterTableBody');
+    mBody.innerHTML = '';
+    if (meterEntries.length > 0) {
+      meterSec.style.display = '';
+      for (const [item, fields] of meterEntries) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(fields['요금'] || '0')}원</td>`;
+        mBody.appendChild(tr);
+      }
+    } else {
+      meterSec.style.display = 'none';
+    }
+
+    document.getElementById('billCard').classList.add('show');
+    document.getElementById('billCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  } catch (e) {
+    errEl.textContent = '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+    errEl.classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '조회하기';
+  }
+});
+
+// 엔터키 제출
+['inp-dong','inp-ho','inp-name','inp-phone'].forEach(id => {
+  document.getElementById(id).addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btnVerify').click();
+  });
+});
+</script>
+</body>
+</html>

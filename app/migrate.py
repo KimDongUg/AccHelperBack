@@ -272,6 +272,24 @@ def _run_pg_migration(engine: Engine):
             """))
             logger.info("PG: Created table market_reports")
 
+        # --- fee_entries 테이블 (관리비 데이터) ---
+        if not _pg_table_exists(conn, "fee_entries"):
+            conn.execute(text("""
+                CREATE TABLE fee_entries (
+                    id SERIAL PRIMARY KEY,
+                    year_month VARCHAR(6) NOT NULL,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    name VARCHAR(100) DEFAULT '',
+                    phone VARCHAR(30) DEFAULT '',
+                    fee_json TEXT NOT NULL DEFAULT '{}',
+                    uploaded_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_fee_dong_ho ON fee_entries (dong, ho)"))
+            conn.execute(text("CREATE INDEX ix_fee_year_month ON fee_entries (year_month)"))
+            logger.info("PG: Created table fee_entries")
+
         conn.commit()
     logger.info("PG: Column migrations committed")
 
@@ -510,6 +528,24 @@ def run_migration(engine: Engine):
                 )
             """))
             logger.info("Created table market_reports")
+
+        # --- fee_entries 테이블 (관리비 데이터) ---
+        if not _table_exists(conn, "fee_entries"):
+            conn.execute(text("""
+                CREATE TABLE fee_entries (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    year_month VARCHAR(6) NOT NULL,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    name VARCHAR(100) DEFAULT '',
+                    phone VARCHAR(30) DEFAULT '',
+                    fee_json TEXT NOT NULL DEFAULT '{}',
+                    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_fee_dong_ho ON fee_entries (dong, ho)"))
+            conn.execute(text("CREATE INDEX ix_fee_year_month ON fee_entries (year_month)"))
+            logger.info("Created table fee_entries")
 
         conn.commit()
         logger.info("Migration completed successfully")

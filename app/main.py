@@ -37,6 +37,7 @@ from app.routers import cta_logs as cta_logs_router
 from app.routers import market as market_router
 from app.routers import complaints as complaints_router
 from app.routers import collector as collector_router
+from app.routers import fee as fee_router
 from app.rls import setup_rls
 from app.seed import seed_data
 
@@ -143,6 +144,7 @@ app.include_router(cta_logs_router.router)
 app.include_router(market_router.router)
 app.include_router(complaints_router.router)
 app.include_router(collector_router.router)
+app.include_router(fee_router.router)
 
 from app.config import UPLOAD_DIR
 app.mount("/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
