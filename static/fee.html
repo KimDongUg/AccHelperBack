@@ -121,8 +121,14 @@
       .fee-table tr:last-child { border-bottom: none; }
       .fee-table td { padding: 7px 4px; }
       .fee-table td:first-child { color: #555; }
-      .fee-table td:last-child  { text-align: right; font-weight: 600; color: #1a1a2e; }
-      .fee-table tr.total-row td { font-weight: 700; color: #0d47a1; font-size: 14px; border-top: 1.5px solid #bbdefb; padding-top: 10px; margin-top: 4px; }
+      .fee-table td.amt { text-align: right; font-weight: 600; color: #1a1a2e; }
+      .fee-table td.div-badge { text-align: center; font-size: 11px; font-weight: 700;
+        width: 26px; padding: 2px 0; border-radius: 3px; }
+      .fee-table td.div-badge.과 { color: #1565c0; background: #e3f2fd; }
+      .fee-table td.div-badge.비 { color: #555; background: #f5f5f5; }
+      .fee-table tr.total-row td { font-weight: 700; color: #0d47a1; font-size: 14px; border-top: 1.5px solid #bbdefb; padding-top: 10px; }
+      .fee-table tr.subtotal-row td { font-weight: 600; color: #333; font-size: 13px; border-top: 1px dashed #ddd; padding-top: 8px; }
+      .fee-table tr.subtotal-row td.amt { color: #0d47a1; }
 
       /* 검침내역 테이블 */
       .meter-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -332,8 +338,8 @@ document.getElementById('btnVerify').addEventListener('click', async () => {
     // 헤더
     document.getElementById('billUnit').textContent   = `${d.dong}동 ${d.ho}호  ${d.name}`;
     document.getElementById('billPeriod').textContent = ym(d.year_month);
-    document.getElementById('billTotal').textContent      = d.total       ? fmt(d.total) + '원' : '—';
-    document.getElementById('billTotalAfter').textContent = d.total_after ? fmt(d.total_after) + '원' : '';
+    document.getElementById('billTotal').textContent      = d.total       ? fmt(d.total) : '—';
+    document.getElementById('billTotalAfter').textContent = d.total_after ? fmt(d.total_after) : '';
 
     // ── 고지내역 요약 ─────────────────────────────────────────
     const summaryBody = document.getElementById('summaryTableBody');
@@ -346,7 +352,7 @@ document.getElementById('btnVerify').addEventListener('click', async () => {
       document.getElementById('summarySection').style.display = '';
       for (const [k, v] of summaryEntries) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${k}</td><td>${fmt(v)}원</td>`;
+        tr.innerHTML = `<td>${k}</td><td class="amt">${fmt(v)}</td>`;
         summaryBody.appendChild(tr);
       }
     }
@@ -361,34 +367,68 @@ document.getElementById('btnVerify').addEventListener('click', async () => {
       for (const [item, fields] of meterEntries) {
         const tr = document.createElement('tr');
         const 요금 = fields['요금'] || '0';
-        tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(요금)}원</td>`;
+        tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(요금)}</td>`;
         mBody.appendChild(tr);
       }
     } else {
       meterSec.style.display = 'none';
     }
 
-    // ── 항목별 부과내역 ───────────────────────────────────────
+    // ── 항목별 부과내역 (구분 포함) ──────────────────────────
     const itemEntries = Object.entries(d.billing_items || {});
-    const itemSec   = document.getElementById('itemSection');
-    const itemBody  = document.getElementById('itemTableBody');
+    const 구분Map    = d.billing_구분 || {};
+    const itemSec    = document.getElementById('itemSection');
+    const itemBody   = document.getElementById('itemTableBody');
     itemBody.innerHTML = '';
+
     if (itemEntries.length > 0) {
       itemSec.style.display = '';
-      let itemSum = 0;
+      let 과세합 = 0, 비과세합 = 0;
+      const has구분 = Object.keys(구분Map).length > 0;
+
       for (const [k, v] of itemEntries) {
         const n = parseInt(String(v).replace(/,/g, ''), 10);
-        if (!isNaN(n) && n > 0) itemSum += n;
+        const 구분 = 구분Map[k] || '';
+        if (!isNaN(n)) {
+          if (구분 === '과') 과세합  += n;
+          if (구분 === '비') 비과세합 += n;
+        }
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${k}</td><td>${fmt(v)}원</td>`;
+        const divCell = has구분
+          ? `<td class="div-badge ${구분}">${구분}</td>`
+          : '';
+        tr.innerHTML = `<td>${k}</td><td class="amt">${fmt(v)}</td>${divCell}`;
         itemBody.appendChild(tr);
       }
-      if (itemSum > 0) {
-        const tr = document.createElement('tr');
-        tr.className = 'total-row';
-        tr.innerHTML = `<td>부과항목 합계</td><td>${fmt(itemSum)}원</td>`;
-        itemBody.appendChild(tr);
+
+      // 과세합 / 비과세합 (구분 데이터 있을 때만)
+      if (has구분) {
+        // 고지내역 요약에서 더 정확한 값 사용 (있으면)
+        const sum = d.summary || {};
+        const 공급가액    = parseInt(String(sum['공급가액']    || '0').replace(/,/g,''), 10) || 과세합;
+        const 부가가치세  = parseInt(String(sum['부가가치세']  || '0').replace(/,/g,''), 10) || 0;
+        const 비과세합계  = parseInt(String(sum['비과세합계']  || '0').replace(/,/g,''), 10) || 비과세합;
+
+        const 과세총합 = 공급가액 + 부가가치세;
+
+        if (과세총합 > 0) {
+          const tr1 = document.createElement('tr');
+          tr1.className = 'subtotal-row';
+          tr1.innerHTML = `<td>과세합</td><td class="amt">${fmt(과세총합)}</td><td></td>`;
+          itemBody.appendChild(tr1);
+        }
+        if (비과세합계 > 0) {
+          const tr2 = document.createElement('tr');
+          tr2.className = 'subtotal-row';
+          tr2.innerHTML = `<td>비과세합</td><td class="amt">${fmt(비과세합계)}</td><td></td>`;
+          itemBody.appendChild(tr2);
+        }
       }
+
+      const trTotal = document.createElement('tr');
+      trTotal.className = 'total-row';
+      trTotal.innerHTML = `<td>당월 납부금액</td><td class="amt">${fmt(d.total || '')}</td>${has구분 ? '<td></td>' : ''}`;
+      itemBody.appendChild(trTotal);
     } else {
       itemSec.style.display = 'none';
     }

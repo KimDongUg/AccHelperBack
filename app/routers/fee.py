@@ -68,9 +68,14 @@ def verify_fee(req: FeeVerifyRequest, db: Session = Depends(get_db)):
     # ─── 항목별 부과내역 (prefix '항목_') ─────────────────────
     import re as _re
     _ibsheet_id = _re.compile(r'^[A-Z]\d+$')  # A5, B6, C0 등 IBSheet 내부 코드 제외
-    billing_items = {}
+    billing_items = {}   # { 항목명: 금액 }
+    billing_구분  = {}   # { 항목명: "과" | "비" }
     for k, v in all_items.items():
-        if k.startswith("항목_"):
+        if k.startswith("항목구분_"):
+            label = k[6:]
+            if not _ibsheet_id.match(label):
+                billing_구분[label] = v
+        elif k.startswith("항목_"):
             label = k[3:]  # '항목_' 제거
             if _ibsheet_id.match(label):  # IBSheet 코드 필터링
                 continue
@@ -109,6 +114,7 @@ def verify_fee(req: FeeVerifyRequest, db: Session = Depends(get_db)):
         "total":          total_납기내 or total_부과,
         "total_after":    total_납기후,
         "billing_items":  billing_items,
+        "billing_구분":   billing_구분,
         "summary":        summary,
         "meter":          meter,
         "discounts":      discounts,
