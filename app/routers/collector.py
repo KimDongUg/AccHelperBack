@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +19,9 @@ _PERSISTENT = Path("/data/uploads/collector")
 _FALLBACK   = DATA_DIR / "collector"
 
 _FIXED_KEYS = {"동", "호", "휴대폰", "name", "이름"}
+
+# 수집기가 내보내는 파일명 "관리비데이터_YYYYMM.xlsx"에서 청구 년월 추출
+_FILENAME_YM_RE = re.compile(r"_(\d{6})\.xlsx?$", re.IGNORECASE)
 
 
 def _save_dir() -> Path:
@@ -106,8 +110,12 @@ async def upload_fee_excel(
     if len(content) > 50 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="파일 크기 초과 (최대 50MB).")
 
-    timestamp  = datetime.now().strftime("%Y%m%d_%H%M%S")
-    year_month = timestamp[:6]
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # 청구 년월은 수집기가 ERP 화면에서 읽어 파일명에 담아 보낸 값을 사용한다
+    # (업로드 시각의 달이 아니라, 데이터가 실제로 속한 청구월이어야 함)
+    ym_match   = _FILENAME_YM_RE.search(filename)
+    year_month = ym_match.group(1) if ym_match else timestamp[:6]
     save_path  = _save_dir() / f"fee_{timestamp}.xlsx"
     save_path.write_bytes(content)
 
