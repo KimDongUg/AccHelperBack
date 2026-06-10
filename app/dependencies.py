@@ -56,6 +56,21 @@ def require_super_admin(request: Request, session_token: str | None = Cookie(Non
     return user
 
 
+def require_fee_token(request: Request, dong: str, ho: str) -> dict:
+    """관리비 조회용 JWT 검증. scope='fee'이며 토큰의 dong/ho가 쿼리 파라미터와 일치해야 함."""
+    token = _extract_token(request, None)
+    if not token:
+        raise HTTPException(status_code=401, detail="인증이 필요합니다. 인증번호를 다시 확인해 주세요.")
+    payload = decode_token(token)
+    if not payload or payload.get("scope") != "fee":
+        raise HTTPException(status_code=401, detail="인증이 만료되었습니다. 다시 인증해 주세요.")
+    norm_dong = dong.strip().lstrip("0") or dong.strip()
+    norm_ho = ho.strip().lstrip("0") or ho.strip()
+    if payload.get("dong") != norm_dong or payload.get("ho") != norm_ho:
+        raise HTTPException(status_code=403, detail="인증 정보가 일치하지 않습니다.")
+    return payload
+
+
 def get_company_id(request: Request, session_token: str | None = Cookie(None)) -> int:
     """Extract company_id from the current JWT."""
     user = require_auth(request, session_token)

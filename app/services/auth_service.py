@@ -28,6 +28,16 @@ def mask_email(email: str) -> str:
     return f"{masked_local}@{domain}"
 
 
+def mask_phone(phone: str) -> str:
+    """Mask phone number: show first 3 and last 4 digits.
+    Example: 01012346713 -> 010-****-6713
+    """
+    digits = phone.replace("-", "").replace(" ", "")
+    if len(digits) < 7:
+        return "***"
+    return f"{digits[:3]}-****-{digits[-4:]}"
+
+
 def generate_temp_password(length: int = 10) -> str:
     """Generate a random temporary password with letters and digits."""
     alphabet = string.ascii_letters + string.digits

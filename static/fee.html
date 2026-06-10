@@ -38,6 +38,7 @@
         width: 100%;
       }
       .form-group input:focus { border-color: #1565c0; }
+      .form-group input:disabled { background: #f5f5f5; color: #999; }
 
       .btn-verify {
         width: 100%;
@@ -68,6 +69,45 @@
       }
       .error-msg.show { display: block; }
 
+      /* 인증번호 영역 */
+      .otp-info {
+        font-size: 12.5px;
+        color: #1565c0;
+        font-weight: 600;
+        margin-bottom: 10px;
+        padding: 8px 12px;
+        background: #e3f2fd;
+        border-radius: 8px;
+      }
+      .otp-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: -4px 0 4px;
+        font-size: 12px;
+      }
+      .otp-timer { color: #888; }
+      .btn-link {
+        background: none;
+        border: none;
+        color: #1565c0;
+        font-size: 12px;
+        font-weight: 700;
+        font-family: inherit;
+        cursor: pointer;
+        padding: 4px 0;
+        text-decoration: underline;
+      }
+      .btn-link:disabled { color: #bbb; cursor: not-allowed; text-decoration: none; }
+
+      .privacy-note {
+        margin-top: 16px;
+        font-size: 11.5px;
+        color: #aaa;
+        line-height: 1.6;
+      }
+      .privacy-note a { color: #888; text-decoration: underline; }
+
       /* 관리비 고지서 */
       .bill-card {
         display: none;
@@ -83,10 +123,22 @@
         color: white;
         padding: 20px;
         text-align: center;
+        position: relative;
       }
       .bill-header .apt-name { font-size: 13px; opacity: 0.85; margin-bottom: 4px; }
       .bill-header .unit     { font-size: 20px; font-weight: 700; margin-bottom: 2px; }
       .bill-header .period   { font-size: 13px; opacity: 0.85; }
+
+      .bill-session {
+        padding: 8px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #fff8e1;
+        font-size: 12px;
+        color: #8d6e00;
+      }
+      .bill-session .btn-link { color: #1565c0; }
 
       .bill-total {
         background: #e3f2fd;
@@ -173,9 +225,9 @@
 <main class="fee-wrap">
 
   <!-- 인증 폼 -->
-  <div class="verify-card">
+  <div class="verify-card" id="verifyCard">
     <h2>관리비 조회</h2>
-    <p>호수, 입주자명, 휴대폰 번호를 입력하시면 당월 관리비를 확인할 수 있습니다.</p>
+    <p>호수를 입력하면 등록된 휴대폰 번호로 인증번호를 보내드립니다. 인증 후 당월 관리비를 확인할 수 있습니다.</p>
 
     <div class="form-row">
       <div class="form-group">
@@ -183,25 +235,31 @@
         <input type="number" id="inp-ho" placeholder="예: 1203" inputmode="numeric">
       </div>
     </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="inp-name">입주자명</label>
-        <input type="text" id="inp-name" placeholder="홍길동">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label for="inp-phone">휴대폰</label>
-        <div style="display:flex; align-items:center; gap:0; border:1.5px solid #dde1e7; border-radius:8px; overflow:hidden; transition:border-color 0.2s;" id="phoneWrap">
-          <span style="padding:10px 10px 10px 12px; background:#f5f7fa; color:#333; font-size:14px; font-weight:600; border-right:1px solid #dde1e7; white-space:nowrap;">010</span>
-          <input type="tel" id="inp-phone" placeholder="1234-5678" inputmode="tel"
-                 style="border:none; outline:none; padding:10px 12px; font-size:14px; font-family:inherit; flex:1; width:100%;">
+
+    <button class="btn-verify" id="btnSendSms">인증번호 받기</button>
+
+    <!-- 인증번호 입력 영역 -->
+    <div id="otpArea" style="display:none; margin-top:14px;">
+      <div class="otp-info" id="otpInfo"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="inp-code">인증번호</label>
+          <input type="tel" id="inp-code" placeholder="6자리 숫자" inputmode="numeric" maxlength="6">
         </div>
       </div>
+      <div class="otp-meta">
+        <span class="otp-timer" id="otpTimer"></span>
+        <button class="btn-link" id="btnResend" type="button">인증번호 재발송</button>
+      </div>
+      <button class="btn-verify" id="btnVerifyOtp">조회하기</button>
     </div>
 
-    <button class="btn-verify" id="btnVerify">조회하기</button>
     <div class="error-msg" id="errorMsg"></div>
+
+    <p class="privacy-note">
+      본 서비스는 관리비 조회 목적으로 동호수 및 휴대폰 번호를 활용합니다.
+      <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침 보기</a>
+    </p>
   </div>
 
   <!-- 고지서 -->
@@ -211,6 +269,11 @@
       <div class="apt-name" id="billAptName"></div>
       <div class="unit" id="billUnit"></div>
       <div class="period" id="billPeriod"></div>
+    </div>
+
+    <div class="bill-session">
+      <span id="sessionTimer"></span>
+      <button class="btn-link" id="btnNewSearch" type="button">다른 호수 조회</button>
     </div>
 
     <div class="bill-total">
@@ -281,13 +344,13 @@
   }
 })();
 
-// 전화번호 입력칸 포커스 시 테두리 색상 변경
-document.getElementById('inp-phone').addEventListener('focus', () => {
-  document.getElementById('phoneWrap').style.borderColor = '#1565c0';
-});
-document.getElementById('inp-phone').addEventListener('blur', () => {
-  document.getElementById('phoneWrap').style.borderColor = '#dde1e7';
-});
+const DONG = '1'; // 세종푸르지오시티 2차는 1동 고정
+
+let otpCountdownTimer = null;
+let sessionCountdownTimer = null;
+let sessionHideTimer = null;
+
+const errEl = document.getElementById('errorMsg');
 
 function fmt(v) {
   const n = parseInt(String(v).replace(/,/g, ''), 10);
@@ -299,157 +362,304 @@ function ym(ym6) {
   return `${ym6.slice(0,4)}년 ${parseInt(ym6.slice(4,6))}월분`;
 }
 
-document.getElementById('btnVerify').addEventListener('click', async () => {
-  const dong  = '1'; // 세종푸르지오시티 2차는 1동 고정
-  const ho    = document.getElementById('inp-ho').value.trim();
-  const name  = document.getElementById('inp-name').value.trim();
-  const phone = '010' + document.getElementById('inp-phone').value.trim().replace(/[-\s]/g, '');
-  const errEl = document.getElementById('errorMsg');
-  const btn   = document.getElementById('btnVerify');
+function showError(msg) {
+  errEl.textContent = msg;
+  errEl.classList.add('show');
+}
 
+function clearError() {
   errEl.classList.remove('show');
-  document.getElementById('billCard').classList.remove('show');
+  errEl.textContent = '';
+}
 
-  if (!ho || !name || phone.length < 10) {
-    errEl.textContent = '호, 입주자명, 휴대폰 번호를 모두 입력해 주세요.';
-    errEl.classList.add('show');
+function messageFrom(d, fallback) {
+  if (!d) return fallback;
+  if (d.message) return d.message;
+  if (d.detail) return d.detail;
+  if (d.error) return '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.';
+  return fallback;
+}
+
+function pad2(n) { return String(n).padStart(2, '0'); }
+
+function startOtpCountdown(seconds) {
+  clearInterval(otpCountdownTimer);
+  const timerEl = document.getElementById('otpTimer');
+  const codeInput = document.getElementById('inp-code');
+  const verifyBtn = document.getElementById('btnVerifyOtp');
+  let remain = seconds;
+
+  const tick = () => {
+    if (remain <= 0) {
+      clearInterval(otpCountdownTimer);
+      timerEl.textContent = '인증번호가 만료되었습니다. 재발송해 주세요.';
+      codeInput.disabled = true;
+      verifyBtn.disabled = true;
+      return;
+    }
+    timerEl.textContent = `남은 시간 ${pad2(Math.floor(remain / 60))}:${pad2(remain % 60)}`;
+    remain--;
+  };
+
+  tick();
+  otpCountdownTimer = setInterval(tick, 1000);
+}
+
+function startSessionCountdown(seconds) {
+  clearInterval(sessionCountdownTimer);
+  clearTimeout(sessionHideTimer);
+  const timerEl = document.getElementById('sessionTimer');
+  let remain = seconds;
+
+  const tick = () => {
+    if (remain <= 0) {
+      clearInterval(sessionCountdownTimer);
+      return;
+    }
+    timerEl.textContent = `조회 결과는 ${pad2(Math.floor(remain / 60))}:${pad2(remain % 60)} 후 자동으로 숨겨집니다`;
+    remain--;
+  };
+
+  tick();
+  sessionCountdownTimer = setInterval(tick, 1000);
+  sessionHideTimer = setTimeout(() => {
+    resetToSearch('인증이 만료되었습니다. 다시 인증해 주세요.');
+  }, seconds * 1000);
+}
+
+function resetToSearch(message) {
+  clearInterval(otpCountdownTimer);
+  clearInterval(sessionCountdownTimer);
+  clearTimeout(sessionHideTimer);
+
+  document.getElementById('billCard').classList.remove('show');
+  document.getElementById('verifyCard').style.display = '';
+  document.getElementById('otpArea').style.display = 'none';
+  document.getElementById('inp-code').value = '';
+  document.getElementById('inp-code').disabled = false;
+  document.getElementById('btnVerifyOtp').disabled = false;
+  document.getElementById('btnResend').disabled = false;
+
+  clearError();
+  if (message) showError(message);
+}
+
+function renderBill(d) {
+  document.getElementById('billUnit').textContent   = `${d.dong}동 ${d.ho}호  ${d.name}`;
+  document.getElementById('billPeriod').textContent = ym(d.year_month);
+  document.getElementById('billTotal').textContent      = d.total       ? fmt(d.total) : '—';
+  document.getElementById('billTotalAfter').textContent = d.total_after ? fmt(d.total_after) : '';
+
+  // ── 고지내역 요약 ─────────────────────────────────────────
+  const summaryBody = document.getElementById('summaryTableBody');
+  summaryBody.innerHTML = '';
+  const summaryEntries = Object.entries(d.summary || {});
+  if (summaryEntries.length === 0) {
+    summaryBody.innerHTML = '<tr><td colspan="2" class="no-data">데이터 없음</td></tr>';
+    document.getElementById('summarySection').style.display = 'none';
+  } else {
+    document.getElementById('summarySection').style.display = '';
+    for (const [k, v] of summaryEntries) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${k}</td><td class="amt">${fmt(v)}</td>`;
+      summaryBody.appendChild(tr);
+    }
+  }
+
+  // ── 검침내역 ─────────────────────────────────────────────
+  const meterEntries = Object.entries(d.meter || {});
+  const meterSec  = document.getElementById('meterSection');
+  const mBody     = document.getElementById('meterTableBody');
+  mBody.innerHTML = '';
+  if (meterEntries.length > 0) {
+    meterSec.style.display = '';
+    for (const [item, fields] of meterEntries) {
+      const tr = document.createElement('tr');
+      const 요금 = fields['요금'] || '0';
+      tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(요금)}</td>`;
+      mBody.appendChild(tr);
+    }
+  } else {
+    meterSec.style.display = 'none';
+  }
+
+  // ── 항목별 부과내역 (구분 포함) ──────────────────────────
+  const itemEntries = Object.entries(d.billing_items || {});
+  const 구분Map    = d.billing_구분 || {};
+  const itemSec    = document.getElementById('itemSection');
+  const itemBody   = document.getElementById('itemTableBody');
+  itemBody.innerHTML = '';
+
+  if (itemEntries.length > 0) {
+    itemSec.style.display = '';
+    let 과세합 = 0, 비과세합 = 0;
+    const has구분 = Object.keys(구분Map).length > 0;
+
+    for (const [k, v] of itemEntries) {
+      const n = parseInt(String(v).replace(/,/g, ''), 10);
+      const 구분 = 구분Map[k] || '';
+      if (!isNaN(n)) {
+        if (구분 === '과') 과세합  += n;
+        if (구분 === '비') 비과세합 += n;
+      }
+      const tr = document.createElement('tr');
+      const divCell = has구분
+        ? `<td class="div-badge ${구분}">${구분}</td>`
+        : '';
+      tr.innerHTML = `<td>${k}</td><td class="amt">${fmt(v)}</td>${divCell}`;
+      itemBody.appendChild(tr);
+    }
+
+    // 과세합 / 비과세합 (구분 데이터 있을 때만)
+    if (has구분) {
+      // 고지내역 요약에서 더 정확한 값 사용 (있으면)
+      const sum = d.summary || {};
+      const 공급가액    = parseInt(String(sum['공급가액']    || '0').replace(/,/g,''), 10) || 과세합;
+      const 부가가치세  = parseInt(String(sum['부가가치세']  || '0').replace(/,/g,''), 10) || 0;
+      const 비과세합계  = parseInt(String(sum['비과세합계']  || '0').replace(/,/g,''), 10) || 비과세합;
+
+      const 과세총합 = 공급가액 + 부가가치세;
+
+      if (과세총합 > 0) {
+        const tr1 = document.createElement('tr');
+        tr1.className = 'subtotal-row';
+        tr1.innerHTML = `<td>과세합</td><td class="amt">${fmt(과세총합)}</td><td></td>`;
+        itemBody.appendChild(tr1);
+      }
+      if (비과세합계 > 0) {
+        const tr2 = document.createElement('tr');
+        tr2.className = 'subtotal-row';
+        tr2.innerHTML = `<td>비과세합</td><td class="amt">${fmt(비과세합계)}</td><td></td>`;
+        itemBody.appendChild(tr2);
+      }
+    }
+
+    const trTotal = document.createElement('tr');
+    trTotal.className = 'total-row';
+    trTotal.innerHTML = `<td>당월 납부금액</td><td class="amt">${fmt(d.total || '')}</td>${has구분 ? '<td></td>' : ''}`;
+    itemBody.appendChild(trTotal);
+  } else {
+    itemSec.style.display = 'none';
+  }
+
+  document.getElementById('billCard').classList.add('show');
+  document.getElementById('billCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 인증번호 받기
+document.getElementById('btnSendSms').addEventListener('click', async () => {
+  const ho = document.getElementById('inp-ho').value.trim();
+  clearError();
+
+  if (!ho) {
+    showError('호를 입력해 주세요.');
     return;
   }
 
+  const btn = document.getElementById('btnSendSms');
   btn.disabled = true;
-  btn.textContent = '조회 중...';
+  btn.textContent = '발송 중...';
 
   try {
-    const res = await fetch('/api/fee/verify', {
+    const res = await fetch('/api/fee/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dong, ho, name, phone }),
+      body: JSON.stringify({ dong: DONG, ho }),
     });
+    const d = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}));
-      errEl.textContent = d.detail || '조회 실패. 입력 정보를 확인해 주세요.';
-      errEl.classList.add('show');
+    if (!res.ok || !d.success) {
+      showError(messageFrom(d, '인증번호 발송에 실패했습니다.'));
       return;
     }
 
-    const d = await res.json();
+    document.getElementById('otpInfo').textContent = `${d.masked_phone}로 인증번호를 발송했습니다.`;
+    document.getElementById('otpArea').style.display = '';
+    const codeInput = document.getElementById('inp-code');
+    codeInput.disabled = false;
+    codeInput.value = '';
+    document.getElementById('btnVerifyOtp').disabled = false;
+    document.getElementById('btnResend').disabled = false;
+    startOtpCountdown(d.expires_in || 300);
+    codeInput.focus();
+  } catch (e) {
+    showError('서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '인증번호 받기';
+  }
+});
 
-    // 헤더
-    document.getElementById('billUnit').textContent   = `${d.dong}동 ${d.ho}호  ${d.name}`;
-    document.getElementById('billPeriod').textContent = ym(d.year_month);
-    document.getElementById('billTotal').textContent      = d.total       ? fmt(d.total) : '—';
-    document.getElementById('billTotalAfter').textContent = d.total_after ? fmt(d.total_after) : '';
+// 인증번호 재발송
+document.getElementById('btnResend').addEventListener('click', () => {
+  document.getElementById('btnSendSms').click();
+});
 
-    // ── 고지내역 요약 ─────────────────────────────────────────
-    const summaryBody = document.getElementById('summaryTableBody');
-    summaryBody.innerHTML = '';
-    const summaryEntries = Object.entries(d.summary || {});
-    if (summaryEntries.length === 0) {
-      summaryBody.innerHTML = '<tr><td colspan="2" class="no-data">데이터 없음</td></tr>';
-      document.getElementById('summarySection').style.display = 'none';
-    } else {
-      document.getElementById('summarySection').style.display = '';
-      for (const [k, v] of summaryEntries) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${k}</td><td class="amt">${fmt(v)}</td>`;
-        summaryBody.appendChild(tr);
-      }
+// 조회하기 (인증번호 검증 → 관리비 조회)
+document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
+  const ho = document.getElementById('inp-ho').value.trim();
+  const code = document.getElementById('inp-code').value.trim();
+  clearError();
+  document.getElementById('billCard').classList.remove('show');
+
+  if (!/^\d{6}$/.test(code)) {
+    showError('6자리 인증번호를 입력해 주세요.');
+    return;
+  }
+
+  const btn = document.getElementById('btnVerifyOtp');
+  btn.disabled = true;
+  btn.textContent = '확인 중...';
+
+  try {
+    const vres = await fetch('/api/fee/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dong: DONG, ho, code }),
+    });
+    const vd = await vres.json().catch(() => ({}));
+
+    if (!vres.ok || !vd.success) {
+      showError(messageFrom(vd, '인증에 실패했습니다.'));
+      return;
     }
 
-    // ── 검침내역 ─────────────────────────────────────────────
-    const meterEntries = Object.entries(d.meter || {});
-    const meterSec  = document.getElementById('meterSection');
-    const mBody     = document.getElementById('meterTableBody');
-    mBody.innerHTML = '';
-    if (meterEntries.length > 0) {
-      meterSec.style.display = '';
-      for (const [item, fields] of meterEntries) {
-        const tr = document.createElement('tr');
-        const 요금 = fields['요금'] || '0';
-        tr.innerHTML = `<td>${item}</td><td>${fields['전월'] || '—'}</td><td>${fields['당월'] || '—'}</td><td>${fmt(요금)}</td>`;
-        mBody.appendChild(tr);
-      }
-    } else {
-      meterSec.style.display = 'none';
+    clearInterval(otpCountdownTimer);
+
+    const fres = await fetch(`/api/fee?dong=${encodeURIComponent(DONG)}&ho=${encodeURIComponent(ho)}`, {
+      headers: { 'Authorization': `Bearer ${vd.token}` },
+    });
+    const fd = await fres.json().catch(() => ({}));
+
+    if (!fres.ok) {
+      showError(messageFrom(fd, '조회에 실패했습니다.'));
+      return;
     }
 
-    // ── 항목별 부과내역 (구분 포함) ──────────────────────────
-    const itemEntries = Object.entries(d.billing_items || {});
-    const 구분Map    = d.billing_구분 || {};
-    const itemSec    = document.getElementById('itemSection');
-    const itemBody   = document.getElementById('itemTableBody');
-    itemBody.innerHTML = '';
-
-    if (itemEntries.length > 0) {
-      itemSec.style.display = '';
-      let 과세합 = 0, 비과세합 = 0;
-      const has구분 = Object.keys(구분Map).length > 0;
-
-      for (const [k, v] of itemEntries) {
-        const n = parseInt(String(v).replace(/,/g, ''), 10);
-        const 구분 = 구분Map[k] || '';
-        if (!isNaN(n)) {
-          if (구분 === '과') 과세합  += n;
-          if (구분 === '비') 비과세합 += n;
-        }
-        const tr = document.createElement('tr');
-        const divCell = has구분
-          ? `<td class="div-badge ${구분}">${구분}</td>`
-          : '';
-        tr.innerHTML = `<td>${k}</td><td class="amt">${fmt(v)}</td>${divCell}`;
-        itemBody.appendChild(tr);
-      }
-
-      // 과세합 / 비과세합 (구분 데이터 있을 때만)
-      if (has구분) {
-        // 고지내역 요약에서 더 정확한 값 사용 (있으면)
-        const sum = d.summary || {};
-        const 공급가액    = parseInt(String(sum['공급가액']    || '0').replace(/,/g,''), 10) || 과세합;
-        const 부가가치세  = parseInt(String(sum['부가가치세']  || '0').replace(/,/g,''), 10) || 0;
-        const 비과세합계  = parseInt(String(sum['비과세합계']  || '0').replace(/,/g,''), 10) || 비과세합;
-
-        const 과세총합 = 공급가액 + 부가가치세;
-
-        if (과세총합 > 0) {
-          const tr1 = document.createElement('tr');
-          tr1.className = 'subtotal-row';
-          tr1.innerHTML = `<td>과세합</td><td class="amt">${fmt(과세총합)}</td><td></td>`;
-          itemBody.appendChild(tr1);
-        }
-        if (비과세합계 > 0) {
-          const tr2 = document.createElement('tr');
-          tr2.className = 'subtotal-row';
-          tr2.innerHTML = `<td>비과세합</td><td class="amt">${fmt(비과세합계)}</td><td></td>`;
-          itemBody.appendChild(tr2);
-        }
-      }
-
-      const trTotal = document.createElement('tr');
-      trTotal.className = 'total-row';
-      trTotal.innerHTML = `<td>당월 납부금액</td><td class="amt">${fmt(d.total || '')}</td>${has구분 ? '<td></td>' : ''}`;
-      itemBody.appendChild(trTotal);
-    } else {
-      itemSec.style.display = 'none';
-    }
-
-    document.getElementById('billCard').classList.add('show');
-    document.getElementById('billCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    renderBill(fd);
+    document.getElementById('verifyCard').style.display = 'none';
+    startSessionCountdown(vd.expires_in || 600);
 
   } catch (e) {
-    errEl.textContent = '서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
-    errEl.classList.add('show');
+    showError('서버 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
   } finally {
     btn.disabled = false;
     btn.textContent = '조회하기';
   }
 });
 
+// 다른 호수 조회
+document.getElementById('btnNewSearch').addEventListener('click', () => {
+  document.getElementById('inp-ho').value = '';
+  resetToSearch();
+});
+
 // 엔터키 제출
-['inp-ho','inp-name','inp-phone'].forEach(id => {
-  document.getElementById(id).addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('btnVerify').click();
-  });
+document.getElementById('inp-ho').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSendSms').click();
+});
+document.getElementById('inp-code').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnVerifyOtp').click();
 });
 </script>
 </body>

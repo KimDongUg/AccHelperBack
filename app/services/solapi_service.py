@@ -118,6 +118,49 @@ def send_market_comment_alimtalk(
         return True
 
 
+def send_fee_otp_alimtalk(
+    to: str,
+    code: str,
+    valid_minutes: int,
+) -> bool:
+    """
+    관리비 조회 인증번호 알림톡 발송
+    템플릿 변수: #{인증번호}, #{유효시간}
+    """
+    if not config.SOLAPI_OTP_TEMPLATE_ID:
+        logger.warning("[Solapi] SOLAPI_OTP_TEMPLATE_ID 미설정 — 관리비 인증번호 알림톡 생략")
+        return False
+
+    payload = {
+        "message": {
+            "to": to.replace("-", ""),
+            "from": config.SOLAPI_SENDER_NUMBER,
+            "text": f"[AI Helper] 관리비 조회 인증번호는 [{code}]입니다.\n{valid_minutes}분 이내에 입력해 주세요.",
+            "kakaoOptions": {
+                "pfId": config.SOLAPI_PF_ID,
+                "templateId": config.SOLAPI_OTP_TEMPLATE_ID,
+                "disableSms": "false",
+                "variables": {
+                    "#{인증번호}": code,
+                    "#{유효시간}": str(valid_minutes),
+                },
+            },
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": _make_auth_header(),
+    }
+
+    with httpx.Client(timeout=10.0) as client:
+        resp = client.post(SOLAPI_SEND_URL, json=payload, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("[Solapi] %s %s | payload=%s", resp.status_code, resp.text, payload)
+        resp.raise_for_status()
+        return True
+
+
 def send_complaint_alimtalk(
     to: str,
     apt_name: str,

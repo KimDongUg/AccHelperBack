@@ -7,10 +7,14 @@ import jwt
 from app.config import JWT_ALGORITHM, JWT_EXPIRE_HOURS, JWT_SECRET_KEY
 
 
-def create_access_token(data: dict, expire_hours: int | None = None) -> str:
+def create_access_token(data: dict, expire_hours: int | None = None, expire_minutes: int | None = None) -> str:
     """Create a JWT access token."""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(hours=expire_hours or JWT_EXPIRE_HOURS)
+    if expire_minutes is not None:
+        delta = timedelta(minutes=expire_minutes)
+    else:
+        delta = timedelta(hours=expire_hours or JWT_EXPIRE_HOURS)
+    expire = datetime.utcnow() + delta
     to_encode["exp"] = expire
     to_encode["iat"] = datetime.utcnow()
     return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)

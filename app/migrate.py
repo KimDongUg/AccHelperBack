@@ -290,6 +290,41 @@ def _run_pg_migration(engine: Engine):
             conn.execute(text("CREATE INDEX ix_fee_year_month ON fee_entries (year_month)"))
             logger.info("PG: Created table fee_entries")
 
+        # --- fee_otp 테이블 (관리비 조회 SMS 인증번호) ---
+        if not _pg_table_exists(conn, "fee_otp"):
+            conn.execute(text("""
+                CREATE TABLE fee_otp (
+                    id SERIAL PRIMARY KEY,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    code VARCHAR(6) NOT NULL,
+                    expires_at TIMESTAMP NOT NULL,
+                    fail_count INTEGER NOT NULL DEFAULT 0,
+                    locked_until TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_fee_otp_dong_ho UNIQUE (dong, ho)
+                )
+            """))
+            logger.info("PG: Created table fee_otp")
+
+        # --- access_log 테이블 (관리비 조회 인증/조회 로그) ---
+        if not _pg_table_exists(conn, "access_log"):
+            conn.execute(text("""
+                CREATE TABLE access_log (
+                    id SERIAL PRIMARY KEY,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    ip VARCHAR(45) NOT NULL DEFAULT '',
+                    user_agent TEXT NOT NULL DEFAULT '',
+                    action VARCHAR(20) NOT NULL,
+                    success BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_access_log_dong_ho ON access_log (dong, ho)"))
+            conn.execute(text("CREATE INDEX ix_access_log_created_at ON access_log (created_at)"))
+            logger.info("PG: Created table access_log")
+
         conn.commit()
     logger.info("PG: Column migrations committed")
 
@@ -546,6 +581,41 @@ def run_migration(engine: Engine):
             conn.execute(text("CREATE INDEX ix_fee_dong_ho ON fee_entries (dong, ho)"))
             conn.execute(text("CREATE INDEX ix_fee_year_month ON fee_entries (year_month)"))
             logger.info("Created table fee_entries")
+
+        # --- fee_otp 테이블 (관리비 조회 SMS 인증번호) ---
+        if not _table_exists(conn, "fee_otp"):
+            conn.execute(text("""
+                CREATE TABLE fee_otp (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    code VARCHAR(6) NOT NULL,
+                    expires_at DATETIME NOT NULL,
+                    fail_count INTEGER NOT NULL DEFAULT 0,
+                    locked_until DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (dong, ho)
+                )
+            """))
+            logger.info("Created table fee_otp")
+
+        # --- access_log 테이블 (관리비 조회 인증/조회 로그) ---
+        if not _table_exists(conn, "access_log"):
+            conn.execute(text("""
+                CREATE TABLE access_log (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    ip VARCHAR(45) NOT NULL DEFAULT '',
+                    user_agent TEXT NOT NULL DEFAULT '',
+                    action VARCHAR(20) NOT NULL,
+                    success BOOLEAN NOT NULL DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_access_log_dong_ho ON access_log (dong, ho)"))
+            conn.execute(text("CREATE INDEX ix_access_log_created_at ON access_log (created_at)"))
+            logger.info("Created table access_log")
 
         conn.commit()
         logger.info("Migration completed successfully")
