@@ -160,6 +160,26 @@
                     <textarea id="dashGreeting" class="form-control" rows="2" placeholder="예: 안녕하세요! OOO AI Helper입니다. 궁금한 점을 물어보세요."></textarea>
                     <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.25rem">챗봇 첫 화면에 표시되는 인사말입니다.</div>
                 </div>
+                <!-- 관리비 조회 -->
+                <div class="form-group" style="grid-column:1/-1">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+                        <label style="margin:0">관리비 조회 기능</label>
+                        <label class="notice-toggle-wrap">
+                            <input type="checkbox" id="enableFee">
+                            <span class="notice-toggle-slider"></span>
+                            <span style="font-size:var(--text-sm);color:var(--gray-600);margin-left:0.25rem" id="enableFeeLabel">비활성</span>
+                        </label>
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--gray-400)">활성화하면 메뉴에 "관리비 조회"가 표시되고, ERP 수집기로 업로드한 관리비 데이터를 입주민이 조회할 수 있습니다.</div>
+                </div>
+                <div class="form-group" style="grid-column:1/-1">
+                    <label for="dashCollectorApiKey">ERP 수집기 API 키</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center">
+                        <input type="text" id="dashCollectorApiKey" class="form-control" readonly style="background:#f5f5f5;cursor:default">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="copyCollectorApiKey()" style="white-space:nowrap">복사</button>
+                    </div>
+                    <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.25rem">AIHelperCollector(ERP 수집기) 설정의 AIHELPER_API_KEY 값으로 입력하세요.</div>
+                </div>
                 <!-- 공지사항 -->
                 <div class="form-group notice-admin-group" style="grid-column:1/-1">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">

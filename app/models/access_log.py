@@ -12,6 +12,7 @@ class AccessLog(Base):
     __tablename__ = "access_log"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company_id: Mapped[int] = mapped_column(Integer, nullable=False, default=1, index=True)
     dong: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     ho: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     ip: Mapped[str] = mapped_column(String(45), nullable=False, default="")

@@ -10,9 +10,10 @@ class FeeOtp(Base):
     """관리비 조회 SMS 인증번호 (동/호당 1개의 활성 레코드를 upsert)."""
 
     __tablename__ = "fee_otp"
-    __table_args__ = (UniqueConstraint("dong", "ho", name="uq_fee_otp_dong_ho"),)
+    __table_args__ = (UniqueConstraint("company_id", "dong", "ho", name="uq_fee_otp_company_dong_ho"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    company_id: Mapped[int] = mapped_column(Integer, nullable=False, default=1, index=True)
     dong: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     ho: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     code: Mapped[str] = mapped_column(String(6), nullable=False)

@@ -1,4 +1,5 @@
 import json
+import secrets
 from datetime import datetime
 
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Request
@@ -145,6 +146,7 @@ def register_company(
         industry=data.industry,
         address=data.address,
         phone=data.phone,
+        collector_api_key=secrets.token_hex(32),
     )
     company.company_id = assigned_id
     db.add(company)

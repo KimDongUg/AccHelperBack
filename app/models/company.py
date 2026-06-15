@@ -35,6 +35,8 @@ class Company(Base):
     notice_text_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notice_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notice_image_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    enable_fee: Mapped[bool] = mapped_column(Boolean, default=False)
+    collector_api_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

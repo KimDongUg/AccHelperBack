@@ -104,8 +104,9 @@ def _build_fee_response(entry: FeeEntry) -> dict:
     }
 
 
-def _log_access(db: Session, dong: str, ho: str, request: Request, action: str, success: bool):
+def _log_access(db: Session, company_id: int, dong: str, ho: str, request: Request, action: str, success: bool):
     db.add(AccessLog(
+        company_id=company_id,
         dong=dong,
         ho=ho,
         ip=get_remote_address(request),
@@ -119,18 +120,21 @@ def _log_access(db: Session, dong: str, ho: str, request: Request, action: str, 
 class SendSmsRequest(BaseModel):
     dong: str
     ho: str
+    company_id: int = 1
 
 
 class VerifyOtpRequest(BaseModel):
     dong: str
     ho: str
     code: str = Field(pattern=r"^\d{6}$")
+    company_id: int = 1
 
 
 @router.post("/send-sms")
 @limiter.limit(RATE_LIMIT_FEE_SMS)
 def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db)):
     """동/호 등록된 휴대폰으로 인증번호(알림톡) 발송"""
+    company_id = req.company_id
     dong = _normalize(req.dong)
     ho = _normalize(req.ho)
 
@@ -139,19 +143,21 @@ def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db
 
     entry = (
         db.query(FeeEntry)
-        .filter(FeeEntry.dong == dong, FeeEntry.ho == ho)
+        .filter(FeeEntry.company_id == company_id, FeeEntry.dong == dong, FeeEntry.ho == ho)
         .order_by(FeeEntry.uploaded_at.desc())
         .first()
     )
     if not entry or not entry.phone:
-        _log_access(db, dong, ho, request, "send_sms", False)
+        _log_access(db, company_id, dong, ho, request, "send_sms", False)
         return {"success": False, "message": "등록된 세대 정보를 찾을 수 없습니다."}
 
     now = datetime.utcnow()
-    otp = db.query(FeeOtp).filter(FeeOtp.dong == dong, FeeOtp.ho == ho).first()
+    otp = db.query(FeeOtp).filter(
+        FeeOtp.company_id == company_id, FeeOtp.dong == dong, FeeOtp.ho == ho
+    ).first()
 
     if otp and otp.locked_until and otp.locked_until > now:
-        _log_access(db, dong, ho, request, "send_sms", False)
+        _log_access(db, company_id, dong, ho, request, "send_sms", False)
         return {"success": False, "message": "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."}
 
     code = f"{secrets.randbelow(1_000_000):06d}"
@@ -163,7 +169,7 @@ def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db
         otp.fail_count = 0
         otp.locked_until = None
     else:
-        db.add(FeeOtp(dong=dong, ho=ho, code=code, expires_at=expires_at))
+        db.add(FeeOtp(company_id=company_id, dong=dong, ho=ho, code=code, expires_at=expires_at))
 
     try:
         sent = send_fee_otp_alimtalk(entry.phone, code, FEE_OTP_TTL_MINUTES)
@@ -172,7 +178,7 @@ def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db
         sent = False
 
     db.commit()
-    _log_access(db, dong, ho, request, "send_sms", sent)
+    _log_access(db, company_id, dong, ho, request, "send_sms", sent)
 
     return {
         "success": True,
@@ -186,22 +192,25 @@ def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db
 @limiter.limit(RATE_LIMIT_FEE_VERIFY)
 def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(get_db)):
     """인증번호 확인 → 성공 시 관리비 조회용 JWT 발급"""
+    company_id = req.company_id
     dong = _normalize(req.dong)
     ho = _normalize(req.ho)
     now = datetime.utcnow()
 
-    otp = db.query(FeeOtp).filter(FeeOtp.dong == dong, FeeOtp.ho == ho).first()
+    otp = db.query(FeeOtp).filter(
+        FeeOtp.company_id == company_id, FeeOtp.dong == dong, FeeOtp.ho == ho
+    ).first()
 
     if not otp:
-        _log_access(db, dong, ho, request, "verify", False)
+        _log_access(db, company_id, dong, ho, request, "verify", False)
         return {"success": False, "message": "인증번호를 먼저 요청해 주세요."}
 
     if otp.locked_until and otp.locked_until > now:
-        _log_access(db, dong, ho, request, "verify", False)
+        _log_access(db, company_id, dong, ho, request, "verify", False)
         return {"success": False, "message": "인증 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."}
 
     if otp.expires_at < now:
-        _log_access(db, dong, ho, request, "verify", False)
+        _log_access(db, company_id, dong, ho, request, "verify", False)
         return {"success": False, "message": "인증번호가 만료되었습니다. 다시 요청해 주세요."}
 
     if not secrets.compare_digest(otp.code, req.code):
@@ -209,14 +218,17 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
         if otp.fail_count >= FEE_OTP_MAX_ATTEMPTS:
             otp.locked_until = now + timedelta(minutes=FEE_OTP_LOCKOUT_MINUTES)
         db.commit()
-        _log_access(db, dong, ho, request, "verify", False)
+        _log_access(db, company_id, dong, ho, request, "verify", False)
         return {"success": False, "message": "인증번호가 일치하지 않습니다."}
 
     db.delete(otp)
     db.commit()
-    _log_access(db, dong, ho, request, "verify", True)
+    _log_access(db, company_id, dong, ho, request, "verify", True)
 
-    token = create_access_token({"dong": dong, "ho": ho, "scope": "fee"}, expire_minutes=FEE_TOKEN_TTL_MINUTES)
+    token = create_access_token(
+        {"dong": dong, "ho": ho, "company_id": company_id, "scope": "fee"},
+        expire_minutes=FEE_TOKEN_TTL_MINUTES,
+    )
     return {"success": True, "token": token, "expires_in": FEE_TOKEN_TTL_MINUTES * 60}
 
 
@@ -226,6 +238,7 @@ def get_fee(
     request: Request,
     dong: str,
     ho: str,
+    company_id: int = 1,
     db: Session = Depends(get_db),
     _auth: dict = Depends(require_fee_token),
 ):
@@ -235,14 +248,14 @@ def get_fee(
 
     entry = (
         db.query(FeeEntry)
-        .filter(FeeEntry.dong == dong_n, FeeEntry.ho == ho_n)
+        .filter(FeeEntry.company_id == company_id, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n)
         .order_by(FeeEntry.uploaded_at.desc())
         .first()
     )
 
     if not entry:
-        _log_access(db, dong_n, ho_n, request, "fee_query", False)
+        _log_access(db, company_id, dong_n, ho_n, request, "fee_query", False)
         raise HTTPException(status_code=404, detail="관리비 데이터를 찾을 수 없습니다.")
 
-    _log_access(db, dong_n, ho_n, request, "fee_query", True)
+    _log_access(db, company_id, dong_n, ho_n, request, "fee_query", True)
     return _build_fee_response(entry)

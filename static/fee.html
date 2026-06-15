@@ -224,6 +224,12 @@
 
 <main class="fee-wrap">
 
+  <!-- 관리비 조회 비활성 안내 -->
+  <div class="verify-card" id="feeDisabledCard" style="display:none">
+    <h2>관리비 조회</h2>
+    <p style="margin-bottom:0">이 단지는 관리비 조회 기능을 사용하지 않습니다.</p>
+  </div>
+
   <!-- 인증 폼 -->
   <div class="verify-card" id="verifyCard">
     <h2>관리비 조회</h2>
@@ -316,6 +322,8 @@
 </main>
 
 <script>
+const companyId = new URLSearchParams(location.search).get('company') || '1';
+
 (async () => {
   // 공통 헤더 상태 (로그인/회사)
   try {
@@ -327,7 +335,7 @@
     }
   } catch {}
   try {
-    const r = await fetch('/api/companies/1/public');
+    const r = await fetch(`/api/companies/public/${companyId}`);
     if (r.ok) {
       const c = await r.json();
       if (c.company_name) document.getElementById('billAptName').textContent = c.company_name;
@@ -337,6 +345,11 @@
       // 민원/당근: 비활성화로 명시된 경우만 숨김
       if (c.enable_complaint !== false) document.getElementById('complaintNavLink').style.display = '';
       if (c.enable_market    !== false) document.getElementById('daangnNavLink').style.display = '';
+
+      if (!c.enable_fee) {
+        document.getElementById('feeDisabledCard').style.display = '';
+        document.getElementById('verifyCard').style.display = 'none';
+      }
     } else {
       // API 실패 시 기본적으로 링크 표시
       document.getElementById('complaintNavLink').style.display = '';
@@ -567,7 +580,7 @@ document.getElementById('btnSendSms').addEventListener('click', async () => {
     const res = await fetch('/api/fee/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dong, ho }),
+      body: JSON.stringify({ dong, ho, company_id: Number(companyId) }),
     });
     const d = await res.json().catch(() => ({}));
 
@@ -619,7 +632,7 @@ document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
     const vres = await fetch('/api/fee/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dong, ho, code }),
+      body: JSON.stringify({ dong, ho, code, company_id: Number(companyId) }),
     });
     const vd = await vres.json().catch(() => ({}));
 
@@ -630,7 +643,7 @@ document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
 
     clearInterval(otpCountdownTimer);
 
-    const fres = await fetch(`/api/fee?dong=${encodeURIComponent(dong)}&ho=${encodeURIComponent(ho)}`, {
+    const fres = await fetch(`/api/fee?dong=${encodeURIComponent(dong)}&ho=${encodeURIComponent(ho)}&company_id=${encodeURIComponent(companyId)}`, {
       headers: { 'Authorization': `Bearer ${vd.token}` },
     });
     const fd = await fres.json().catch(() => ({}));

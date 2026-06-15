@@ -8,8 +8,9 @@ import openpyxl
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
-from app.config import COLLECTOR_API_KEY, DATA_DIR
+from app.config import DATA_DIR
 from app.database import get_db
+from app.models.company import Company
 from app.models.fee_data import FeeEntry
 
 logger = logging.getLogger("acchelper")
@@ -34,14 +35,21 @@ def _save_dir() -> Path:
     return Path("/tmp")
 
 
-def _verify_api_key(authorization: str = Header(...)):
-    if not COLLECTOR_API_KEY:
-        raise HTTPException(status_code=503, detail="서버 COLLECTOR_API_KEY가 설정되지 않았습니다.")
-    if authorization != f"Bearer {COLLECTOR_API_KEY}":
+def _get_company_by_api_key(authorization: str = Header(...), db: Session = Depends(get_db)) -> Company:
+    if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="API 키 인증 실패")
+    api_key = authorization[7:]
+    company = (
+        db.query(Company)
+        .filter(Company.collector_api_key == api_key, Company.deleted_at == None)
+        .first()
+    )
+    if not company:
+        raise HTTPException(status_code=401, detail="API 키 인증 실패")
+    return company
 
 
-def _parse_and_store(file_path: Path, year_month: str, db: Session):
+def _parse_and_store(file_path: Path, year_month: str, company_id: int, db: Session):
     try:
         wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
         ws = wb.active
@@ -52,7 +60,9 @@ def _parse_and_store(file_path: Path, year_month: str, db: Session):
         headers = [str(v).strip() if v is not None else "" for v in rows[0]]
 
         # 기존 같은 년월 데이터 삭제
-        db.query(FeeEntry).filter(FeeEntry.year_month == year_month).delete()
+        db.query(FeeEntry).filter(
+            FeeEntry.year_month == year_month, FeeEntry.company_id == company_id
+        ).delete()
 
         count = 0
         for row in rows[1:]:
@@ -70,6 +80,7 @@ def _parse_and_store(file_path: Path, year_month: str, db: Session):
 
             fee_data = {k: v for k, v in rd.items() if k not in _FIXED_KEYS and v}
             entry = FeeEntry(
+                company_id=company_id,
                 year_month=year_month,
                 dong=dong, ho=ho,
                 name=name, phone=phone,
@@ -97,7 +108,7 @@ def health():
 async def upload_fee_excel(
     request: Request,
     filename: str = Query(default="fee.xlsx"),
-    _=Depends(_verify_api_key),
+    company: Company = Depends(_get_company_by_api_key),
     db: Session = Depends(get_db),
 ):
     """ERP 수집기 → 관리비 엑셀 업로드 (raw bytes, API 키 인증)"""
@@ -119,6 +130,9 @@ async def upload_fee_excel(
     save_path  = _save_dir() / f"fee_{timestamp}.xlsx"
     save_path.write_bytes(content)
 
-    count = _parse_and_store(save_path, year_month, db)
-    logger.info("관리비 엑셀 업로드+파싱: %s (%d bytes, %d rows)", save_path.name, len(content), count)
+    count = _parse_and_store(save_path, year_month, company.company_id, db)
+    logger.info(
+        "관리비 엑셀 업로드+파싱: company_id=%d %s (%d bytes, %d rows)",
+        company.company_id, save_path.name, len(content), count,
+    )
     return {"ok": True, "filename": save_path.name, "size": len(content), "rows": count}

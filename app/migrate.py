@@ -9,6 +9,8 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.engine import Engine
 
+from app.config import COLLECTOR_API_KEY
+
 logger = logging.getLogger("acchelper")
 
 
@@ -90,6 +92,8 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "notice_text_link", "VARCHAR(500)")
         _pg_add_column_if_missing(conn, "companies", "notice_image_url", "VARCHAR(500)")
         _pg_add_column_if_missing(conn, "companies", "notice_image_link", "VARCHAR(500)")
+        _pg_add_column_if_missing(conn, "companies", "enable_fee", "BOOLEAN DEFAULT FALSE")
+        _pg_add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
         # Backfill: mark existing companies as approved
         conn.execute(text(
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
@@ -277,6 +281,7 @@ def _run_pg_migration(engine: Engine):
             conn.execute(text("""
                 CREATE TABLE fee_entries (
                     id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
                     year_month VARCHAR(6) NOT NULL,
                     dong VARCHAR(20) NOT NULL,
                     ho VARCHAR(20) NOT NULL,
@@ -288,13 +293,18 @@ def _run_pg_migration(engine: Engine):
             """))
             conn.execute(text("CREATE INDEX ix_fee_dong_ho ON fee_entries (dong, ho)"))
             conn.execute(text("CREATE INDEX ix_fee_year_month ON fee_entries (year_month)"))
+            conn.execute(text("CREATE INDEX ix_fee_company_dong_ho ON fee_entries (company_id, dong, ho)"))
             logger.info("PG: Created table fee_entries")
+        else:
+            _pg_add_column_if_missing(conn, "fee_entries", "company_id", "INTEGER NOT NULL DEFAULT 1")
+            conn.execute(text("CREATE INDEX IF NOT EXISTS ix_fee_company_dong_ho ON fee_entries (company_id, dong, ho)"))
 
         # --- fee_otp 테이블 (관리비 조회 SMS 인증번호) ---
         if not _pg_table_exists(conn, "fee_otp"):
             conn.execute(text("""
                 CREATE TABLE fee_otp (
                     id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
                     dong VARCHAR(20) NOT NULL,
                     ho VARCHAR(20) NOT NULL,
                     code VARCHAR(6) NOT NULL,
@@ -302,16 +312,19 @@ def _run_pg_migration(engine: Engine):
                     fail_count INTEGER NOT NULL DEFAULT 0,
                     locked_until TIMESTAMP,
                     created_at TIMESTAMP DEFAULT NOW(),
-                    CONSTRAINT uq_fee_otp_dong_ho UNIQUE (dong, ho)
+                    CONSTRAINT uq_fee_otp_company_dong_ho UNIQUE (company_id, dong, ho)
                 )
             """))
             logger.info("PG: Created table fee_otp")
+        else:
+            _pg_add_column_if_missing(conn, "fee_otp", "company_id", "INTEGER NOT NULL DEFAULT 1")
 
         # --- access_log 테이블 (관리비 조회 인증/조회 로그) ---
         if not _pg_table_exists(conn, "access_log"):
             conn.execute(text("""
                 CREATE TABLE access_log (
                     id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL DEFAULT 1,
                     dong VARCHAR(20) NOT NULL,
                     ho VARCHAR(20) NOT NULL,
                     ip VARCHAR(45) NOT NULL DEFAULT '',
@@ -324,9 +337,45 @@ def _run_pg_migration(engine: Engine):
             conn.execute(text("CREATE INDEX ix_access_log_dong_ho ON access_log (dong, ho)"))
             conn.execute(text("CREATE INDEX ix_access_log_created_at ON access_log (created_at)"))
             logger.info("PG: Created table access_log")
+        else:
+            _pg_add_column_if_missing(conn, "access_log", "company_id", "INTEGER NOT NULL DEFAULT 1")
 
         conn.commit()
     logger.info("PG: Column migrations committed")
+
+    # --- Transaction 1.5: fee_otp 유니크 제약 갱신 + 회사1 관리비 백필 ---
+    # (실패해도 나머지 마이그레이션에 영향 없도록 별도 트랜잭션으로 분리)
+    with engine.connect() as conn:
+        try:
+            exists = conn.execute(text(
+                "SELECT 1 FROM information_schema.table_constraints "
+                "WHERE table_name='fee_otp' AND constraint_name='uq_fee_otp_company_dong_ho'"
+            )).fetchone()
+            if not exists:
+                conn.execute(text("ALTER TABLE fee_otp DROP CONSTRAINT IF EXISTS uq_fee_otp_dong_ho"))
+                conn.execute(text(
+                    "ALTER TABLE fee_otp ADD CONSTRAINT uq_fee_otp_company_dong_ho "
+                    "UNIQUE (company_id, dong, ho)"
+                ))
+                logger.info("PG: fee_otp unique constraint updated to (company_id, dong, ho)")
+            conn.commit()
+        except Exception as e:
+            logger.warning("PG: could not update fee_otp constraint: %s", e)
+            conn.rollback()
+
+    with engine.connect() as conn:
+        try:
+            conn.execute(text("UPDATE companies SET enable_fee = TRUE WHERE company_id = 1"))
+            if COLLECTOR_API_KEY:
+                conn.execute(text(
+                    "UPDATE companies SET collector_api_key = :key "
+                    "WHERE company_id = 1 AND collector_api_key IS NULL"
+                ), {"key": COLLECTOR_API_KEY})
+            conn.commit()
+            logger.info("PG: company 1 fee backfill complete")
+        except Exception as e:
+            logger.warning("PG: company 1 fee backfill failed: %s", e)
+            conn.rollback()
 
     # --- Transaction 2: Fix embedding column type + HNSW index ---
     # This is isolated so failure doesn't break the rest of startup.
@@ -410,6 +459,8 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "companies", "hero_text", "TEXT")
             _add_column_if_missing(conn, "companies", "greeting_text", "TEXT")
             _add_column_if_missing(conn, "companies", "categories", "TEXT")
+            _add_column_if_missing(conn, "companies", "enable_fee", "BOOLEAN DEFAULT 0")
+            _add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
             # Backfill: mark existing companies as approved
             conn.execute(text(
                 "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
@@ -569,6 +620,7 @@ def run_migration(engine: Engine):
             conn.execute(text("""
                 CREATE TABLE fee_entries (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL DEFAULT 1,
                     year_month VARCHAR(6) NOT NULL,
                     dong VARCHAR(20) NOT NULL,
                     ho VARCHAR(20) NOT NULL,
@@ -580,13 +632,17 @@ def run_migration(engine: Engine):
             """))
             conn.execute(text("CREATE INDEX ix_fee_dong_ho ON fee_entries (dong, ho)"))
             conn.execute(text("CREATE INDEX ix_fee_year_month ON fee_entries (year_month)"))
+            conn.execute(text("CREATE INDEX ix_fee_company_dong_ho ON fee_entries (company_id, dong, ho)"))
             logger.info("Created table fee_entries")
+        else:
+            _add_column_if_missing(conn, "fee_entries", "company_id", "INTEGER NOT NULL DEFAULT 1")
 
         # --- fee_otp 테이블 (관리비 조회 SMS 인증번호) ---
         if not _table_exists(conn, "fee_otp"):
             conn.execute(text("""
                 CREATE TABLE fee_otp (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL DEFAULT 1,
                     dong VARCHAR(20) NOT NULL,
                     ho VARCHAR(20) NOT NULL,
                     code VARCHAR(6) NOT NULL,
@@ -594,16 +650,19 @@ def run_migration(engine: Engine):
                     fail_count INTEGER NOT NULL DEFAULT 0,
                     locked_until DATETIME,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    UNIQUE (dong, ho)
+                    UNIQUE (company_id, dong, ho)
                 )
             """))
             logger.info("Created table fee_otp")
+        else:
+            _add_column_if_missing(conn, "fee_otp", "company_id", "INTEGER NOT NULL DEFAULT 1")
 
         # --- access_log 테이블 (관리비 조회 인증/조회 로그) ---
         if not _table_exists(conn, "access_log"):
             conn.execute(text("""
                 CREATE TABLE access_log (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL DEFAULT 1,
                     dong VARCHAR(20) NOT NULL,
                     ho VARCHAR(20) NOT NULL,
                     ip VARCHAR(45) NOT NULL DEFAULT '',
@@ -616,6 +675,17 @@ def run_migration(engine: Engine):
             conn.execute(text("CREATE INDEX ix_access_log_dong_ho ON access_log (dong, ho)"))
             conn.execute(text("CREATE INDEX ix_access_log_created_at ON access_log (created_at)"))
             logger.info("Created table access_log")
+        else:
+            _add_column_if_missing(conn, "access_log", "company_id", "INTEGER NOT NULL DEFAULT 1")
+
+        # 회사1(세종푸르지오시티 2차) 관리비 조회 활성화 + 기존 수집기 키 백필
+        if _table_exists(conn, "companies"):
+            conn.execute(text("UPDATE companies SET enable_fee = 1 WHERE company_id = 1"))
+            if COLLECTOR_API_KEY:
+                conn.execute(text(
+                    "UPDATE companies SET collector_api_key = :key "
+                    "WHERE company_id = 1 AND collector_api_key IS NULL"
+                ), {"key": COLLECTOR_API_KEY})
 
         conn.commit()
         logger.info("Migration completed successfully")
