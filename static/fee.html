@@ -227,9 +227,13 @@
   <!-- 인증 폼 -->
   <div class="verify-card" id="verifyCard">
     <h2>관리비 조회</h2>
-    <p>호수를 입력하면 등록된 휴대폰 번호로 인증번호를 보내드립니다. 인증 후 당월 관리비를 확인할 수 있습니다.</p>
+    <p>동/호수를 입력하면 등록된 휴대폰 번호로 인증번호를 보내드립니다. 인증 후 당월 관리비를 확인할 수 있습니다.</p>
 
     <div class="form-row">
+      <div class="form-group" style="flex:0 0 80px">
+        <label for="inp-dong">동</label>
+        <input type="number" id="inp-dong" value="1" placeholder="예: 1" inputmode="numeric">
+      </div>
       <div class="form-group">
         <label for="inp-ho">호</label>
         <input type="number" id="inp-ho" placeholder="예: 1203" inputmode="numeric">
@@ -343,8 +347,6 @@
     document.getElementById('daangnNavLink').style.display = '';
   }
 })();
-
-const DONG = '1'; // 세종푸르지오시티 2차는 1동 고정
 
 let otpCountdownTimer = null;
 let sessionCountdownTimer = null;
@@ -548,11 +550,12 @@ function renderBill(d) {
 
 // 인증번호 받기
 document.getElementById('btnSendSms').addEventListener('click', async () => {
+  const dong = document.getElementById('inp-dong').value.trim();
   const ho = document.getElementById('inp-ho').value.trim();
   clearError();
 
-  if (!ho) {
-    showError('호를 입력해 주세요.');
+  if (!dong || !ho) {
+    showError('동, 호를 입력해 주세요.');
     return;
   }
 
@@ -564,7 +567,7 @@ document.getElementById('btnSendSms').addEventListener('click', async () => {
     const res = await fetch('/api/fee/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dong: DONG, ho }),
+      body: JSON.stringify({ dong, ho }),
     });
     const d = await res.json().catch(() => ({}));
 
@@ -597,6 +600,7 @@ document.getElementById('btnResend').addEventListener('click', () => {
 
 // 조회하기 (인증번호 검증 → 관리비 조회)
 document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
+  const dong = document.getElementById('inp-dong').value.trim();
   const ho = document.getElementById('inp-ho').value.trim();
   const code = document.getElementById('inp-code').value.trim();
   clearError();
@@ -615,7 +619,7 @@ document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
     const vres = await fetch('/api/fee/verify-otp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dong: DONG, ho, code }),
+      body: JSON.stringify({ dong, ho, code }),
     });
     const vd = await vres.json().catch(() => ({}));
 
@@ -626,7 +630,7 @@ document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
 
     clearInterval(otpCountdownTimer);
 
-    const fres = await fetch(`/api/fee?dong=${encodeURIComponent(DONG)}&ho=${encodeURIComponent(ho)}`, {
+    const fres = await fetch(`/api/fee?dong=${encodeURIComponent(dong)}&ho=${encodeURIComponent(ho)}`, {
       headers: { 'Authorization': `Bearer ${vd.token}` },
     });
     const fd = await fres.json().catch(() => ({}));
@@ -655,6 +659,9 @@ document.getElementById('btnNewSearch').addEventListener('click', () => {
 });
 
 // 엔터키 제출
+document.getElementById('inp-dong').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('btnSendSms').click();
+});
 document.getElementById('inp-ho').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btnSendSms').click();
 });
