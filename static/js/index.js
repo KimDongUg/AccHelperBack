@@ -245,6 +245,12 @@ async function validateAndStartChat(code) {
             }
         }
 
+        // 관리비 조회 (현재 회사1만 관리비 데이터 보유)
+        var feeNavLink = document.getElementById('feeNavLink');
+        if (feeNavLink) {
+            feeNavLink.style.display = (currentCompanyId === 1) ? '' : 'none';
+        }
+
         // 우리아파트 당근 (아파트·오피스텔 모두 표시)
         var daangnNavLink = document.getElementById('daangnNavLink');
         if (daangnNavLink) {
