@@ -224,12 +224,6 @@
 
 <main class="fee-wrap">
 
-  <!-- 관리비 조회 비활성 안내 -->
-  <div class="verify-card" id="feeDisabledCard" style="display:none">
-    <h2>관리비 조회</h2>
-    <p style="margin-bottom:0">이 단지는 관리비 조회 기능을 사용하지 않습니다.</p>
-  </div>
-
   <!-- 인증 폼 -->
   <div class="verify-card" id="verifyCard">
     <h2>관리비 조회</h2>
@@ -346,10 +340,7 @@ const companyId = new URLSearchParams(location.search).get('company') || '1';
       if (c.enable_complaint !== false) document.getElementById('complaintNavLink').style.display = '';
       if (c.enable_market    !== false) document.getElementById('daangnNavLink').style.display = '';
 
-      if (!c.enable_fee) {
-        document.getElementById('feeDisabledCard').style.display = '';
-        document.getElementById('verifyCard').style.display = 'none';
-      }
+
     } else {
       // API 실패 시 기본적으로 링크 표시
       document.getElementById('complaintNavLink').style.display = '';

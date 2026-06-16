@@ -245,10 +245,9 @@ async function validateAndStartChat(code) {
             }
         }
 
-        // 관리비 조회 (회사별 enable_fee 설정에 따라 노출)
         var feeNavLink = document.getElementById('feeNavLink');
         if (feeNavLink) {
-            feeNavLink.style.display = company.enable_fee ? '' : 'none';
+            feeNavLink.style.display = '';
             feeNavLink.href = '/fee.html?company=' + company.company_id;
         }
 
