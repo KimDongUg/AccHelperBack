@@ -160,18 +160,6 @@
                     <textarea id="dashGreeting" class="form-control" rows="2" placeholder="예: 안녕하세요! OOO AI Helper입니다. 궁금한 점을 물어보세요."></textarea>
                     <div style="font-size:var(--text-xs);color:var(--gray-400);margin-top:0.25rem">챗봇 첫 화면에 표시되는 인사말입니다.</div>
                 </div>
-                <!-- 관리비 조회 -->
-                <div class="form-group" style="grid-column:1/-1">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
-                        <label style="margin:0">관리비 조회 기능</label>
-                        <label class="notice-toggle-wrap">
-                            <input type="checkbox" id="enableFee">
-                            <span class="notice-toggle-slider"></span>
-                            <span style="font-size:var(--text-sm);color:var(--gray-600);margin-left:0.25rem" id="enableFeeLabel">비활성</span>
-                        </label>
-                    </div>
-                    <div style="font-size:var(--text-xs);color:var(--gray-400)">활성화하면 메뉴에 "관리비 조회"가 표시되고, ERP 수집기로 업로드한 관리비 데이터를 입주민이 조회할 수 있습니다.</div>
-                </div>
                 <div class="form-group" style="grid-column:1/-1">
                     <label for="dashCollectorApiKey">ERP 수집기 API 키</label>
                     <div style="display:flex;gap:0.5rem;align-items:center">
@@ -224,6 +212,7 @@
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="complaintPersons" id="tabComplaintPersons">민원인 목록</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="market" id="tabMarket">🥕 당근 관리</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="fee" id="tabFee" style="display:none">관리비 조회</button>
         </div>
 
         <!-- Tab: Q&A Management -->
@@ -830,6 +819,26 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Tab: 관리비 조회 (관리자용) -->
+        <div class="tab-content" id="tabContentFee" role="tabpanel" style="display:none">
+            <div class="toolbar" style="flex-wrap:wrap;gap:0.75rem">
+                <h3 style="margin:0;font-size:var(--text-base)">관리비 조회</h3>
+                <div style="display:flex;gap:0.5rem;align-items:flex-end;flex-wrap:wrap;margin-left:auto">
+                    <div style="display:flex;flex-direction:column;gap:2px">
+                        <label for="adminFeeDong" style="font-size:var(--text-xs);color:var(--gray-600);font-weight:600">동</label>
+                        <input type="text" id="adminFeeDong" class="form-control" placeholder="예: 1" style="width:80px" inputmode="numeric" onkeydown="if(event.key==='Enter')adminFeeSearch()">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:2px">
+                        <label for="adminFeeHo" style="font-size:var(--text-xs);color:var(--gray-600);font-weight:600">호수</label>
+                        <input type="text" id="adminFeeHo" class="form-control" placeholder="예: 101" style="width:110px" inputmode="numeric" onkeydown="if(event.key==='Enter')adminFeeSearch()">
+                    </div>
+                    <button class="btn btn-primary" id="adminFeeSearchBtn" onclick="adminFeeSearch()">조회</button>
+                </div>
+            </div>
+            <div id="adminFeeMsg" style="display:none;margin-top:1rem;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:500"></div>
+            <div id="adminFeeResult" style="margin-top:1.25rem;max-width:560px"></div>
         </div>
 
         <!-- Tab: Subscription Management -->

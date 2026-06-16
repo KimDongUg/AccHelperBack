@@ -18,7 +18,7 @@ from app.config import (
     RATE_LIMIT_FEE_VERIFY,
 )
 from app.database import get_db
-from app.dependencies import require_fee_token
+from app.dependencies import require_admin, require_fee_token
 from app.models.access_log import AccessLog
 from app.models.fee_data import FeeEntry
 from app.models.fee_otp import FeeOtp
@@ -230,6 +230,33 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
         expire_minutes=FEE_TOKEN_TTL_MINUTES,
     )
     return {"success": True, "token": token, "expires_in": FEE_TOKEN_TTL_MINUTES * 60}
+
+
+@router.get("/admin-search")
+def admin_fee_search(
+    request: Request,
+    dong: str,
+    ho: str,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자 전용 관리비 조회 (OTP 인증 불필요, company_id는 JWT에서 자동 추출)"""
+    cid = admin["company_id"]
+    if cid == 0:
+        raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
+    dong_n = _normalize(dong)
+    ho_n = _normalize(ho)
+    if not dong_n or not ho_n:
+        raise HTTPException(status_code=400, detail="동, 호를 입력하세요.")
+    entry = (
+        db.query(FeeEntry)
+        .filter(FeeEntry.company_id == cid, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n)
+        .order_by(FeeEntry.uploaded_at.desc())
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="해당 세대의 관리비 데이터를 찾을 수 없습니다.")
+    return _build_fee_response(entry)
 
 
 @router.get("")

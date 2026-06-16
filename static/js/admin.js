@@ -109,6 +109,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (collectorCard) collectorCard.style.display = '';
     }
 
+    // 관리비 조회 탭: 일반 관리자는 항상 표시
+    if (currentRole === 'admin') {
+        const tabFeeBtn = document.getElementById('tabFee');
+        if (tabFeeBtn) tabFeeBtn.style.display = '';
+    }
+
     // Show super admin link for super_admin
     if (currentRole === 'super_admin') {
         const saLink = document.getElementById('superAdminLink');
@@ -1353,11 +1359,8 @@ async function loadCompanySettings() {
         document.getElementById('dashChatbotUrl').value = getCompanyChatbotUrl() || '';
         document.getElementById('dashGreeting').value = company.greeting_text || '';
 
-        // Load 관리비 조회 설정
-        const enableFee = !!company.enable_fee;
-        document.getElementById('enableFee').checked = enableFee;
-        document.getElementById('enableFeeLabel').textContent = enableFee ? '활성' : '비활성';
         document.getElementById('dashCollectorApiKey').value = company.collector_api_key || '';
+
 
         // Load notice
         const noticeActive = !!company.notice_active;
@@ -1412,7 +1415,6 @@ async function saveCompanySettings() {
     const companyAddress = document.getElementById('dashCompanyAddress').value.trim();
     const greetingText = document.getElementById('dashGreeting').value.trim();
     const categories = getCategoryItems();
-    const enableFee = document.getElementById('enableFee').checked;
     const noticeActive = document.getElementById('noticeActive').checked;
     const noticeText = document.getElementById('noticeText').value.trim();
     const noticeTextLink = document.getElementById('noticeTextLink').value.trim();
@@ -1426,7 +1428,6 @@ async function saveCompanySettings() {
             address: companyAddress || null,
             greeting_text: greetingText || null,
             categories: categories.length > 0 ? categories : null,
-            enable_fee: enableFee,
             notice_active: noticeActive,
             notice_text: noticeText || null,
             notice_text_link: noticeTextLink || null,
@@ -1453,12 +1454,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (toggle) {
         toggle.addEventListener('change', function () {
             document.getElementById('noticeActiveLabel').textContent = this.checked ? '활성' : '비활성';
-        });
-    }
-    const feeToggle = document.getElementById('enableFee');
-    if (feeToggle) {
-        feeToggle.addEventListener('change', function () {
-            document.getElementById('enableFeeLabel').textContent = this.checked ? '활성' : '비활성';
         });
     }
 });
@@ -3395,4 +3390,137 @@ async function deleteMktResident(id) {
         showToast('삭제되었습니다.');
         loadMarketResidents();
     } catch (e) { showToast(e.message, 'error'); }
+}
+
+/* ═══════════════════════════════════════════════
+ *  관리비 조회 (관리자용)
+ * ═══════════════════════════════════════════════ */
+function _fmtFee(v) {
+    const n = parseInt(String(v).replace(/,/g, ''), 10);
+    return isNaN(n) ? (v || '0') : n.toLocaleString('ko-KR');
+}
+
+function _ymFee(ym6) {
+    if (!ym6 || ym6.length < 6) return '';
+    return `${ym6.slice(0, 4)}년 ${parseInt(ym6.slice(4, 6))}월분`;
+}
+
+async function adminFeeSearch() {
+    const dong = (document.getElementById('adminFeeDong').value || '').trim();
+    const ho   = (document.getElementById('adminFeeHo').value   || '').trim();
+    const msgEl    = document.getElementById('adminFeeMsg');
+    const resultEl = document.getElementById('adminFeeResult');
+    const btn      = document.getElementById('adminFeeSearchBtn');
+
+    function showMsg(text, isError) {
+        msgEl.textContent = text;
+        msgEl.style.display = '';
+        msgEl.style.background = isError ? '#ffebee' : '#e3f2fd';
+        msgEl.style.color = isError ? '#c62828' : '#1565c0';
+    }
+    function clearMsg() { msgEl.style.display = 'none'; }
+
+    if (!dong || !ho) { showMsg('동과 호수를 모두 입력하세요.', true); return; }
+
+    clearMsg();
+    resultEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400)">조회 중...</div>';
+    btn.disabled = true;
+
+    try {
+        const params = new URLSearchParams({ dong, ho });
+        const data = await apiGet(`/fee/admin-search?${params}`);
+        renderAdminFeeResult(data, resultEl);
+    } catch (e) {
+        resultEl.innerHTML = '';
+        const msg = e.message || '데이터를 조회하지 못했습니다.';
+        showMsg(msg, true);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderAdminFeeResult(d, container) {
+    const has구분 = Object.keys(d.billing_구분 || {}).length > 0;
+
+    function buildItemRows() {
+        const entries = Object.entries(d.billing_items || {});
+        if (!entries.length) return '';
+        let 과세합 = 0, 비과세합 = 0;
+        let rows = '';
+        for (const [k, v] of entries) {
+            const 구분 = (d.billing_구분 || {})[k] || '';
+            const n = parseInt(String(v).replace(/,/g, ''), 10);
+            if (!isNaN(n)) {
+                if (구분 === '과') 과세합 += n;
+                if (구분 === '비') 비과세합 += n;
+            }
+            const divCell = has구분 ? `<td style="text-align:center;font-size:11px;font-weight:700;width:26px;padding:2px 0;border-radius:3px;${구분==='과'?'color:#1565c0;background:#e3f2fd':'color:#555;background:#f5f5f5'}">${구분}</td>` : '';
+            rows += `<tr style="border-bottom:1px solid #f5f5f5"><td style="padding:7px 4px;color:#555">${k}</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:#1a1a2e">${_fmtFee(v)}</td>${divCell}</tr>`;
+        }
+        if (has구분) {
+            const sum = d.summary || {};
+            const 공급가액   = parseInt(String(sum['공급가액']   || '0').replace(/,/g,''), 10) || 과세합;
+            const 부가가치세 = parseInt(String(sum['부가가치세'] || '0').replace(/,/g,''), 10) || 0;
+            const 비과세합계 = parseInt(String(sum['비과세합계'] || '0').replace(/,/g,''), 10) || 비과세합;
+            const 과세총합   = 공급가액 + 부가가치세;
+            if (과세총합 > 0) rows += `<tr style="border-top:1px dashed #ddd"><td style="padding:7px 4px;font-weight:600;color:#333">과세합</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:#0d47a1">${_fmtFee(과세총합)}</td><td></td></tr>`;
+            if (비과세합계 > 0) rows += `<tr><td style="padding:7px 4px;font-weight:600;color:#333">비과세합</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:#0d47a1">${_fmtFee(비과세합계)}</td><td></td></tr>`;
+        }
+        rows += `<tr style="border-top:1.5px solid #bbdefb"><td style="padding:10px 4px 7px;font-weight:700;color:#0d47a1;font-size:14px">당월 납부금액</td><td style="padding:10px 4px 7px;text-align:right;font-weight:700;color:#0d47a1;font-size:14px">${_fmtFee(d.total || '')}</td>${has구분?'<td></td>':''}</tr>`;
+        return rows;
+    }
+
+    function buildSummaryRows() {
+        return Object.entries(d.summary || {}).map(([k, v]) =>
+            `<tr style="border-bottom:1px solid #f5f5f5"><td style="padding:7px 4px;color:#555">${k}</td><td style="padding:7px 4px;text-align:right;font-weight:600;color:#1a1a2e">${_fmtFee(v)}</td></tr>`
+        ).join('');
+    }
+
+    function buildMeterRows() {
+        return Object.entries(d.meter || {}).map(([item, fields]) =>
+            `<tr style="border-bottom:1px solid #f0f0f0"><td style="padding:7px 8px;text-align:left;color:#555;font-weight:600">${item}</td><td style="padding:7px 8px;text-align:center;color:#444">${fields['전월'] || '—'}</td><td style="padding:7px 8px;text-align:center;color:#444">${fields['당월'] || '—'}</td><td style="padding:7px 8px;text-align:center;color:#444">${_fmtFee(fields['요금'] || '0')}</td></tr>`
+        ).join('');
+    }
+
+    const itemRows    = buildItemRows();
+    const summaryRows = buildSummaryRows();
+    const meterRows   = buildMeterRows();
+
+    container.innerHTML = `
+<div style="background:#fff;border-radius:14px;box-shadow:0 2px 12px rgba(0,0,0,0.08);overflow:hidden;font-family:'Malgun Gothic','맑은 고딕',sans-serif">
+  <div style="background:linear-gradient(135deg,#1565c0,#0d47a1);color:#fff;padding:20px;text-align:center">
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px">${d.dong}동 ${d.ho}호 &nbsp;${d.name || ''}</div>
+    <div style="font-size:13px;opacity:.85">${_ymFee(d.year_month)}</div>
+  </div>
+  <div style="background:#e3f2fd;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #bbdefb">
+    <div>
+      <div style="font-size:12px;color:#1565c0;font-weight:600;margin-bottom:2px">납기내 납부금액</div>
+      <div style="font-size:24px;font-weight:800;color:#0d47a1;letter-spacing:-0.5px">${d.total ? _fmtFee(d.total) + '원' : '—'}</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:12px;color:#888;margin-bottom:2px">납기후</div>
+      <div style="font-size:16px;font-weight:700;color:#555">${d.total_after ? _fmtFee(d.total_after) + '원' : ''}</div>
+    </div>
+  </div>
+  ${itemRows ? `<div style="padding:16px 20px;border-bottom:1px solid #f0f0f0">
+    <div style="font-size:12px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">항목별 부과내역</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px"><tbody>${itemRows}</tbody></table>
+  </div>` : ''}
+  ${summaryRows ? `<div style="padding:16px 20px;border-bottom:1px solid #f0f0f0">
+    <div style="font-size:12px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">고지내역</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13.5px"><tbody>${summaryRows}</tbody></table>
+  </div>` : ''}
+  ${meterRows ? `<div style="padding:16px 20px">
+    <div style="font-size:12px;font-weight:700;color:#1565c0;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">검침내역</div>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr>
+        <th style="background:#e8eaf6;color:#3949ab;font-weight:700;padding:7px 8px;text-align:left;font-size:12px">검침항목</th>
+        <th style="background:#e8eaf6;color:#3949ab;font-weight:700;padding:7px 8px;text-align:center;font-size:12px">전월지침</th>
+        <th style="background:#e8eaf6;color:#3949ab;font-weight:700;padding:7px 8px;text-align:center;font-size:12px">당월지침</th>
+        <th style="background:#e8eaf6;color:#3949ab;font-weight:700;padding:7px 8px;text-align:center;font-size:12px">사용량(요금)</th>
+      </tr></thead>
+      <tbody>${meterRows}</tbody>
+    </table>
+  </div>` : ''}
+</div>`;
 }
