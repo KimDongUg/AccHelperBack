@@ -203,16 +203,15 @@
         <!-- Tab Navigation -->
         <div class="tab-nav" role="tablist" aria-label="관리 탭">
             <button class="tab-btn active" role="tab" aria-selected="true" data-tab="qa" id="tabQa">Q&A 관리</button>
-            <button class="tab-btn" role="tab" aria-selected="false" data-tab="admins" id="tabAdmins" style="display:none">관리자 관리</button>
-            <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback" id="tabFeedback">피드백</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="unanswered" id="tabUnanswered">미답변 질문</button>
-            <button class="tab-btn" role="tab" aria-selected="false" data-tab="logs" id="tabLogs">활동 로그</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="feedback" id="tabFeedback">피드백</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="statistics" id="tabStatistics">통계</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="questionViews" id="tabQuestionViews">질문 조회 상세</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="fee" id="tabFee" style="display:none">관리비 조회</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="complaintPersons" id="tabComplaintPersons">민원인 목록</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="market" id="tabMarket">🥕 당근 관리</button>
+            <button class="tab-btn" role="tab" aria-selected="false" data-tab="admins" id="tabAdmins" style="display:none">관리자 관리</button>
             <button class="tab-btn" role="tab" aria-selected="false" data-tab="subscription" id="tabSubscription">구독</button>
-            <button class="tab-btn" role="tab" aria-selected="false" data-tab="fee" id="tabFee" style="display:none">관리비 조회</button>
         </div>
 
         <!-- Tab: Q&A Management -->
@@ -387,33 +386,6 @@
             </div>
         </div>
 
-        <!-- Tab: Activity Logs -->
-        <div class="tab-content" id="tabContentLogs" role="tabpanel" style="display:none">
-            <div class="toolbar">
-                <h3 style="margin:0;font-size:var(--text-base)">활동 로그</h3>
-            </div>
-            <div class="qa-table-wrap">
-                <div class="table-wrap">
-                    <table class="qa-table" aria-label="활동 로그">
-                        <thead>
-                            <tr>
-                                <th scope="col" style="width:50px">ID</th>
-                                <th scope="col" style="width:120px">작업 유형</th>
-                                <th scope="col" style="width:100px">대상</th>
-                                <th scope="col">상세</th>
-                                <th scope="col" style="width:140px">시간</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logTableBody">
-                        </tbody>
-                    </table>
-                </div>
-                <div id="logEmptyState" class="empty-state" style="display:none">
-                    <p>활동 로그가 없습니다.</p>
-                </div>
-                <nav class="pagination" id="logPagination" aria-label="로그 페이지 내비게이션"></nav>
-            </div>
-        </div>
 
         <!-- Tab: Statistics -->
         <div class="tab-content" id="tabContentStatistics" role="tabpanel" style="display:none">

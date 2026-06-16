@@ -287,7 +287,6 @@ function switchTab(tab) {
     if (tab === 'admins') loadAdminList();
     if (tab === 'feedback') { feedbackPage = 1; loadFeedbackList(); }
     if (tab === 'unanswered') { unansweredPage = 1; loadUnansweredList(); }
-    if (tab === 'logs') { logPage = 1; loadActivityLogs(); }
     if (tab === 'statistics') initStatistics();
     if (tab === 'questionViews') initQuestionViews();
     if (tab === 'complaintPersons') { cpPage = 1; loadComplaintPersons(); }
