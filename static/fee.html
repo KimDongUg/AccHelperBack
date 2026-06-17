@@ -108,6 +108,63 @@
       }
       .privacy-note a { color: #888; text-decoration: underline; }
 
+      /* 개인정보 동의 */
+      .consent-box {
+        margin-top: 14px;
+        border: 1px solid #dde1e7;
+        border-radius: 10px;
+        overflow: hidden;
+        font-size: 12.5px;
+      }
+      .consent-policy {
+        background: #f9fafc;
+        padding: 13px 14px;
+        line-height: 1.8;
+        color: #555;
+      }
+      .consent-policy table { width: 100%; border-collapse: collapse; font-size: 12px; }
+      .consent-policy th {
+        background: #eef1f7;
+        color: #3949ab;
+        font-weight: 700;
+        padding: 6px 10px;
+        text-align: left;
+        border-bottom: 1px solid #e0e4ef;
+        white-space: nowrap;
+        width: 72px;
+      }
+      .consent-policy td {
+        padding: 6px 10px;
+        color: #444;
+        border-bottom: 1px solid #eef0f5;
+        vertical-align: top;
+      }
+      .consent-policy tr:last-child td,
+      .consent-policy tr:last-child th { border-bottom: none; }
+      .consent-check-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 14px;
+        background: #fff;
+        border-top: 1px solid #eee;
+        cursor: pointer;
+      }
+      .consent-check-row input[type="checkbox"] {
+        width: 17px; height: 17px;
+        accent-color: #1565c0;
+        cursor: pointer;
+        flex-shrink: 0;
+      }
+      .consent-check-row label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #1a1a2e;
+        cursor: pointer;
+        user-select: none;
+      }
+      .consent-check-row label span { color: #c62828; }
+
       /* 관리비 고지서 */
       .bill-card {
         display: none;
@@ -240,7 +297,22 @@
       </div>
     </div>
 
-    <button class="btn-verify" id="btnSendSms">인증번호 받기</button>
+    <!-- 개인정보 동의 -->
+    <div class="consent-box" id="consentBox">
+      <div class="consent-policy">
+        <table>
+          <tr><th>수집 항목</th><td>동호수, 전화번호, 입주자 정보</td></tr>
+          <tr><th>목적</th><td>관리비 조회 서비스 제공</td></tr>
+          <tr><th>보관기간</th><td>서비스 제공 기간</td></tr>
+        </table>
+      </div>
+      <div class="consent-check-row" onclick="toggleConsent()">
+        <input type="checkbox" id="consentChk" onclick="event.stopPropagation();handleConsent()">
+        <label for="consentChk">개인정보 수집 및 이용 동의 <span>(필수)</span></label>
+      </div>
+    </div>
+
+    <button class="btn-verify" id="btnSendSms" disabled>인증번호 받기</button>
 
     <!-- 인증번호 입력 영역 -->
     <div id="otpArea" style="display:none; margin-top:14px;">
@@ -261,7 +333,6 @@
     <div class="error-msg" id="errorMsg"></div>
 
     <p class="privacy-note">
-      본 서비스는 관리비 조회 목적으로 동호수 및 휴대폰 번호를 활용합니다.
       <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침 보기</a>
     </p>
   </div>
@@ -317,6 +388,34 @@
 
 <script>
 const companyId = new URLSearchParams(location.search).get('company') || '1';
+
+/* ── 개인정보 동의 (월별 1회) ── */
+function _consentKey() {
+  const now = new Date();
+  return `fee_consent_${companyId}_${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+}
+function _isConsentedThisMonth() {
+  return localStorage.getItem(_consentKey()) === '1';
+}
+function _saveConsent() {
+  localStorage.setItem(_consentKey(), '1');
+}
+function toggleConsent() {
+  const chk = document.getElementById('consentChk');
+  chk.checked = !chk.checked;
+  handleConsent();
+}
+function handleConsent() {
+  const chk = document.getElementById('consentChk');
+  document.getElementById('btnSendSms').disabled = !chk.checked;
+  if (chk.checked) _saveConsent();
+}
+(function initConsent() {
+  if (_isConsentedThisMonth()) {
+    document.getElementById('consentBox').style.display = 'none';
+    document.getElementById('btnSendSms').disabled = false;
+  }
+})();
 
 (async () => {
   // 공통 헤더 상태 (로그인/회사)
