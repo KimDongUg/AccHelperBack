@@ -359,9 +359,9 @@ window.renderDashboard = async function(d, token, companyId) {
   function _render(hist, avg) {
     const vat = _n((d.summary || {})['부가가치세']);
     let html = _heroCard(d, hist);
-    html += _compareCard(d, avg);
     html += _donutChart(d.billing_items || {}, vat);
     html += _usageCards(d.meter || {});
+    html += _compareCard(d, avg);
     html += _historyChart(hist);
     html += _aiCard(d, hist, avg);
     container.innerHTML = html;
