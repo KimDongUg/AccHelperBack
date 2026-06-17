@@ -292,6 +292,7 @@ function switchTab(tab) {
     if (tab === 'complaintPersons') { cpPage = 1; loadComplaintPersons(); }
     if (tab === 'market') { mktPage = 1; loadMarketPosts(); }
     if (tab === 'subscription') loadSubscriptionTab();
+    if (tab === 'fee') loadFeeAccessLog();
 }
 
 /* ═══════════════════════════════════════════════
@@ -3435,6 +3436,7 @@ async function adminFeeSearch() {
         showMsg(msg, true);
     } finally {
         btn.disabled = false;
+        loadFeeAccessLog();
     }
 }
 
@@ -3522,4 +3524,65 @@ function renderAdminFeeResult(d, container) {
     </table>
   </div>` : ''}
 </div>`;
+}
+
+/* ═══════════════════════════════════════════════
+ *  관리비 조회 이력
+ * ═══════════════════════════════════════════════ */
+const _FEE_ACTION_LABEL = {
+    send_sms:    'SMS 발송',
+    verify:      'OTP 인증',
+    fee_query:   '관리비 조회',
+    admin_query: '관리자 조회',
+};
+
+async function loadFeeAccessLog() {
+    const el = document.getElementById('adminFeeLogTable');
+    if (!el) return;
+    el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">불러오는 중...</div>';
+    try {
+        const data = await apiGet('/fee/admin-log?limit=100');
+        renderFeeAccessLog(data.logs || [], el);
+    } catch (e) {
+        el.innerHTML = '<div style="color:#c62828;font-size:13px;padding:8px 0">이력을 불러오지 못했습니다.</div>';
+    }
+}
+
+function renderFeeAccessLog(logs, container) {
+    if (!logs.length) {
+        container.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">조회 이력이 없습니다.</div>';
+        return;
+    }
+
+    const rows = logs.map(l => {
+        const dt = new Date(l.created_at);
+        const kst = new Date(dt.getTime() + 9 * 60 * 60 * 1000);
+        const pad = n => String(n).padStart(2, '0');
+        const dateStr = `${kst.getUTCFullYear()}-${pad(kst.getUTCMonth()+1)}-${pad(kst.getUTCDate())} ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}:${pad(kst.getUTCSeconds())}`;
+        const actionLabel = _FEE_ACTION_LABEL[l.action] || l.action;
+        const successBadge = l.success
+            ? '<span style="display:inline-block;padding:2px 8px;border-radius:20px;background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:700">성공</span>'
+            : '<span style="display:inline-block;padding:2px 8px;border-radius:20px;background:#ffebee;color:#c62828;font-size:11px;font-weight:700">실패</span>';
+        return `<tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:8px 10px;font-size:13px;color:#555;white-space:nowrap">${dateStr}</td>
+            <td style="padding:8px 10px;font-size:13px;font-weight:600;color:#1a1a2e;text-align:center">${l.dong}동 ${l.ho}호</td>
+            <td style="padding:8px 10px;font-size:13px;color:#555;text-align:center">${actionLabel}</td>
+            <td style="padding:8px 10px;text-align:center">${successBadge}</td>
+        </tr>`;
+    }).join('');
+
+    container.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f5f6fa">
+            <th style="padding:8px 10px;text-align:left;font-size:12px;color:var(--gray-600);font-weight:600;white-space:nowrap">일시</th>
+            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">동호수</th>
+            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">액션</th>
+            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">결과</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }

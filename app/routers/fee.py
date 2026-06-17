@@ -232,6 +232,37 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
     return {"success": True, "token": token, "expires_in": FEE_TOKEN_TTL_MINUTES * 60}
 
 
+@router.get("/admin-log")
+def admin_fee_log(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+    limit: int = 100,
+    offset: int = 0,
+):
+    """관리자 전용 관리비 조회 이력 (access_log)"""
+    cid = admin["company_id"]
+    if cid == 0:
+        raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
+    q = db.query(AccessLog).filter(AccessLog.company_id == cid)
+    total = q.count()
+    logs = q.order_by(AccessLog.created_at.desc()).offset(offset).limit(min(limit, 200)).all()
+    return {
+        "total": total,
+        "logs": [
+            {
+                "id": l.id,
+                "dong": l.dong,
+                "ho": l.ho,
+                "action": l.action,
+                "success": l.success,
+                "ip": l.ip,
+                "created_at": l.created_at.isoformat() + "Z",
+            }
+            for l in logs
+        ],
+    }
+
+
 @router.get("/admin-search")
 def admin_fee_search(
     request: Request,
@@ -255,7 +286,9 @@ def admin_fee_search(
         .first()
     )
     if not entry:
+        _log_access(db, cid, dong_n, ho_n, request, "admin_query", False)
         raise HTTPException(status_code=404, detail="해당 세대의 관리비 데이터를 찾을 수 없습니다.")
+    _log_access(db, cid, dong_n, ho_n, request, "admin_query", True)
     return _build_fee_response(entry)
 
 

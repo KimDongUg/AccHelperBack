@@ -811,6 +811,14 @@
             </div>
             <div id="adminFeeMsg" style="display:none;margin-top:1rem;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:500"></div>
             <div id="adminFeeResult" style="margin-top:1.25rem;max-width:560px"></div>
+            <!-- 조회 이력 -->
+            <div style="margin-top:2.5rem">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">
+                    <h4 style="margin:0;font-size:var(--text-sm);font-weight:700;color:var(--gray-700)">조회 이력</h4>
+                    <button class="btn btn-outline" style="padding:4px 12px;font-size:12px" onclick="loadFeeAccessLog()">새로고침</button>
+                </div>
+                <div id="adminFeeLogTable"></div>
+            </div>
         </div>
 
         <!-- Tab: Subscription Management -->
