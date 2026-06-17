@@ -811,6 +811,18 @@
             </div>
             <div id="adminFeeMsg" style="display:none;margin-top:1rem;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:500"></div>
             <div id="adminFeeResult" style="margin-top:1.25rem;max-width:560px"></div>
+            <!-- 조회 통계 -->
+            <div style="margin-top:2.5rem">
+                <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap">
+                    <h4 style="margin:0;font-size:var(--text-sm);font-weight:700;color:var(--gray-700)">조회 통계</h4>
+                    <div style="display:flex;gap:4px">
+                        <button id="feeStatTabDaily"   class="btn btn-outline" style="padding:3px 12px;font-size:12px;background:var(--primary);color:#fff;border-color:var(--primary)" onclick="switchFeeStatTab('daily')">일별</button>
+                        <button id="feeStatTabMonthly" class="btn btn-outline" style="padding:3px 12px;font-size:12px" onclick="switchFeeStatTab('monthly')">월별</button>
+                        <button id="feeStatTabYearly"  class="btn btn-outline" style="padding:3px 12px;font-size:12px" onclick="switchFeeStatTab('yearly')">년도별</button>
+                    </div>
+                </div>
+                <div id="adminFeeStatsTable"></div>
+            </div>
             <!-- 조회 이력 -->
             <div style="margin-top:2.5rem">
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem">

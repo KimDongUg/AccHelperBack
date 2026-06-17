@@ -232,6 +232,50 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
     return {"success": True, "token": token, "expires_in": FEE_TOKEN_TTL_MINUTES * 60}
 
 
+@router.get("/admin-stats")
+def admin_fee_stats(
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자 전용 관리비 조회 통계 (일별/월별/년도별)"""
+    from collections import defaultdict
+    cid = admin["company_id"]
+    if cid == 0:
+        raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
+
+    logs = db.query(AccessLog).filter(AccessLog.company_id == cid).all()
+
+    def empty():
+        return {"total": 0, "success": 0, "fail": 0}
+
+    daily: dict = defaultdict(empty)
+    monthly: dict = defaultdict(empty)
+    yearly: dict = defaultdict(empty)
+
+    for log in logs:
+        kst = log.created_at + timedelta(hours=9)
+        for key, bucket in [
+            (kst.strftime("%Y-%m-%d"), daily),
+            (kst.strftime("%Y-%m"),    monthly),
+            (kst.strftime("%Y"),       yearly),
+        ]:
+            bucket[key]["total"] += 1
+            if log.success:
+                bucket[key]["success"] += 1
+            else:
+                bucket[key]["fail"] += 1
+
+    def to_list(d, limit=None):
+        items = [{"period": k, **v} for k, v in sorted(d.items(), reverse=True)]
+        return items[:limit] if limit else items
+
+    return {
+        "daily":   to_list(daily,   30),
+        "monthly": to_list(monthly, 12),
+        "yearly":  to_list(yearly),
+    }
+
+
 @router.get("/admin-log")
 def admin_fee_log(
     db: Session = Depends(get_db),

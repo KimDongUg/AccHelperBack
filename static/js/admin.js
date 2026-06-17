@@ -292,7 +292,7 @@ function switchTab(tab) {
     if (tab === 'complaintPersons') { cpPage = 1; loadComplaintPersons(); }
     if (tab === 'market') { mktPage = 1; loadMarketPosts(); }
     if (tab === 'subscription') loadSubscriptionTab();
-    if (tab === 'fee') loadFeeAccessLog();
+    if (tab === 'fee') { loadFeeStats(); loadFeeAccessLog(); }
 }
 
 /* ═══════════════════════════════════════════════
@@ -3535,6 +3535,85 @@ const _FEE_ACTION_LABEL = {
     fee_query:   '관리비 조회',
     admin_query: '관리자 조회',
 };
+
+/* ── 통계 ── */
+let _feeStatsData = null;
+let _feeStatTab = 'daily';
+
+async function loadFeeStats() {
+    const el = document.getElementById('adminFeeStatsTable');
+    if (!el) return;
+    el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">불러오는 중...</div>';
+    try {
+        _feeStatsData = await apiGet('/fee/admin-stats');
+        renderFeeStats(_feeStatTab);
+    } catch (e) {
+        el.innerHTML = '<div style="color:#c62828;font-size:13px;padding:8px 0">통계를 불러오지 못했습니다.</div>';
+    }
+}
+
+function switchFeeStatTab(tab) {
+    _feeStatTab = tab;
+    ['daily', 'monthly', 'yearly'].forEach(t => {
+        const btn = document.getElementById('feeStatTab' + t.charAt(0).toUpperCase() + t.slice(1));
+        if (!btn) return;
+        if (t === tab) {
+            btn.style.background = 'var(--primary)';
+            btn.style.color = '#fff';
+            btn.style.borderColor = 'var(--primary)';
+        } else {
+            btn.style.background = '';
+            btn.style.color = '';
+            btn.style.borderColor = '';
+        }
+    });
+    if (_feeStatsData) renderFeeStats(tab);
+}
+
+function renderFeeStats(tab) {
+    const el = document.getElementById('adminFeeStatsTable');
+    if (!el || !_feeStatsData) return;
+    const rows = (_feeStatsData[tab] || []);
+    if (!rows.length) {
+        el.innerHTML = '<div style="color:var(--gray-400);font-size:13px;padding:8px 0">데이터가 없습니다.</div>';
+        return;
+    }
+    const maxTotal = Math.max(...rows.map(r => r.total), 1);
+    const periodLabel = { daily: '날짜', monthly: '월', yearly: '년도' }[tab];
+    const tableRows = rows.map(r => {
+        const pct = Math.round((r.total / maxTotal) * 100);
+        const successPct = r.total > 0 ? Math.round((r.success / r.total) * 100) : 0;
+        return `<tr style="border-bottom:1px solid #f0f0f0">
+            <td style="padding:8px 10px;font-size:13px;color:#555;white-space:nowrap;min-width:100px">${r.period}</td>
+            <td style="padding:8px 10px;min-width:160px">
+                <div style="display:flex;align-items:center;gap:8px">
+                    <div style="flex:1;background:#f0f0f0;border-radius:4px;height:8px;overflow:hidden">
+                        <div style="width:${pct}%;height:100%;background:var(--primary);border-radius:4px"></div>
+                    </div>
+                    <span style="font-size:12px;font-weight:700;color:#1a1a2e;min-width:24px;text-align:right">${r.total}</span>
+                </div>
+            </td>
+            <td style="padding:8px 10px;font-size:13px;color:#2e7d32;text-align:center;font-weight:600">${r.success}</td>
+            <td style="padding:8px 10px;font-size:13px;color:#c62828;text-align:center;font-weight:600">${r.fail}</td>
+            <td style="padding:8px 10px;font-size:12px;color:#888;text-align:center">${successPct}%</td>
+        </tr>`;
+    }).join('');
+    el.innerHTML = `
+    <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead>
+          <tr style="background:#f5f6fa">
+            <th style="padding:8px 10px;text-align:left;font-size:12px;color:var(--gray-600);font-weight:600">${periodLabel}</th>
+            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600">총 조회</th>
+            <th style="padding:8px 10px;font-size:12px;color:#2e7d32;font-weight:600;text-align:center">성공</th>
+            <th style="padding:8px 10px;font-size:12px;color:#c62828;font-weight:600;text-align:center">실패</th>
+            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">성공률</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>`;
+}
 
 async function loadFeeAccessLog() {
     const el = document.getElementById('adminFeeLogTable');
