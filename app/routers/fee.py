@@ -336,6 +336,39 @@ def admin_fee_search(
     return _build_fee_response(entry)
 
 
+@router.get("/history")
+@limiter.limit(RATE_LIMIT_FEE_QUERY)
+def get_fee_history(
+    request: Request,
+    dong: str,
+    ho: str,
+    company_id: int = 1,
+    months: int = 12,
+    db: Session = Depends(get_db),
+    _auth: dict = Depends(require_fee_token),
+):
+    """해당 세대 최근 N개월 납부금액 히스토리"""
+    dong_n = _normalize(dong)
+    ho_n = _normalize(ho)
+    entries = (
+        db.query(FeeEntry)
+        .filter(FeeEntry.company_id == company_id, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n)
+        .order_by(FeeEntry.year_month.desc())
+        .limit(min(months, 24))
+        .all()
+    )
+    history = []
+    for e in reversed(entries):
+        resp = _build_fee_response(e)
+        amt_str = resp.get("total", "") or ""
+        try:
+            amt = int(str(amt_str).replace(",", ""))
+        except (ValueError, TypeError):
+            amt = 0
+        history.append({"year_month": e.year_month, "amount": amt})
+    return {"history": history}
+
+
 @router.get("")
 @limiter.limit(RATE_LIMIT_FEE_QUERY)
 def get_fee(

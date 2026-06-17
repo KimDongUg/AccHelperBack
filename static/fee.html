@@ -6,6 +6,7 @@
     <title>관리비 조회 — AI Helper</title>
     <link rel="icon" type="image/png" href="/assets/images/robot.png">
     <link rel="stylesheet" href="/css/common.css?v=16">
+    <link rel="stylesheet" href="/css/fee.css">
     <style>
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { background: #f5f7fa; font-family: 'Malgun Gothic', '맑은 고딕', sans-serif; color: #1a1a2e; min-height: 100vh; }
@@ -281,6 +282,12 @@
 
 <main class="fee-wrap">
 
+  <!-- 관리비 조회 비활성 안내 -->
+  <div class="verify-card" id="feeDisabledCard" style="display:none">
+    <h2>관리비 조회</h2>
+    <p style="margin-bottom:0">이 단지는 관리비 조회 기능을 사용하지 않습니다.</p>
+  </div>
+
   <!-- 인증 폼 -->
   <div class="verify-card" id="verifyCard">
     <h2>관리비 조회</h2>
@@ -336,6 +343,10 @@
       <a href="/privacy.html" target="_blank" rel="noopener">개인정보처리방침 보기</a>
     </p>
   </div>
+
+  <!-- 대시보드 컨테이너 -->
+  <div id="dashContainer" style="display:none"></div>
+  <button class="fc-toggle-btn" id="fcToggleBtn" style="display:none" onclick="toggleBillDetail()">상세 고지서 보기 ▼</button>
 
   <!-- 고지서 -->
   <div class="bill-card" id="billCard">
@@ -439,7 +450,10 @@ function handleConsent() {
       if (c.enable_complaint !== false) document.getElementById('complaintNavLink').style.display = '';
       if (c.enable_market    !== false) document.getElementById('daangnNavLink').style.display = '';
 
-
+      if (!c.enable_fee) {
+        document.getElementById('feeDisabledCard').style.display = '';
+        document.getElementById('verifyCard').style.display = 'none';
+      }
     } else {
       // API 실패 시 기본적으로 링크 표시
       document.getElementById('complaintNavLink').style.display = '';
@@ -538,6 +552,11 @@ function resetToSearch(message) {
   clearTimeout(sessionHideTimer);
 
   document.getElementById('billCard').classList.remove('show');
+  document.getElementById('dashContainer').style.display = 'none';
+  document.getElementById('dashContainer').innerHTML = '';
+  const toggleBtn = document.getElementById('fcToggleBtn');
+  toggleBtn.style.display = 'none';
+  toggleBtn.textContent = '상세 고지서 보기 ▼';
   document.getElementById('verifyCard').style.display = '';
   document.getElementById('otpArea').style.display = 'none';
   document.getElementById('inp-code').value = '';
@@ -547,6 +566,15 @@ function resetToSearch(message) {
 
   clearError();
   if (message) showError(message);
+}
+
+function toggleBillDetail() {
+  const card = document.getElementById('billCard');
+  const btn = document.getElementById('fcToggleBtn');
+  const shown = card.classList.contains('show');
+  card.classList.toggle('show', !shown);
+  btn.textContent = shown ? '상세 고지서 보기 ▼' : '상세 고지서 닫기 ▲';
+  if (!shown) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function renderBill(d) {
@@ -647,8 +675,7 @@ function renderBill(d) {
     itemSec.style.display = 'none';
   }
 
-  document.getElementById('billCard').classList.add('show');
-  document.getElementById('billCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 대시보드에서 토글로 보임 — 자동 show 제거
 }
 
 // 인증번호 받기
@@ -745,6 +772,8 @@ document.getElementById('btnVerifyOtp').addEventListener('click', async () => {
 
     renderBill(fd);
     document.getElementById('verifyCard').style.display = 'none';
+    document.getElementById('fcToggleBtn').style.display = '';
+    window.renderDashboard(fd, vd.token, Number(companyId));
     startSessionCountdown(vd.expires_in || 600);
 
   } catch (e) {
@@ -772,5 +801,6 @@ document.getElementById('inp-code').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('btnVerifyOtp').click();
 });
 </script>
+<script src="/js/fee-charts.js"></script>
 </body>
 </html>

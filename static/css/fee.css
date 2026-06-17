@@ -1,0 +1,74 @@
+/* fee.css — 관리비 대시보드 스타일 */
+
+.fc-hero {
+  background: linear-gradient(135deg, #1a56db 0%, #0d47a1 100%);
+  border-radius: 16px;
+  padding: 24px 20px;
+  color: white;
+  margin-bottom: 14px;
+  box-shadow: 0 4px 20px rgba(26, 86, 219, 0.25);
+}
+.fc-hero-amt {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  margin: 4px 0;
+}
+
+.fc-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+}
+.fc-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin-bottom: 16px;
+}
+
+/* 도넛 차트 */
+.fc-donut-wrap { display: flex; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.fc-legend { flex: 1; min-width: 150px; }
+.fc-leg-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 4px; border-bottom: 1px solid #f8fafc;
+  cursor: pointer; user-select: none; border-radius: 4px;
+}
+.fc-leg-row:hover { background: #f8fafc; }
+.fc-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.fc-leg-name { flex: 1; font-size: 12.5px; color: #374151; }
+.fc-leg-amt { font-size: 12px; font-weight: 700; color: #1a1a2e; }
+.fc-leg-pct { font-size: 11px; color: #94a3b8; margin-left: 4px; }
+.fc-chev { font-size: 10px; color: #94a3b8; margin-left: 4px; }
+.fc-det { display: none; background: #f8fafc; border-radius: 6px; margin: 2px 0 6px; }
+.fc-det-row {
+  display: flex; justify-content: space-between;
+  padding: 4px 8px 4px 18px; font-size: 12px; color: #555;
+  border-bottom: 1px solid #f0f0f0;
+}
+.fc-det-row:last-child { border-bottom: none; }
+
+/* 사용량 카드 */
+.fc-ugrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
+.fc-ucard { background: #f8fafc; border-radius: 10px; padding: 14px 12px; }
+.fc-uhead { display: flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+.fc-uval { font-size: 22px; font-weight: 800; color: #1a1a2e; margin-bottom: 2px; }
+.fc-uunit { font-size: 13px; font-weight: 500; color: #64748b; }
+.fc-ufee { font-size: 12px; color: #94a3b8; margin-bottom: 6px; }
+.fc-gauge-bg { background: #e2e8f0; border-radius: 4px; height: 7px; overflow: hidden; margin-bottom: 4px; }
+.fc-gauge-fill { height: 100%; border-radius: 4px; transition: width 1.2s ease; }
+.fc-usub { font-size: 11px; color: #94a3b8; }
+
+/* 상세 고지서 토글 버튼 */
+.fc-toggle-btn {
+  width: 100%; background: #fff; border: 1.5px solid #e2e8f0;
+  border-radius: 10px; padding: 13px 16px;
+  font-size: 14px; font-weight: 600; color: #374151;
+  cursor: pointer; font-family: inherit;
+  margin-bottom: 12px; transition: background .15s;
+  display: block;
+}
+.fc-toggle-btn:hover { background: #f8fafc; }
