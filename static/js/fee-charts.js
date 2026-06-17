@@ -179,48 +179,40 @@ function _usageCards(meter) {
   </div>`;
 }
 
-/* F-03.5 단지 비교 분석 카드 (관리비/전기/수도/온수 — 최소/평균/최대 대비 내 위치) */
-function _meterUsage(meter, key) {
-  const m = meter && meter[key];
-  if (!m) return null;
-  const 당월 = parseFloat(String(m['당월'] || m['당월지침'] || '0').replace(/,/g, '')) || 0;
-  const 전월 = parseFloat(String(m['전월'] || m['전월지침'] || '0').replace(/,/g, '')) || 0;
-  const usage = 당월 - 전월;
-  return usage > 0 ? usage : null;
+/* F-03.5 단지 비교 분석 카드 (관리비/전기/수도/온수 — 우리집 vs 단지 평균) */
+function _cmpRow2(label, icon, myVal, avgVal) {
+  if (myVal == null || avgVal == null) return '';
+  const ok = myVal <= avgVal;
+  const color = ok ? '#22c55e' : '#ef4444';
+
+  return `<div class="fc-cmp2-row">
+    <div class="fc-cmp2-head"><span>${ok ? '✅' : '⚠️'}</span><span class="fc-cmp2-label">${icon} ${label}</span></div>
+    <div class="fc-cmp2-val"><span class="fc-cmp2-vlabel">우리집</span><span class="fc-cmp2-vamt" style="color:${color}">${Math.round(myVal).toLocaleString()}원</span></div>
+    <div class="fc-cmp2-val"><span class="fc-cmp2-vlabel">단지 평균</span><span class="fc-cmp2-vamt">${Math.round(avgVal).toLocaleString()}원</span></div>
+  </div>`;
 }
 
-function _compareRow(label, icon, unit, myVal, stat) {
-  if (myVal == null || !stat || stat.avg == null) return '';
-  const { avg, min, max } = stat;
-  const range = max - min;
-  const pos = v => range > 0 ? Math.min(Math.max(((v - min) / range) * 100, 0), 100) : 50;
-  const myPos = pos(myVal);
-  const avgPos = pos(avg);
-  const color = myVal > avg ? '#ef4444' : myVal < avg ? '#22c55e' : '#64748b';
-  const fmt = v => unit === '원' ? Math.round(v).toLocaleString() + '원' : v.toLocaleString() + unit;
-  const diffPct = avg > 0 ? Math.round(((myVal - avg) / avg) * 100) : 0;
-  const diffLabel = diffPct === 0 ? '평균과 동일' : `평균보다 ${diffPct > 0 ? '+' : ''}${diffPct}%`;
+/* 백엔드 average 집계와 동일한 항목 그룹 (검침 '요금'은 단가라 총비용 비교에 부적합) */
+const _FC_ELEC_FEE_ITEMS = ['세대전기료', '냉난방동력전기', '공동전기료', '공동전력기금', '세대전력기금', '승강기전기'];
+const _FC_WATER_FEE_ITEMS = ['세대수도료', '공동수도료', '하수도료', '물이용부담금'];
+const _FC_HOTWATER_FEE_ITEMS = ['세대급탕비'];
 
-  return `<div class="fc-cmp-row">
-    <div class="fc-cmp-head">
-      <span class="fc-cmp-label">${icon} ${label}</span>
-      <span class="fc-cmp-myval">내 값 <b style="color:${color}">${fmt(myVal)}</b> (<span style="color:${color}">${diffLabel}</span>)</span>
-    </div>
-    <div class="fc-cmp-track">
-      <div class="fc-cmp-avgmark" style="left:${avgPos}%"><span>평균</span></div>
-      <div class="fc-cmp-mymark" style="left:${myPos}%;background:${color}"></div>
-    </div>
-    <div class="fc-cmp-scale"><span>최소 ${fmt(min)}</span><span>최대 ${fmt(max)}</span></div>
-  </div>`;
+function _sumItems(billing, keys) {
+  return keys.reduce((s, k) => s + _n(billing[k]), 0);
 }
 
 function _compareCard(d, avg) {
   if (!avg) return '';
+  const billing = d.billing_items || {};
+  const elecFee = _sumItems(billing, _FC_ELEC_FEE_ITEMS) || null;
+  const waterFee = _sumItems(billing, _FC_WATER_FEE_ITEMS) || null;
+  const hotFee = _sumItems(billing, _FC_HOTWATER_FEE_ITEMS) || null;
+
   const rows = [
-    _compareRow('관리비', '🏢', '원', _n(d.total) || null, avg.amount),
-    _compareRow('전기', '⚡', 'kWh', _meterUsage(d.meter, '전기'), avg.electricity_kwh),
-    _compareRow('수도', '💧', '톤', _meterUsage(d.meter, '수도'), avg.water_ton),
-    _compareRow('온수', '🔥', '톤', _meterUsage(d.meter, '온수'), avg.hotwater_ton),
+    _cmpRow2('관리비', '🏢', _n(d.total) || null, avg.amount && avg.amount.avg),
+    _cmpRow2('전기', '⚡', elecFee, avg.electricity_fee && avg.electricity_fee.avg),
+    _cmpRow2('수도', '💧', waterFee, avg.water_fee && avg.water_fee.avg),
+    _cmpRow2('온수', '🔥', hotFee, avg.hotwater_fee && avg.hotwater_fee.avg),
   ].filter(Boolean);
 
   if (!rows.length) return '';

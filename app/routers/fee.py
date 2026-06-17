@@ -39,6 +39,12 @@ _SUMMARY_KEYS = {
 }
 
 
+# 단지 비교 분석용 비용 항목 그룹 (검침 '요금' 필드는 단가라 총비용 비교에 부적합)
+_ELEC_FEE_ITEMS = ['세대전기료', '냉난방동력전기', '공동전기료', '공동전력기금', '세대전력기금', '승강기전기']
+_WATER_FEE_ITEMS = ['세대수도료', '공동수도료', '하수도료', '물이용부담금']
+_HOTWATER_FEE_ITEMS = ['세대급탕비']
+
+
 def _normalize(v: str) -> str:
     v = v.strip()
     return v.lstrip("0") or v
@@ -396,9 +402,14 @@ def get_fee_average(
     )
     if not entries:
         return {"amount": None, "electricity_kwh": None, "water_ton": None,
-                 "hotwater_ton": None, "sample_size": 0}
+                 "hotwater_ton": None, "electricity_fee": None, "water_fee": None,
+                 "hotwater_fee": None, "sample_size": 0}
+
+    def _category_sum(billing_items: dict, keys: list) -> int:
+        return sum(_to_int(billing_items.get(k)) for k in keys)
 
     amounts, elec, water, hotwater = [], [], [], []
+    elec_fee, water_fee, hotwater_fee = [], [], []
     for e in entries:
         resp = _build_fee_response(e)
         amt = _to_int(resp.get("total"))
@@ -406,7 +417,7 @@ def get_fee_average(
             amounts.append(amt)
 
         meter = resp.get("meter", {})
-        for item, bucket in (("전기", elec), ("수도", water), ("온수", hotwater)):
+        for item, usage_bucket in (("전기", elec), ("수도", water), ("온수", hotwater)):
             m = meter.get(item)
             if not m:
                 continue
@@ -414,7 +425,18 @@ def get_fee_average(
             prev = _to_int(m.get("전월") or m.get("전월지침"))
             usage = cur - prev
             if usage > 0:
-                bucket.append(usage)
+                usage_bucket.append(usage)
+
+        billing_items = resp.get("billing_items", {})
+        ce = _category_sum(billing_items, _ELEC_FEE_ITEMS)
+        if ce > 0:
+            elec_fee.append(ce)
+        cw = _category_sum(billing_items, _WATER_FEE_ITEMS)
+        if cw > 0:
+            water_fee.append(cw)
+        ch = _category_sum(billing_items, _HOTWATER_FEE_ITEMS)
+        if ch > 0:
+            hotwater_fee.append(ch)
 
     def _stats(values):
         if not values:
@@ -426,10 +448,13 @@ def get_fee_average(
         }
 
     return {
-        "amount":         _stats(amounts),
+        "amount":          _stats(amounts),
         "electricity_kwh": _stats(elec),
         "water_ton":       _stats(water),
         "hotwater_ton":    _stats(hotwater),
+        "electricity_fee": _stats(elec_fee),
+        "water_fee":       _stats(water_fee),
+        "hotwater_fee":    _stats(hotwater_fee),
         "sample_size":     len(entries),
     }
 
