@@ -32,35 +32,50 @@ function _animateCount(el, end, ms) {
 }
 
 /* F-01 히어로 카드 */
-function _heroCard(d, history) {
+function _heroCard(d, history, avg) {
   const total = _n(d.total);
   const ym = d.year_month || '';
   const ymLabel = ym.length >= 6
     ? `${ym.slice(0, 4)}년 ${parseInt(ym.slice(4, 6))}월분` : '';
 
-  let prevHtml = '';
+  let prevCol = '';
   if (history && history.length >= 2) {
     const prev = history[history.length - 2].amount;
     if (prev > 0) {
       const diff = total - prev;
       const pct = ((diff / prev) * 100).toFixed(1);
       const up = diff >= 0;
-      prevHtml = `<div style="margin-top:8px;font-size:13px;opacity:.9">전월 대비&nbsp;`
-        + `<span style="font-weight:700;color:${up ? '#fca5a5' : '#86efac'}">`
-        + `${up ? '+' : ''}${diff.toLocaleString()}원 (${up ? '+' : ''}${pct}%)</span></div>`;
+      prevCol = `<div>📈 지난달 대비<br>`
+        + `<b style="color:${up ? '#fca5a5' : '#86efac'}">`
+        + `${up ? '+' : ''}${diff.toLocaleString()}원 (${up ? '+' : ''}${pct}%)</b></div>`;
     }
+  } else if (history && history.length === 1) {
+    prevCol = `<div>📈 지난달 대비<br><b style="opacity:.7">비교 데이터 없음</b></div>`;
   }
+
+  let avgCol = '';
+  if (avg && avg.amount) {
+    const diff = total - avg.amount;
+    const pct = ((diff / avg.amount) * 100).toFixed(1);
+    const up = diff >= 0;
+    avgCol = `<div>🏆 단지 평균 대비<br>`
+      + `<b style="color:${up ? '#fca5a5' : '#86efac'}">${up ? '+' : ''}${pct}%</b></div>`;
+  }
+
+  const compareHtml = (prevCol || avgCol)
+    ? `<div style="display:flex;gap:20px;margin-top:10px;font-size:12.5px;opacity:.95;line-height:1.6">${prevCol}${avgCol}</div>`
+    : '';
 
   return `<div class="fc-hero">
     <div style="font-size:13px;opacity:.75;margin-bottom:6px">🏠 ${d.dong}동 ${d.ho}호 · ${ymLabel}</div>
     <div style="font-size:13px;opacity:.8;margin-bottom:2px">이번달 관리비</div>
     <div class="fc-hero-amt" id="fcHeroAmt">0원</div>
-    ${prevHtml}
+    ${compareHtml}
   </div>`;
 }
 
 /* F-02 도넛 차트 */
-function _donutChart(billing) {
+function _donutChart(billing, vat) {
   const cats = [];
   const used = new Set();
 
@@ -79,6 +94,7 @@ function _donutChart(billing) {
   for (const [k, v] of Object.entries(billing)) {
     if (!used.has(k) && _n(v) > 0) { etcSum += _n(v); etcItems[k] = _n(v); }
   }
+  if (vat > 0) { etcSum += vat; etcItems['부가가치세'] = vat; }
   if (etcSum > 0) cats.push({ key: '기타', icon: '📦', color: '#94a3b8', total: etcSum, items: etcItems });
 
   const grand = cats.reduce((s, c) => s + c.total, 0);
@@ -135,7 +151,9 @@ window._fcTog = function(key) {
 };
 
 /* F-03 사용량 카드 */
-function _usageCards(meter) {
+const _FC_AVG_KEY = { '전기': 'electricity_kwh', '수도': 'water_ton', '온수': 'hotwater_ton' };
+
+function _usageCards(meter, avg) {
   const CFGS = [
     { key: '전기', icon: '⚡', unit: 'kWh', maxRef: 300 },
     { key: '수도', icon: '💧', unit: '톤',  maxRef: 20 },
@@ -156,12 +174,25 @@ function _usageCards(meter) {
     const pct = Math.min(Math.round((usage / cfg.maxRef) * 100), 100);
     const gColor = pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
 
+    let cmpHtml = '';
+    const avgKey = _FC_AVG_KEY[cfg.key];
+    const avgVal = avgKey && avg ? avg[avgKey] : null;
+    if (avgVal && usage > 0) {
+      const diffPct = Math.round(((avgVal - usage) / avgVal) * 100);
+      let badge;
+      if (diffPct >= 5) badge = `<span style="color:#22c55e">${diffPct}% 절약 👍</span>`;
+      else if (diffPct <= -10) badge = `<span style="color:#ef4444">평균보다 ${Math.abs(diffPct)}% 높음</span>`;
+      else badge = `<span style="color:#64748b">평균 수준</span>`;
+      cmpHtml = `<div class="fc-uavg">평균 ${avgVal.toLocaleString()}${cfg.unit}</div><div class="fc-ucmp">${badge}</div>`;
+    }
+
     return `<div class="fc-ucard">
       <div class="fc-uhead"><span>${cfg.icon}</span><span>${cfg.key}</span></div>
       <div class="fc-uval">${usage > 0 ? usage.toLocaleString() : '—'}<span class="fc-uunit"> ${cfg.unit}</span></div>
       ${fee > 0 ? `<div class="fc-ufee">${fee.toLocaleString()}원</div>` : ''}
       <div class="fc-gauge-bg"><div class="fc-gauge-fill" style="width:${pct}%;background:${gColor}"></div></div>
       <div class="fc-usub">${전월.toLocaleString()} → ${당월.toLocaleString()}</div>
+      ${cmpHtml}
     </div>`;
   }).filter(Boolean);
 
@@ -173,7 +204,19 @@ function _usageCards(meter) {
 }
 
 /* F-04 월별 추이 (Chart.js) */
-function _historyChart() {
+function _historyChart(history) {
+  if (!history || !history.length) return '';
+
+  if (history.length < 3) {
+    return `<div class="fc-card">
+      <div class="fc-card-title">월별 관리비 추이</div>
+      <div style="text-align:center;color:#94a3b8;font-size:13px;padding:20px 0;line-height:1.7">
+        📊 데이터 누적 중입니다 (현재 ${history.length}개월)<br>
+        <span style="font-size:11.5px">3개월 이상 쌓이면 추이 그래프가 표시됩니다.</span>
+      </div>
+    </div>`;
+  }
+
   return `<div class="fc-card">
     <div class="fc-card-title">월별 관리비 추이</div>
     <div style="position:relative;height:180px"><canvas id="fcHistChart"></canvas></div>
@@ -221,7 +264,7 @@ function _drawHistChart(history) {
 }
 
 /* F-05 AI 분석 카드 (규칙 기반) */
-function _aiCard(d, history) {
+function _aiCard(d, history, avg) {
   const msgs = [];
   const tips = [];
   const total = _n(d.total);
@@ -246,7 +289,15 @@ function _aiCard(d, history) {
     const 당 = parseFloat(String(elec['당월'] || '0').replace(/,/g, '')) || 0;
     const 전 = parseFloat(String(elec['전월'] || '0').replace(/,/g, '')) || 0;
     const use = 당 - 전;
-    if (use > 200) {
+    if (use > 0 && avg && avg.electricity_kwh) {
+      const ratio = use / avg.electricity_kwh;
+      if (ratio > 1.1) {
+        msgs.push(`전기 사용량이 단지 평균보다 <b>${Math.round((ratio - 1) * 100)}% 높습니다</b>.`);
+        tips.push('💡 에어컨 설정온도를 1°C 높이면 약 7% 전기료가 절감됩니다.');
+      } else if (ratio < 0.9) {
+        msgs.push(`전기 절약을 잘 실천하고 계세요! 평균보다 <b>${Math.round((1 - ratio) * 100)}% 적게</b> 사용했습니다. 👍`);
+      }
+    } else if (use > 200) {
       msgs.push(`전기 사용량(${use.toFixed(0)}kWh)이 많은 편입니다.`);
       tips.push('💡 에어컨 설정온도를 1°C 높이면 약 7% 전기료가 절감됩니다.');
     } else if (use > 0 && use < 100) {
@@ -278,17 +329,18 @@ window.renderDashboard = async function(d, token, companyId) {
   const container = document.getElementById('dashContainer');
   if (!container) return;
 
-  function _render(hist) {
-    let html = _heroCard(d, hist);
-    html += _donutChart(d.billing_items || {});
-    html += _usageCards(d.meter || {});
-    if (hist && hist.length >= 2) html += _historyChart();
-    html += _aiCard(d, hist);
+  function _render(hist, avg) {
+    const vat = _n((d.summary || {})['부가가치세']);
+    let html = _heroCard(d, hist, avg);
+    html += _donutChart(d.billing_items || {}, vat);
+    html += _usageCards(d.meter || {}, avg);
+    html += _historyChart(hist);
+    html += _aiCard(d, hist, avg);
     container.innerHTML = html;
     container.style.display = '';
     _animateCount(document.getElementById('fcHeroAmt'), _n(d.total), 1200);
 
-    if (hist && hist.length >= 2) {
+    if (hist && hist.length >= 3) {
       const draw = () => _drawHistChart(hist);
       if (window.Chart) {
         draw();
@@ -301,17 +353,22 @@ window.renderDashboard = async function(d, token, companyId) {
     }
   }
 
-  _render(null); // Phase 1: 즉시 표시
+  _render(null, null); // Phase 1: 즉시 표시
 
-  // Phase 2: 히스토리 비동기 로드
+  // Phase 2: 히스토리/단지평균 비동기 로드
   try {
-    const params = new URLSearchParams({ dong: d.dong, ho: d.ho, company_id: String(companyId) });
-    const res = await fetch(`/api/fee/history?${params}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (res.ok) {
-      const { history } = await res.json();
-      if (history && history.length >= 1) _render(history);
-    }
+    const histParams = new URLSearchParams({ dong: d.dong, ho: d.ho, company_id: String(companyId) });
+    const avgParams = new URLSearchParams({ company_id: String(companyId), year_month: d.year_month || '' });
+    const authHeader = { Authorization: `Bearer ${token}` };
+
+    const [histRes, avgRes] = await Promise.all([
+      fetch(`/api/fee/history?${histParams}`, { headers: authHeader }),
+      fetch(`/api/fee/average?${avgParams}`, { headers: authHeader }),
+    ]);
+
+    const hist = histRes.ok ? (await histRes.json()).history : null;
+    const avg = avgRes.ok ? await avgRes.json() : null;
+
+    if ((hist && hist.length >= 1) || (avg && avg.amount)) _render(hist, avg);
   } catch (_) {}
 };

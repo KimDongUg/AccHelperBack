@@ -44,6 +44,13 @@ def _normalize(v: str) -> str:
     return v.lstrip("0") or v
 
 
+def _to_int(v) -> int:
+    try:
+        return int(str(v).replace(",", ""))
+    except (ValueError, TypeError):
+        return 0
+
+
 def _build_fee_response(entry: FeeEntry) -> dict:
     """FeeEntry를 관리비 조회 화면용 응답 형태로 가공."""
     all_items = json.loads(entry.fee_json or "{}")
@@ -367,6 +374,58 @@ def get_fee_history(
             amt = 0
         history.append({"year_month": e.year_month, "amount": amt})
     return {"history": history}
+
+
+@router.get("/average")
+@limiter.limit(RATE_LIMIT_FEE_QUERY)
+def get_fee_average(
+    request: Request,
+    company_id: int = 1,
+    year_month: str = "",
+    db: Session = Depends(get_db),
+    _auth: dict = Depends(require_fee_token),
+):
+    """해당 단지의 해당 월 평균 관리비/사용량 (히어로 카드, 사용량 카드 비교용)"""
+    if not year_month:
+        raise HTTPException(status_code=400, detail="year_month이 필요합니다.")
+
+    entries = (
+        db.query(FeeEntry)
+        .filter(FeeEntry.company_id == company_id, FeeEntry.year_month == year_month)
+        .all()
+    )
+    if not entries:
+        return {"amount": None, "electricity_kwh": None, "water_ton": None,
+                 "hotwater_ton": None, "sample_size": 0}
+
+    amounts, elec, water, hotwater = [], [], [], []
+    for e in entries:
+        resp = _build_fee_response(e)
+        amt = _to_int(resp.get("total"))
+        if amt > 0:
+            amounts.append(amt)
+
+        meter = resp.get("meter", {})
+        for item, bucket in (("전기", elec), ("수도", water), ("온수", hotwater)):
+            m = meter.get(item)
+            if not m:
+                continue
+            cur = _to_int(m.get("당월") or m.get("당월지침"))
+            prev = _to_int(m.get("전월") or m.get("전월지침"))
+            usage = cur - prev
+            if usage > 0:
+                bucket.append(usage)
+
+    def _avg(values):
+        return round(sum(values) / len(values), 1) if values else None
+
+    return {
+        "amount":         _avg(amounts),
+        "electricity_kwh": _avg(elec),
+        "water_ton":       _avg(water),
+        "hotwater_ton":    _avg(hotwater),
+        "sample_size":     len(entries),
+    }
 
 
 @router.get("")
