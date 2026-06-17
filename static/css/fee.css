@@ -61,6 +61,7 @@
 .fc-gauge-bg { background: #e2e8f0; border-radius: 4px; height: 7px; overflow: hidden; margin-bottom: 4px; }
 .fc-gauge-fill { height: 100%; border-radius: 4px; transition: width 1.2s ease; }
 .fc-usub { font-size: 11px; color: #94a3b8; }
+.fc-uavg { font-size: 11px; color: #94a3b8; margin-top: 4px; }
 
 /* 단지 비교 분석 (우리집 vs 단지 평균) */
 .fc-cmp2-row { padding: 12px 0; border-bottom: 1px solid #f1f5f9; }

@@ -142,7 +142,9 @@ window._fcTog = function(key) {
 };
 
 /* F-03 사용량 카드 */
-function _usageCards(meter) {
+const _FC_USAGE_AVG_KEY = { '전기': 'electricity_kwh', '수도': 'water_ton', '온수': 'hotwater_ton' };
+
+function _usageCards(meter, avg) {
   const CFGS = [
     { key: '전기', icon: '⚡', unit: 'kWh', maxRef: 300 },
     { key: '수도', icon: '💧', unit: '톤',  maxRef: 20 },
@@ -160,7 +162,12 @@ function _usageCards(meter) {
     const fee = _n(m['요금']);
     if (usage === 0 && fee === 0) return null;
 
-    const pct = Math.min(Math.round((usage / cfg.maxRef) * 100), 100);
+    // 단지 평균의 2배를 기준치로 잡아 평균=50%, 평균의 1.6배 이상=빨강이 되도록 함
+    const avgKey = _FC_USAGE_AVG_KEY[cfg.key];
+    const avgUsage = avgKey && avg && avg[avgKey] ? avg[avgKey].avg : null;
+    const maxRef = avgUsage ? avgUsage * 2 : cfg.maxRef;
+
+    const pct = Math.min(Math.round((usage / maxRef) * 100), 100);
     const gColor = pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
 
     return `<div class="fc-ucard">
@@ -169,6 +176,7 @@ function _usageCards(meter) {
       ${fee > 0 ? `<div class="fc-ufee">${fee.toLocaleString()}원</div>` : ''}
       <div class="fc-gauge-bg"><div class="fc-gauge-fill" style="width:${pct}%;background:${gColor}"></div></div>
       <div class="fc-usub">${전월.toLocaleString()} → ${당월.toLocaleString()}</div>
+      ${avgUsage ? `<div class="fc-uavg">단지 평균 ${avgUsage.toLocaleString()}${cfg.unit}</div>` : ''}
     </div>`;
   }).filter(Boolean);
 
@@ -363,7 +371,7 @@ window.renderDashboard = async function(d, token, companyId) {
     const vat = _n((d.summary || {})['부가가치세']);
     let html = _heroCard(d, hist);
     html += _donutChart(d.billing_items || {}, vat);
-    html += _usageCards(d.meter || {});
+    html += _usageCards(d.meter || {}, avg);
     html += _compareCard(d, avg);
     html += _historyChart(hist);
     html += _aiCard(d, hist, avg);
