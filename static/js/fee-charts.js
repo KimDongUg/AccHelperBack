@@ -358,7 +358,7 @@ window.renderDashboard = async function(d, token, companyId) {
   // Phase 2: 히스토리/단지평균 비동기 로드
   try {
     const histParams = new URLSearchParams({ dong: d.dong, ho: d.ho, company_id: String(companyId) });
-    const avgParams = new URLSearchParams({ company_id: String(companyId), year_month: d.year_month || '' });
+    const avgParams = new URLSearchParams({ dong: d.dong, ho: d.ho, company_id: String(companyId), year_month: d.year_month || '' });
     const authHeader = { Authorization: `Bearer ${token}` };
 
     const [histRes, avgRes] = await Promise.all([
