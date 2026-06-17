@@ -416,14 +416,20 @@ def get_fee_average(
             if usage > 0:
                 bucket.append(usage)
 
-    def _avg(values):
-        return round(sum(values) / len(values), 1) if values else None
+    def _stats(values):
+        if not values:
+            return None
+        return {
+            "avg": round(sum(values) / len(values), 1),
+            "min": min(values),
+            "max": max(values),
+        }
 
     return {
-        "amount":         _avg(amounts),
-        "electricity_kwh": _avg(elec),
-        "water_ton":       _avg(water),
-        "hotwater_ton":    _avg(hotwater),
+        "amount":         _stats(amounts),
+        "electricity_kwh": _stats(elec),
+        "water_ton":       _stats(water),
+        "hotwater_ton":    _stats(hotwater),
         "sample_size":     len(entries),
     }
 

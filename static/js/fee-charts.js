@@ -32,7 +32,7 @@ function _animateCount(el, end, ms) {
 }
 
 /* F-01 히어로 카드 */
-function _heroCard(d, history, avg) {
+function _heroCard(d, history) {
   const total = _n(d.total);
   const ym = d.year_month || '';
   const ymLabel = ym.length >= 6
@@ -53,17 +53,8 @@ function _heroCard(d, history, avg) {
     prevCol = `<div>📈 지난달 대비<br><b style="opacity:.7">비교 데이터 없음</b></div>`;
   }
 
-  let avgCol = '';
-  if (avg && avg.amount) {
-    const diff = total - avg.amount;
-    const pct = ((diff / avg.amount) * 100).toFixed(1);
-    const up = diff >= 0;
-    avgCol = `<div>🏆 단지 평균 대비<br>`
-      + `<b style="color:${up ? '#fca5a5' : '#86efac'}">${up ? '+' : ''}${pct}%</b></div>`;
-  }
-
-  const compareHtml = (prevCol || avgCol)
-    ? `<div style="display:flex;gap:20px;margin-top:10px;font-size:12.5px;opacity:.95;line-height:1.6">${prevCol}${avgCol}</div>`
+  const compareHtml = prevCol
+    ? `<div style="display:flex;gap:20px;margin-top:10px;font-size:12.5px;opacity:.95;line-height:1.6">${prevCol}</div>`
     : '';
 
   return `<div class="fc-hero">
@@ -151,9 +142,7 @@ window._fcTog = function(key) {
 };
 
 /* F-03 사용량 카드 */
-const _FC_AVG_KEY = { '전기': 'electricity_kwh', '수도': 'water_ton', '온수': 'hotwater_ton' };
-
-function _usageCards(meter, avg) {
+function _usageCards(meter) {
   const CFGS = [
     { key: '전기', icon: '⚡', unit: 'kWh', maxRef: 300 },
     { key: '수도', icon: '💧', unit: '톤',  maxRef: 20 },
@@ -174,25 +163,12 @@ function _usageCards(meter, avg) {
     const pct = Math.min(Math.round((usage / cfg.maxRef) * 100), 100);
     const gColor = pct > 80 ? '#ef4444' : pct > 50 ? '#f59e0b' : '#22c55e';
 
-    let cmpHtml = '';
-    const avgKey = _FC_AVG_KEY[cfg.key];
-    const avgVal = avgKey && avg ? avg[avgKey] : null;
-    if (avgVal && usage > 0) {
-      const diffPct = Math.round(((avgVal - usage) / avgVal) * 100);
-      let badge;
-      if (diffPct >= 5) badge = `<span style="color:#22c55e">${diffPct}% 절약 👍</span>`;
-      else if (diffPct <= -10) badge = `<span style="color:#ef4444">평균보다 ${Math.abs(diffPct)}% 높음</span>`;
-      else badge = `<span style="color:#64748b">평균 수준</span>`;
-      cmpHtml = `<div class="fc-uavg">평균 ${avgVal.toLocaleString()}${cfg.unit}</div><div class="fc-ucmp">${badge}</div>`;
-    }
-
     return `<div class="fc-ucard">
       <div class="fc-uhead"><span>${cfg.icon}</span><span>${cfg.key}</span></div>
       <div class="fc-uval">${usage > 0 ? usage.toLocaleString() : '—'}<span class="fc-uunit"> ${cfg.unit}</span></div>
       ${fee > 0 ? `<div class="fc-ufee">${fee.toLocaleString()}원</div>` : ''}
       <div class="fc-gauge-bg"><div class="fc-gauge-fill" style="width:${pct}%;background:${gColor}"></div></div>
       <div class="fc-usub">${전월.toLocaleString()} → ${당월.toLocaleString()}</div>
-      ${cmpHtml}
     </div>`;
   }).filter(Boolean);
 
@@ -200,6 +176,57 @@ function _usageCards(meter, avg) {
   return `<div class="fc-card">
     <div class="fc-card-title">사용량 분석</div>
     <div class="fc-ugrid">${cards.join('')}</div>
+  </div>`;
+}
+
+/* F-03.5 단지 비교 분석 카드 (관리비/전기/수도/온수 — 최소/평균/최대 대비 내 위치) */
+function _meterUsage(meter, key) {
+  const m = meter && meter[key];
+  if (!m) return null;
+  const 당월 = parseFloat(String(m['당월'] || m['당월지침'] || '0').replace(/,/g, '')) || 0;
+  const 전월 = parseFloat(String(m['전월'] || m['전월지침'] || '0').replace(/,/g, '')) || 0;
+  const usage = 당월 - 전월;
+  return usage > 0 ? usage : null;
+}
+
+function _compareRow(label, icon, unit, myVal, stat) {
+  if (myVal == null || !stat || stat.avg == null) return '';
+  const { avg, min, max } = stat;
+  const range = max - min;
+  const pos = v => range > 0 ? Math.min(Math.max(((v - min) / range) * 100, 0), 100) : 50;
+  const myPos = pos(myVal);
+  const avgPos = pos(avg);
+  const color = myVal > avg ? '#ef4444' : myVal < avg ? '#22c55e' : '#64748b';
+  const fmt = v => unit === '원' ? Math.round(v).toLocaleString() + '원' : v.toLocaleString() + unit;
+  const diffPct = avg > 0 ? Math.round(((myVal - avg) / avg) * 100) : 0;
+  const diffLabel = diffPct === 0 ? '평균과 동일' : `평균보다 ${diffPct > 0 ? '+' : ''}${diffPct}%`;
+
+  return `<div class="fc-cmp-row">
+    <div class="fc-cmp-head">
+      <span class="fc-cmp-label">${icon} ${label}</span>
+      <span class="fc-cmp-myval">내 값 <b style="color:${color}">${fmt(myVal)}</b> (<span style="color:${color}">${diffLabel}</span>)</span>
+    </div>
+    <div class="fc-cmp-track">
+      <div class="fc-cmp-avgmark" style="left:${avgPos}%"><span>평균</span></div>
+      <div class="fc-cmp-mymark" style="left:${myPos}%;background:${color}"></div>
+    </div>
+    <div class="fc-cmp-scale"><span>최소 ${fmt(min)}</span><span>최대 ${fmt(max)}</span></div>
+  </div>`;
+}
+
+function _compareCard(d, avg) {
+  if (!avg) return '';
+  const rows = [
+    _compareRow('관리비', '🏢', '원', _n(d.total) || null, avg.amount),
+    _compareRow('전기', '⚡', 'kWh', _meterUsage(d.meter, '전기'), avg.electricity_kwh),
+    _compareRow('수도', '💧', '톤', _meterUsage(d.meter, '수도'), avg.water_ton),
+    _compareRow('온수', '🔥', '톤', _meterUsage(d.meter, '온수'), avg.hotwater_ton),
+  ].filter(Boolean);
+
+  if (!rows.length) return '';
+  return `<div class="fc-card">
+    <div class="fc-card-title">단지 비교 분석</div>
+    ${rows.join('')}
   </div>`;
 }
 
@@ -290,7 +317,7 @@ function _aiCard(d, history, avg) {
     const 전 = parseFloat(String(elec['전월'] || '0').replace(/,/g, '')) || 0;
     const use = 당 - 전;
     if (use > 0 && avg && avg.electricity_kwh) {
-      const ratio = use / avg.electricity_kwh;
+      const ratio = use / avg.electricity_kwh.avg;
       if (ratio > 1.1) {
         msgs.push(`전기 사용량이 단지 평균보다 <b>${Math.round((ratio - 1) * 100)}% 높습니다</b>.`);
         tips.push('💡 에어컨 설정온도를 1°C 높이면 약 7% 전기료가 절감됩니다.');
@@ -331,9 +358,10 @@ window.renderDashboard = async function(d, token, companyId) {
 
   function _render(hist, avg) {
     const vat = _n((d.summary || {})['부가가치세']);
-    let html = _heroCard(d, hist, avg);
+    let html = _heroCard(d, hist);
+    html += _compareCard(d, avg);
     html += _donutChart(d.billing_items || {}, vat);
-    html += _usageCards(d.meter || {}, avg);
+    html += _usageCards(d.meter || {});
     html += _historyChart(hist);
     html += _aiCard(d, hist, avg);
     container.innerHTML = html;
