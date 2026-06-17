@@ -184,11 +184,22 @@ function _cmpRow2(label, icon, myVal, avgVal) {
   if (myVal == null || avgVal == null) return '';
   const ok = myVal <= avgVal;
   const color = ok ? '#22c55e' : '#ef4444';
+  const maxV = Math.max(myVal, avgVal) || 1;
+  const myPct = Math.max((myVal / maxV) * 100, 2);
+  const avgPct = Math.max((avgVal / maxV) * 100, 2);
 
   return `<div class="fc-cmp2-row">
     <div class="fc-cmp2-head"><span>${ok ? '✅' : '⚠️'}</span><span class="fc-cmp2-label">${icon} ${label}</span></div>
-    <div class="fc-cmp2-val"><span class="fc-cmp2-vlabel">우리집</span><span class="fc-cmp2-vamt" style="color:${color}">${Math.round(myVal).toLocaleString()}원</span></div>
-    <div class="fc-cmp2-val"><span class="fc-cmp2-vlabel">단지 평균</span><span class="fc-cmp2-vamt">${Math.round(avgVal).toLocaleString()}원</span></div>
+    <div class="fc-cmp2-val">
+      <span class="fc-cmp2-vlabel fc-cmp2-mine">우리집</span>
+      <span class="fc-cmp2-bar-bg"><span class="fc-cmp2-bar" style="width:${myPct}%;background:${color}"></span></span>
+      <span class="fc-cmp2-vamt" style="color:${color}">${Math.round(myVal).toLocaleString()}원</span>
+    </div>
+    <div class="fc-cmp2-val">
+      <span class="fc-cmp2-vlabel">단지 평균</span>
+      <span class="fc-cmp2-bar-bg"><span class="fc-cmp2-bar" style="width:${avgPct}%;background:#94a3b8"></span></span>
+      <span class="fc-cmp2-vamt">${Math.round(avgVal).toLocaleString()}원</span>
+    </div>
   </div>`;
 }
 
