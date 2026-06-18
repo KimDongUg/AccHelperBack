@@ -465,7 +465,7 @@ def get_fee_average(
     def _category_sum(billing_items: dict, keys: list) -> int:
         return sum(_to_int(billing_items.get(k)) for k in keys)
 
-    amounts, elec, water, hotwater = [], [], [], []
+    amounts, elec, water, hotwater, heating, cooling = [], [], [], [], [], []
     elec_fee, water_fee, hotwater_fee = [], [], []
     for e in entries:
         resp = _build_fee_response(e)
@@ -474,12 +474,13 @@ def get_fee_average(
             amounts.append(amt)
 
         meter = resp.get("meter", {})
-        for item, usage_bucket in (("전기", elec), ("수도", water), ("온수", hotwater)):
+        for item, usage_bucket in (("전기", elec), ("수도", water), ("온수", hotwater), ("난방", heating), ("냉방", cooling)):
             m = meter.get(item)
             if not m:
                 continue
-            cur = _to_int(m.get("당월") or m.get("당월지침"))
-            prev = _to_int(m.get("전월") or m.get("전월지침"))
+            # 난방/냉방(Mcal)은 소수점 지침이 있어 _to_int(정수 전용)로는 항상 0이 됨 — _to_float 사용
+            cur = _to_float(m.get("당월") or m.get("당월지침")) or 0
+            prev = _to_float(m.get("전월") or m.get("전월지침")) or 0
             usage = cur - prev
             if usage > 0:
                 usage_bucket.append(usage)
@@ -509,6 +510,8 @@ def get_fee_average(
         "electricity_kwh": _stats(elec),
         "water_ton":       _stats(water),
         "hotwater_ton":    _stats(hotwater),
+        "heating_mcal":    _stats(heating),
+        "cooling_mcal":    _stats(cooling),
         "electricity_fee": _stats(elec_fee),
         "water_fee":       _stats(water_fee),
         "hotwater_fee":    _stats(hotwater_fee),
