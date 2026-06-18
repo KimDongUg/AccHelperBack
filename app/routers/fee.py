@@ -50,6 +50,14 @@ def _normalize(v: str) -> str:
     return v.lstrip("0") or v
 
 
+# 테스트 용도로 임의 생성한 동호수 — 실제 세대가 아니므로 조회이력/통계/평균 집계에서 항상 제외
+_TEST_UNITS = {(1, "1", "9999")}
+
+
+def _is_test_unit(company_id: int, dong: str, ho: str) -> bool:
+    return (company_id, dong, ho) in _TEST_UNITS
+
+
 def _to_int(v) -> int:
     try:
         return int(str(v).replace(",", ""))
@@ -118,6 +126,8 @@ def _build_fee_response(entry: FeeEntry) -> dict:
 
 
 def _log_access(db: Session, company_id: int, dong: str, ho: str, request: Request, action: str, success: bool):
+    if _is_test_unit(company_id, dong, ho):
+        return
     db.add(AccessLog(
         company_id=company_id,
         dong=dong,
@@ -400,6 +410,7 @@ def get_fee_average(
         .filter(FeeEntry.company_id == company_id, FeeEntry.year_month == year_month)
         .all()
     )
+    entries = [e for e in entries if not _is_test_unit(company_id, e.dong, e.ho)]
     if not entries:
         return {"amount": None, "electricity_kwh": None, "water_ton": None,
                  "hotwater_ton": None, "electricity_fee": None, "water_fee": None,
