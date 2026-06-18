@@ -421,12 +421,12 @@ def get_fee_average(
     if not year_month:
         raise HTTPException(status_code=400, detail="year_month이 필요합니다.")
 
-    entries = (
+    all_entries = (
         db.query(FeeEntry)
         .filter(FeeEntry.company_id == company_id, FeeEntry.year_month == year_month)
         .all()
     )
-    entries = [e for e in entries if not _is_test_unit(company_id, e.dong, e.ho)]
+    entries = [e for e in all_entries if not _is_test_unit(company_id, e.dong, e.ho)]
     if not entries:
         return {"amount": None, "electricity_kwh": None, "water_ton": None,
                  "hotwater_ton": None, "electricity_fee": None, "water_fee": None,
@@ -436,7 +436,9 @@ def get_fee_average(
     ho_n = _normalize(ho)
     my_area = None
     if dong_n and ho_n:
-        my_entry = next((e for e in entries if e.dong == dong_n and e.ho == ho_n), None)
+        # 테스트 동호수(1동 9999호, 회사 자체 미리보기용)로 조회할 수도 있으므로
+        # 본인 면적은 테스트 동호수 제외 전(all_entries)에서 찾는다 — 평균 대상(entries)은 계속 제외 유지.
+        my_entry = next((e for e in all_entries if e.dong == dong_n and e.ho == ho_n), None)
         if my_entry:
             my_items = json.loads(my_entry.fee_json or "{}")
             my_area = _to_float(my_items.get("전용면적"))
