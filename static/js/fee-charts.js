@@ -141,6 +141,13 @@ window._fcTog = function(key) {
   if (chev) chev.textContent = hidden ? '▲' : '▼';
 };
 
+/* 평균 비교 기준 라벨 — 전용면적이 같은 세대 평균인지, 단지 전체 평균인지 표시 */
+function _avgLabel(avg) {
+  if (avg && avg.area_match === 'exact') return `동일면적(${avg.area}㎡) 평균`;
+  if (avg && avg.area_match === 'nearby') return `유사면적(${avg.area}㎡) 평균`;
+  return '단지 평균';
+}
+
 /* F-03 사용량 카드 */
 const _FC_USAGE_AVG_KEY = { '전기': 'electricity_kwh', '수도': 'water_ton', '온수': 'hotwater_ton' };
 
@@ -176,7 +183,7 @@ function _usageCards(meter, avg) {
       ${fee > 0 ? `<div class="fc-ufee">${fee.toLocaleString()}원</div>` : ''}
       <div class="fc-gauge-bg"><div class="fc-gauge-fill" style="width:${pct}%;background:${gColor}"></div></div>
       <div class="fc-usub">${전월.toLocaleString()} → ${당월.toLocaleString()}</div>
-      ${avgUsage ? `<div class="fc-uavg">단지 평균 ${avgUsage.toLocaleString()}${cfg.unit}</div>` : ''}
+      ${avgUsage ? `<div class="fc-uavg">${_avgLabel(avg)} ${avgUsage.toLocaleString()}${cfg.unit}</div>` : ''}
     </div>`;
   }).filter(Boolean);
 
@@ -187,8 +194,8 @@ function _usageCards(meter, avg) {
   </div>`;
 }
 
-/* F-03.5 단지 비교 분석 카드 (관리비/전기/수도/온수 — 우리집 vs 단지 평균) */
-function _cmpRow2(label, icon, myVal, avgVal) {
+/* F-03.5 단지 비교 분석 카드 (관리비/전기/수도/온수 — 우리집 vs 동일면적 평균) */
+function _cmpRow2(label, icon, myVal, avgVal, avgLabel) {
   if (myVal == null || avgVal == null) return '';
   const ok = myVal <= avgVal;
   const color = ok ? '#22c55e' : '#ef4444';
@@ -204,7 +211,7 @@ function _cmpRow2(label, icon, myVal, avgVal) {
       <span class="fc-cmp2-vamt" style="color:${color}">${Math.round(myVal).toLocaleString()}원</span>
     </div>
     <div class="fc-cmp2-val">
-      <span class="fc-cmp2-vlabel">단지 평균</span>
+      <span class="fc-cmp2-vlabel">${avgLabel}</span>
       <span class="fc-cmp2-bar-bg"><span class="fc-cmp2-bar" style="width:${avgPct}%;background:#94a3b8"></span></span>
       <span class="fc-cmp2-vamt">${Math.round(avgVal).toLocaleString()}원</span>
     </div>
@@ -226,17 +233,19 @@ function _compareCard(d, avg) {
   const elecFee = _sumItems(billing, _FC_ELEC_FEE_ITEMS) || null;
   const waterFee = _sumItems(billing, _FC_WATER_FEE_ITEMS) || null;
   const hotFee = _sumItems(billing, _FC_HOTWATER_FEE_ITEMS) || null;
+  const avgLabel = _avgLabel(avg);
 
   const rows = [
-    _cmpRow2('관리비', '🏢', _n(d.total) || null, avg.amount && avg.amount.avg),
-    _cmpRow2('전기', '⚡', elecFee, avg.electricity_fee && avg.electricity_fee.avg),
-    _cmpRow2('수도', '💧', waterFee, avg.water_fee && avg.water_fee.avg),
-    _cmpRow2('온수', '🔥', hotFee, avg.hotwater_fee && avg.hotwater_fee.avg),
+    _cmpRow2('관리비', '🏢', _n(d.total) || null, avg.amount && avg.amount.avg, avgLabel),
+    _cmpRow2('전기', '⚡', elecFee, avg.electricity_fee && avg.electricity_fee.avg, avgLabel),
+    _cmpRow2('수도', '💧', waterFee, avg.water_fee && avg.water_fee.avg, avgLabel),
+    _cmpRow2('온수', '🔥', hotFee, avg.hotwater_fee && avg.hotwater_fee.avg, avgLabel),
   ].filter(Boolean);
 
   if (!rows.length) return '';
   return `<div class="fc-card">
     <div class="fc-card-title">단지 비교 분석</div>
+    ${d.exclusive_area ? `<div style="font-size:11.5px;color:#94a3b8;margin:-4px 0 10px">전용면적 ${d.exclusive_area}㎡ 기준</div>` : ''}
     ${rows.join('')}
   </div>`;
 }
@@ -329,11 +338,12 @@ function _aiCard(d, history, avg) {
     const use = 당 - 전;
     if (use > 0 && avg && avg.electricity_kwh) {
       const ratio = use / avg.electricity_kwh.avg;
+      const avgLabel = _avgLabel(avg);
       if (ratio > 1.1) {
-        msgs.push(`전기 사용량이 단지 평균보다 <b>${Math.round((ratio - 1) * 100)}% 높습니다</b>.`);
+        msgs.push(`전기 사용량이 ${avgLabel}보다 <b>${Math.round((ratio - 1) * 100)}% 높습니다</b>.`);
         tips.push('💡 에어컨 설정온도를 1°C 높이면 약 7% 전기료가 절감됩니다.');
       } else if (ratio < 0.9) {
-        msgs.push(`전기 절약을 잘 실천하고 계세요! 평균보다 <b>${Math.round((1 - ratio) * 100)}% 적게</b> 사용했습니다. 👍`);
+        msgs.push(`전기 절약을 잘 실천하고 계세요! ${avgLabel}보다 <b>${Math.round((1 - ratio) * 100)}% 적게</b> 사용했습니다. 👍`);
       }
     } else if (use > 200) {
       msgs.push(`전기 사용량(${use.toFixed(0)}kWh)이 많은 편입니다.`);
