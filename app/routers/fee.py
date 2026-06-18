@@ -65,6 +65,13 @@ def _to_int(v) -> int:
         return 0
 
 
+def _to_float(v):
+    try:
+        return float(str(v).replace(",", ""))
+    except (ValueError, TypeError):
+        return None
+
+
 def _build_fee_response(entry: FeeEntry) -> dict:
     """FeeEntry를 관리비 조회 화면용 응답 형태로 가공."""
     all_items = json.loads(entry.fee_json or "{}")
@@ -117,6 +124,7 @@ def _build_fee_response(entry: FeeEntry) -> dict:
         "year_month":     entry.year_month,
         "total":          total_납기내 or total_부과,
         "total_after":    total_납기후,
+        "exclusive_area": all_items.get("전용면적", ""),
         "billing_items":  billing_items,
         "billing_구분":   billing_구분,
         "summary":        summary,
@@ -398,10 +406,18 @@ def get_fee_average(
     request: Request,
     company_id: int = 1,
     year_month: str = "",
+    dong: str = "",
+    ho: str = "",
     db: Session = Depends(get_db),
     _auth: dict = Depends(require_fee_token),
 ):
-    """해당 단지의 해당 월 평균 관리비/사용량 (히어로 카드, 사용량 카드 비교용)"""
+    """해당 단지의 해당 월 평균 관리비/사용량 (히어로 카드, 사용량 카드 비교용)
+
+    dong/ho가 주어지면 해당 세대와 전용면적이 같은 세대들만 모아 평균을 낸다
+    (단지 전체에는 면적이 다른 세대가 섞여 있어 비교가 불공정해지는 문제 보완).
+    동일면적 표본이 3건 미만이면 면적 차이가 가장 가까운 세대부터 채워 3건을 확보한다.
+    전용면적 데이터가 없는 세대(수집 전 업로드분)는 기존처럼 단지 전체 평균으로 폴백한다.
+    """
     if not year_month:
         raise HTTPException(status_code=400, detail="year_month이 필요합니다.")
 
@@ -414,7 +430,35 @@ def get_fee_average(
     if not entries:
         return {"amount": None, "electricity_kwh": None, "water_ton": None,
                  "hotwater_ton": None, "electricity_fee": None, "water_fee": None,
-                 "hotwater_fee": None, "sample_size": 0}
+                 "hotwater_fee": None, "sample_size": 0, "area": None, "area_match": None}
+
+    dong_n = _normalize(dong)
+    ho_n = _normalize(ho)
+    my_area = None
+    if dong_n and ho_n:
+        my_entry = next((e for e in entries if e.dong == dong_n and e.ho == ho_n), None)
+        if my_entry:
+            my_items = json.loads(my_entry.fee_json or "{}")
+            my_area = _to_float(my_items.get("전용면적"))
+
+    area_match = None
+    if my_area is not None:
+        with_area = []
+        for e in entries:
+            items = json.loads(e.fee_json or "{}")
+            a = _to_float(items.get("전용면적"))
+            if a is not None:
+                with_area.append((e, abs(a - my_area)))
+
+        if with_area:
+            with_area.sort(key=lambda pair: pair[1])
+            exact = [e for e, diff in with_area if diff < 0.01]
+            if len(exact) >= 3:
+                entries = exact
+                area_match = "exact"
+            else:
+                entries = [e for e, _ in with_area[:3]]
+                area_match = "nearby"
 
     def _category_sum(billing_items: dict, keys: list) -> int:
         return sum(_to_int(billing_items.get(k)) for k in keys)
@@ -467,6 +511,8 @@ def get_fee_average(
         "water_fee":       _stats(water_fee),
         "hotwater_fee":    _stats(hotwater_fee),
         "sample_size":     len(entries),
+        "area":            my_area,
+        "area_match":      area_match,
     }
 
 
