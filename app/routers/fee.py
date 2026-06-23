@@ -268,13 +268,17 @@ def admin_fee_stats(
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """관리자 전용 관리비 조회 통계 (일별/월별/년도별)"""
+    """관리자 전용 관리비 조회 통계 (일별/월별/년도별) — 관리자 자체 조회(admin_query)는 입주민 사용 통계가 아니므로 제외"""
     from collections import defaultdict
     cid = admin["company_id"]
     if cid == 0:
         raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
 
-    logs = db.query(AccessLog).filter(AccessLog.company_id == cid).all()
+    logs = (
+        db.query(AccessLog)
+        .filter(AccessLog.company_id == cid, AccessLog.action != "admin_query")
+        .all()
+    )
 
     def empty():
         return {"total": 0, "success": 0, "fail": 0}
@@ -314,11 +318,11 @@ def admin_fee_log(
     limit: int = 100,
     offset: int = 0,
 ):
-    """관리자 전용 관리비 조회 이력 (access_log)"""
+    """관리자 전용 관리비 조회 이력 (access_log) — 관리자 자체 조회(admin_query)는 입주민 이력이 아니므로 제외"""
     cid = admin["company_id"]
     if cid == 0:
         raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
-    q = db.query(AccessLog).filter(AccessLog.company_id == cid)
+    q = db.query(AccessLog).filter(AccessLog.company_id == cid, AccessLog.action != "admin_query")
     total = q.count()
     logs = q.order_by(AccessLog.created_at.desc()).offset(offset).limit(min(limit, 200)).all()
     return {
