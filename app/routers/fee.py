@@ -209,7 +209,8 @@ def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db
         sent = False
 
     db.commit()
-    _log_access(db, company_id, dong, ho, request, "send_sms", sent)
+    if not sent:
+        _log_access(db, company_id, dong, ho, request, "send_sms", False)
 
     return {
         "success": True,
@@ -254,7 +255,6 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
 
     db.delete(otp)
     db.commit()
-    _log_access(db, company_id, dong, ho, request, "verify", True)
 
     token = create_access_token(
         {"dong": dong, "ho": ho, "company_id": company_id, "scope": "fee"},
