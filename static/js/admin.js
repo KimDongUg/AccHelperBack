@@ -3663,11 +3663,12 @@ function renderFeeAccessLog(logs, container) {
         const successBadge = l.success
             ? '<span style="display:inline-block;padding:2px 8px;border-radius:20px;background:#e8f5e9;color:#2e7d32;font-size:11px;font-weight:700">성공</span>'
             : '<span style="display:inline-block;padding:2px 8px;border-radius:20px;background:#ffebee;color:#c62828;font-size:11px;font-weight:700">실패</span>';
+        const note = l.success ? '' : actionLabel;
         return `<tr style="border-bottom:1px solid #f0f0f0">
             <td style="padding:8px 10px;font-size:13px;color:#555;white-space:nowrap">${dateStr}</td>
             <td style="padding:8px 10px;font-size:13px;font-weight:600;color:#1a1a2e;text-align:center">${l.dong}동 ${l.ho}호</td>
-            <td style="padding:8px 10px;font-size:13px;color:#555;text-align:center">${actionLabel}</td>
             <td style="padding:8px 10px;text-align:center">${successBadge}</td>
+            <td style="padding:8px 10px;font-size:13px;color:#c62828;text-align:center">${note}</td>
         </tr>`;
     }).join('');
 
@@ -3678,8 +3679,8 @@ function renderFeeAccessLog(logs, container) {
           <tr style="background:#f5f6fa">
             <th style="padding:8px 10px;text-align:left;font-size:12px;color:var(--gray-600);font-weight:600;white-space:nowrap">일시</th>
             <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">동호수</th>
-            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">액션</th>
             <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">결과</th>
+            <th style="padding:8px 10px;font-size:12px;color:var(--gray-600);font-weight:600;text-align:center">비고</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
