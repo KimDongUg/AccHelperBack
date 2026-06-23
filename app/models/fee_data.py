@@ -2,6 +2,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
+from app.utils import now_kst
 
 
 class FeeEntry(Base):
@@ -15,4 +16,4 @@ class FeeEntry(Base):
     name: Mapped[str] = mapped_column(String(100), nullable=False, default="")
     phone: Mapped[str] = mapped_column(String(30), nullable=False, default="")
     fee_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
-    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)

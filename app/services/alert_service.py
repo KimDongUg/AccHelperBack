@@ -6,16 +6,16 @@
 """
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
 from app import config
 
-KST = timezone(timedelta(hours=9))
 from app.database import SessionLocal
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.unanswered_question import UnansweredQuestion
 from app.services.solapi_service import send_unanswered_alimtalk, send_complaint_alimtalk, send_market_comment_alimtalk
+from app.utils import now_kst
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,7 @@ def _build_complaint_url(company_id: int, complaint_id: int) -> str:
 
 
 def _format_time(dt: datetime) -> str:
-    kst_dt = dt.replace(tzinfo=timezone.utc).astimezone(KST)
-    return kst_dt.strftime("%Y-%m-%d %H:%M")
+    return dt.strftime("%Y-%m-%d %H:%M")
 
 
 def trigger_unanswered_alert(question_id: int) -> None:
@@ -116,7 +115,7 @@ def trigger_unanswered_alert(question_id: int) -> None:
         # 5. 발송 기록 업데이트 (1명이라도 성공 시)
         if success_count > 0:
             question.alert_count = 1
-            question.alert_sent_at = datetime.utcnow()
+            question.alert_sent_at = now_kst()
             db.commit()
 
     except Exception as e:

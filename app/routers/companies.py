@@ -21,6 +21,7 @@ from app.models.qa_embedding import QaEmbedding
 from app.models.tenant_quota import TenantQuota
 from app.models.tenant_usage import TenantUsageMonthly
 from app.models.prompt_template import PromptTemplate
+from app.utils import now_kst
 from app.schemas.company import (
     CompanyCreate,
     CompanyListResponse,
@@ -255,7 +256,7 @@ def update_my_company(
 
     for key, value in update_data.items():
         setattr(company, key, value)
-    company.updated_at = datetime.utcnow()
+    company.updated_at = now_kst()
     db.commit()
     db.refresh(company)
     return company
@@ -313,7 +314,7 @@ def update_company(
     _serialize_categories(update_data)
     for key, value in update_data.items():
         setattr(company, key, value)
-    company.updated_at = datetime.utcnow()
+    company.updated_at = now_kst()
     db.commit()
     db.refresh(company)
     return company
@@ -332,9 +333,9 @@ def delete_company(
     if company.company_id == 1:
         raise HTTPException(status_code=400, detail="기본 회사는 삭제할 수 없습니다.")
 
-    company.deleted_at = datetime.utcnow()
+    company.deleted_at = now_kst()
     company.is_active = False
-    company.updated_at = datetime.utcnow()
+    company.updated_at = now_kst()
     db.commit()
     return {"success": True, "message": "회사가 삭제되었습니다."}
 
@@ -354,7 +355,7 @@ def restore_company(
 
     company.deleted_at = None
     company.is_active = True
-    company.updated_at = datetime.utcnow()
+    company.updated_at = now_kst()
     db.commit()
     return {"success": True, "message": "회사가 복원되었습니다."}
 

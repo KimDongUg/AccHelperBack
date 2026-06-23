@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.utils import now_kst
 
 
 class BillingKey(Base):
@@ -18,7 +19,7 @@ class BillingKey(Base):
     card_company: Mapped[str | None] = mapped_column(String(50), nullable=True)
     card_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
     deactivated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
@@ -36,4 +37,4 @@ class PaymentHistory(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False)  # success, failed
     payment_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
     failure_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
-    paid_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    paid_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)

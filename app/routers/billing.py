@@ -25,6 +25,7 @@ from app.schemas.billing import (
     PaymentHistoryItem,
     PaymentHistoryResponse,
 )
+from app.utils import now_kst
 
 logger = logging.getLogger("acchelper")
 
@@ -101,7 +102,7 @@ async def billing_success(
         )
         for bk in existing:
             bk.is_active = False
-            bk.deactivated_at = datetime.utcnow()
+            bk.deactivated_at = now_kst()
 
         # 3) 새 빌링키 저장
         new_bk = BillingKey(
@@ -368,7 +369,7 @@ def billing_history(
                 status=p.status,
                 payment_key=p.payment_key,
                 failure_reason=p.failure_reason,
-                paid_at=p.paid_at.isoformat() + "Z",
+                paid_at=p.paid_at.isoformat(),
             )
             for p in payments
         ],
@@ -394,7 +395,7 @@ def billing_deactivate(
 
     for bk in bk_list:
         bk.is_active = False
-        bk.deactivated_at = datetime.utcnow()
+        bk.deactivated_at = now_kst()
 
     # 구독 다운그레이드
     company = db.query(Company).filter(Company.company_id == company_id).first()
@@ -470,7 +471,7 @@ def billing_cancel(
     )
     for bk in bk_list:
         bk.is_active = False
-        bk.deactivated_at = datetime.utcnow()
+        bk.deactivated_at = now_kst()
 
     # free로 다운그레이드
     company.subscription_plan = "free"

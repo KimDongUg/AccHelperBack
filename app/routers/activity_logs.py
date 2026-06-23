@@ -48,7 +48,7 @@ def list_activity_logs(
                 "target_id": log.target_id,
                 "details": log.details,
                 "ip_address": log.ip_address,
-                "timestamp": log.timestamp.isoformat() + "Z" if log.timestamp else None,
+                "timestamp": log.timestamp.isoformat() if log.timestamp else None,
             }
             for log in items
         ],

@@ -12,6 +12,7 @@ from app.config import DATA_DIR
 from app.database import get_db
 from app.models.company import Company
 from app.models.fee_data import FeeEntry
+from app.utils import now_kst
 
 logger = logging.getLogger("acchelper")
 router = APIRouter(prefix="/api/collector", tags=["collector"])
@@ -85,7 +86,7 @@ def _parse_and_store(file_path: Path, year_month: str, company_id: int, db: Sess
                 dong=dong, ho=ho,
                 name=name, phone=phone,
                 fee_json=json.dumps(fee_data, ensure_ascii=False),
-                uploaded_at=datetime.utcnow(),
+                uploaded_at=now_kst(),
             )
             db.add(entry)
             count += 1

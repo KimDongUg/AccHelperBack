@@ -15,6 +15,7 @@ from app.schemas.unanswered_question import (
     UnansweredQuestionStatusUpdate,
 )
 from app.services.alert_service import trigger_unanswered_alert
+from app.utils import now_kst
 
 router = APIRouter(prefix="/api/unanswered-questions", tags=["unanswered-questions"])
 
@@ -101,7 +102,7 @@ def update_unanswered_question_status(
         raise HTTPException(status_code=404, detail="미답변 질문을 찾을 수 없습니다.")
 
     uq.status = data.status
-    uq.updated_at = datetime.utcnow()
+    uq.updated_at = now_kst()
     db.commit()
 
     return UnansweredQuestionStatusResponse(id=uq.id, status=uq.status)

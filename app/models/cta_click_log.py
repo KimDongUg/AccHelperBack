@@ -5,13 +5,14 @@ from sqlalchemy import DateTime, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.utils import now_kst
 
 
 class CtaClickLog(Base):
     __tablename__ = "cta_click_logs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst, index=True)
     page_path: Mapped[str] = mapped_column(String(200), nullable=False)
     cta_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     visitor_type: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown")

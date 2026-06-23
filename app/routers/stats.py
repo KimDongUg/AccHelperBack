@@ -16,6 +16,7 @@ from app.models.market import ApartmentResident, MarketComment, MarketPost, Mark
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
 from app.models.tenant_usage import TenantUsageMonthly
+from app.utils import now_kst
 
 router = APIRouter(prefix="/api/stats", tags=["stats"])
 
@@ -38,7 +39,7 @@ def get_stats(
     total_qa = qa_query.count()
     active_qa = qa_query.filter(QaKnowledge.is_active == True).count()
 
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = now_kst().replace(hour=0, minute=0, second=0, microsecond=0)
     chat_query = db.query(ChatLog)
     if company_id != 0:
         chat_query = chat_query.filter(ChatLog.company_id == company_id)
@@ -75,7 +76,7 @@ def get_stats(
             }
 
     # Feedback stats (recent 7 days)
-    week_ago = datetime.utcnow() - timedelta(days=7)
+    week_ago = now_kst() - timedelta(days=7)
     fb_query = db.query(Feedback)
     if company_id != 0:
         fb_query = fb_query.filter(Feedback.company_id == company_id)
@@ -106,7 +107,7 @@ def get_overview(
     user: dict = Depends(require_super_admin),
 ):
     """Super admin: overview stats across all companies."""
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = now_kst().replace(hour=0, minute=0, second=0, microsecond=0)
 
     total_companies = db.query(Company).filter(Company.deleted_at == None).count()
     active_companies = (
@@ -181,7 +182,7 @@ def get_trends(
 ):
     """Daily chat/RAG usage trends."""
     company_id = user["company_id"]
-    start = datetime.utcnow() - timedelta(days=days)
+    start = now_kst() - timedelta(days=days)
 
     query = db.query(
         func.date(ChatLog.timestamp).label("date"),

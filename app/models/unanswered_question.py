@@ -4,6 +4,7 @@ from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.utils import now_kst
 
 
 class UnansweredQuestion(Base):
@@ -14,9 +15,9 @@ class UnansweredQuestion(Base):
     company_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     session_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="pending")
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=now_kst, onupdate=now_kst
     )
     alert_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     alert_count: Mapped[int] = mapped_column(Integer, default=0)

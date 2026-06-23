@@ -11,6 +11,7 @@ from app.models.qa_knowledge import QaKnowledge
 from app.quota import increment_usage
 from app.schemas.qa import QaCreate, QaListResponse, QaMoveCategory, QaResponse, QaUpdate
 from app.services.embedding_service import delete_qa_embedding, upsert_qa_embedding
+from app.utils import now_kst
 
 router = APIRouter(prefix="/api/qa", tags=["qa"])
 
@@ -218,7 +219,7 @@ def update_qa(
         del update_data["company_id"]
     for key, value in update_data.items():
         setattr(qa, key, value)
-    qa.updated_at = datetime.utcnow()
+    qa.updated_at = now_kst()
     qa.updated_by = user["user_id"]
 
     # QA 커스터마이즈 플래그
@@ -292,7 +293,7 @@ def toggle_qa(
     if not qa:
         raise HTTPException(status_code=404, detail="Q&A를 찾을 수 없습니다.")
     qa.is_active = not qa.is_active
-    qa.updated_at = datetime.utcnow()
+    qa.updated_at = now_kst()
     qa.updated_by = user["user_id"]
     db.commit()
     db.refresh(qa)

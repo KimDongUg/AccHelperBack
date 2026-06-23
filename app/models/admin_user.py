@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.utils import now_kst
 
 
 class AdminUser(Base):
@@ -26,5 +27,5 @@ class AdminUser(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     receive_unanswered_alert: Mapped[bool] = mapped_column(Boolean, default=True)
     receive_complaint_alert: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

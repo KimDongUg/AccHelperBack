@@ -10,6 +10,7 @@ from app.database import get_db
 from app.dependencies import require_admin
 from app.models.prompt_template import PromptTemplate
 from app.services.chat_service import DEFAULT_SYSTEM_PROMPT
+from app.utils import now_kst
 
 router = APIRouter(prefix="/api/prompts", tags=["prompts"])
 
@@ -100,7 +101,7 @@ def update_prompt(
         template.system_prompt = data.system_prompt
     if data.is_active is not None:
         template.is_active = data.is_active
-    template.updated_at = datetime.utcnow()
+    template.updated_at = now_kst()
 
     db.commit()
     db.refresh(template)

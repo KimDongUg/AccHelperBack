@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.utils import now_kst
 
 
 class Company(Base):
@@ -37,9 +38,9 @@ class Company(Base):
     notice_image_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     enable_fee: Mapped[bool] = mapped_column(Boolean, default=False)
     collector_api_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+        DateTime, default=now_kst, onupdate=now_kst
     )
     trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

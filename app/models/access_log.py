@@ -4,6 +4,7 @@ from sqlalchemy import Boolean, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
+from app.utils import now_kst
 
 
 class AccessLog(Base):
@@ -19,4 +20,4 @@ class AccessLog(Base):
     user_agent: Mapped[str] = mapped_column(Text, nullable=False, default="")
     action: Mapped[str] = mapped_column(String(20), nullable=False)  # send_sms / verify / fee_query
     success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst, index=True)

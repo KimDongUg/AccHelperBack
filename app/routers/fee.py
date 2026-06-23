@@ -284,7 +284,7 @@ def admin_fee_stats(
     yearly: dict = defaultdict(empty)
 
     for log in logs:
-        kst = log.created_at + timedelta(hours=9)
+        kst = log.created_at
         for key, bucket in [
             (kst.strftime("%Y-%m-%d"), daily),
             (kst.strftime("%Y-%m"),    monthly),
@@ -331,7 +331,7 @@ def admin_fee_log(
                 "action": l.action,
                 "success": l.success,
                 "ip": l.ip,
-                "created_at": l.created_at.isoformat() + "Z",
+                "created_at": l.created_at.isoformat(),
             }
             for l in logs
         ],

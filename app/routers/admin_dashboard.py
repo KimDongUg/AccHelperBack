@@ -11,6 +11,7 @@ from app.models.admin_user import AdminUser
 from app.models.billing import BillingKey, PaymentHistory
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
+from app.utils import now_kst
 from app.schemas.admin import AdminListResponse
 from app.schemas.admin_dashboard import (
     ApprovalRequest,
@@ -140,9 +141,9 @@ def list_subscribers(
             admin_count=admin_count,
             total_paid=total_paid,
             payment_count=payment_count,
-            last_paid_at=last_paid_at.isoformat() + "Z" if last_paid_at else None,
+            last_paid_at=last_paid_at.isoformat() if last_paid_at else None,
             trial_ends_at=c.trial_ends_at.isoformat() + "Z" if c.trial_ends_at else None,
-            created_at=c.created_at.isoformat() + "Z",
+            created_at=c.created_at.isoformat(),
         ))
 
     return SubscriberListResponse(success=True, items=items, total=len(items))
@@ -193,7 +194,7 @@ def list_all_payments(
             status=p.status,
             payment_key=p.payment_key,
             failure_reason=p.failure_reason,
-            paid_at=p.paid_at.isoformat() + "Z",
+            paid_at=p.paid_at.isoformat(),
         ))
 
     return PaymentListResponse(success=True, items=items, total=len(items))
@@ -232,14 +233,14 @@ def approve_company(
 
     if body.status == "approved":
         company.approval_status = "approved"
-        company.approved_at = datetime.utcnow()
+        company.approved_at = now_kst()
         company.approved_by = user["user_id"]
         company.rejection_reason = None
     else:
         company.approval_status = "rejected"
         company.rejection_reason = body.reason
 
-    company.updated_at = datetime.utcnow()
+    company.updated_at = now_kst()
     db.commit()
 
     return {
@@ -265,7 +266,7 @@ def update_subscription(
         raise HTTPException(status_code=400, detail="subscription_plan은 'enterprise' 또는 'free'만 가능합니다.")
 
     company.subscription_plan = body.subscription_plan
-    company.updated_at = datetime.utcnow()
+    company.updated_at = now_kst()
     db.commit()
 
     return {
