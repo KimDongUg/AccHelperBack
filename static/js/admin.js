@@ -103,10 +103,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Show admin tab for admin/super_admin
     if (currentRole === 'admin' || currentRole === 'super_admin') {
         document.getElementById('tabAdmins').style.display = '';
-
-        // Show ERP collector card for admin and super_admin
-        const collectorCard = document.getElementById('collectorCard');
-        if (collectorCard) collectorCard.style.display = '';
     }
 
     // 관리비 조회 탭: 일반 관리자는 항상 표시
