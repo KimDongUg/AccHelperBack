@@ -372,10 +372,14 @@ function _aiCard(d, history, avg) {
   </div>`;
 }
 
-/* 메인 대시보드 렌더러 */
-window.renderDashboard = async function(d, token, companyId) {
+/* 메인 대시보드 렌더러
+   opts.historyUrl / opts.averageUrl로 엔드포인트를 바꿀 수 있음
+   (관리자 화면은 OTP 토큰 대신 관리자 JWT로 인증하는 /admin-history, /admin-average 사용) */
+window.renderDashboard = async function(d, token, companyId, opts) {
   const container = document.getElementById('dashContainer');
   if (!container) return;
+  const historyUrl = (opts && opts.historyUrl) || '/api/fee/history';
+  const averageUrl = (opts && opts.averageUrl) || '/api/fee/average';
 
   function _render(hist, avg) {
     const vat = _n((d.summary || {})['부가가치세']);
@@ -411,8 +415,8 @@ window.renderDashboard = async function(d, token, companyId) {
     const authHeader = { Authorization: `Bearer ${token}` };
 
     const [histRes, avgRes] = await Promise.all([
-      fetch(`/api/fee/history?${histParams}`, { headers: authHeader }),
-      fetch(`/api/fee/average?${avgParams}`, { headers: authHeader }),
+      fetch(`${historyUrl}?${histParams}`, { headers: authHeader }),
+      fetch(`${averageUrl}?${avgParams}`, { headers: authHeader }),
     ]);
 
     const hist = histRes.ok ? (await histRes.json()).history : null;

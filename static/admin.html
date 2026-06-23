@@ -7,6 +7,7 @@
     <link rel="icon" type="image/png" href="/assets/images/logo.png">
     <link rel="stylesheet" href="/css/common.css?v=15">
     <link rel="stylesheet" href="/css/admin.css?v=15">
+    <link rel="stylesheet" href="/css/fee.css">
 </head>
 <body>
     <a href="#main-content" class="skip-link">본문으로 건너뛰기</a>
@@ -810,7 +811,11 @@
                 </div>
             </div>
             <div id="adminFeeMsg" style="display:none;margin-top:1rem;padding:12px 16px;border-radius:8px;font-size:13px;font-weight:500"></div>
-            <div id="adminFeeResult" style="margin-top:1.25rem;max-width:560px"></div>
+            <div style="margin-top:1.25rem;max-width:560px">
+                <div id="dashContainer" style="display:none"></div>
+                <button class="fc-toggle-btn" id="adminFcToggleBtn" style="display:none" onclick="toggleAdminFeeDetail()">상세 고지서 보기 ▼</button>
+                <div id="adminFeeResult"></div>
+            </div>
             <!-- 조회 통계 -->
             <div style="margin-top:2.5rem">
                 <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap">
@@ -1197,6 +1202,7 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>if(typeof marked!=='undefined')marked.setOptions({breaks:true});</script>
     <script src="/js/api.js?v=15"></script>
+    <script src="/js/fee-charts.js"></script>
     <script src="/js/admin.js?v=16"></script>
 </body>
 </html>

@@ -367,18 +367,7 @@ def admin_fee_search(
     return _build_fee_response(entry)
 
 
-@router.get("/history")
-@limiter.limit(RATE_LIMIT_FEE_QUERY)
-def get_fee_history(
-    request: Request,
-    dong: str,
-    ho: str,
-    company_id: int = 1,
-    months: int = 12,
-    db: Session = Depends(get_db),
-    _auth: dict = Depends(require_fee_token),
-):
-    """해당 세대 최근 N개월 납부금액 히스토리"""
+def _compute_fee_history(db: Session, company_id: int, dong: str, ho: str, months: int) -> list:
     dong_n = _normalize(dong)
     ho_n = _normalize(ho)
     entries = (
@@ -397,20 +386,41 @@ def get_fee_history(
         except (ValueError, TypeError):
             amt = 0
         history.append({"year_month": e.year_month, "amount": amt})
-    return {"history": history}
+    return history
 
 
-@router.get("/average")
+@router.get("/history")
 @limiter.limit(RATE_LIMIT_FEE_QUERY)
-def get_fee_average(
+def get_fee_history(
     request: Request,
+    dong: str,
+    ho: str,
     company_id: int = 1,
-    year_month: str = "",
-    dong: str = "",
-    ho: str = "",
+    months: int = 12,
     db: Session = Depends(get_db),
     _auth: dict = Depends(require_fee_token),
 ):
+    """해당 세대 최근 N개월 납부금액 히스토리"""
+    return {"history": _compute_fee_history(db, company_id, dong, ho, months)}
+
+
+@router.get("/admin-history")
+def admin_fee_history(
+    request: Request,
+    dong: str,
+    ho: str,
+    months: int = 12,
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자 전용 관리비 히스토리 (OTP 인증 불필요, company_id는 JWT에서 자동 추출)"""
+    cid = admin["company_id"]
+    if cid == 0:
+        raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
+    return {"history": _compute_fee_history(db, cid, dong, ho, months)}
+
+
+def _compute_fee_average(db: Session, company_id: int, year_month: str, dong: str, ho: str) -> dict:
     """해당 단지의 해당 월 평균 관리비/사용량 (히어로 카드, 사용량 카드 비교용)
 
     dong/ho가 주어지면 해당 세대와 전용면적이 같은 세대들만 모아 평균을 낸다
@@ -519,6 +529,37 @@ def get_fee_average(
         "area":            my_area,
         "area_match":      area_match,
     }
+
+
+@router.get("/average")
+@limiter.limit(RATE_LIMIT_FEE_QUERY)
+def get_fee_average(
+    request: Request,
+    company_id: int = 1,
+    year_month: str = "",
+    dong: str = "",
+    ho: str = "",
+    db: Session = Depends(get_db),
+    _auth: dict = Depends(require_fee_token),
+):
+    """해당 단지의 해당 월 평균 관리비/사용량 (히어로 카드, 사용량 카드 비교용)"""
+    return _compute_fee_average(db, company_id, year_month, dong, ho)
+
+
+@router.get("/admin-average")
+def admin_fee_average(
+    request: Request,
+    year_month: str = "",
+    dong: str = "",
+    ho: str = "",
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """관리자 전용 단지 평균 (OTP 인증 불필요, company_id는 JWT에서 자동 추출)"""
+    cid = admin["company_id"]
+    if cid == 0:
+        raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
+    return _compute_fee_average(db, cid, year_month, dong, ho)
 
 
 @router.get("")

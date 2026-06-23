@@ -3405,12 +3405,23 @@ function _ymFee(ym6) {
     return `${ym6.slice(0, 4)}년 ${parseInt(ym6.slice(4, 6))}월분`;
 }
 
+function toggleAdminFeeDetail() {
+    const card = document.getElementById('adminFeeResult');
+    const btn = document.getElementById('adminFcToggleBtn');
+    const shown = card.style.display !== 'none';
+    card.style.display = shown ? 'none' : '';
+    btn.textContent = shown ? '상세 고지서 보기 ▼' : '상세 고지서 닫기 ▲';
+    if (!shown) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 async function adminFeeSearch() {
     const dong = (document.getElementById('adminFeeDong').value || '').trim();
     const ho   = (document.getElementById('adminFeeHo').value   || '').trim();
-    const msgEl    = document.getElementById('adminFeeMsg');
-    const resultEl = document.getElementById('adminFeeResult');
-    const btn      = document.getElementById('adminFeeSearchBtn');
+    const msgEl       = document.getElementById('adminFeeMsg');
+    const resultEl    = document.getElementById('adminFeeResult');
+    const dashEl      = document.getElementById('dashContainer');
+    const toggleBtn   = document.getElementById('adminFcToggleBtn');
+    const btn         = document.getElementById('adminFeeSearchBtn');
 
     function showMsg(text, isError) {
         msgEl.textContent = text;
@@ -3423,13 +3434,27 @@ async function adminFeeSearch() {
     if (!dong || !ho) { showMsg('동과 호수를 모두 입력하세요.', true); return; }
 
     clearMsg();
+    dashEl.style.display = 'none';
+    toggleBtn.style.display = 'none';
+    resultEl.style.display = 'none';
     resultEl.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400)">조회 중...</div>';
+    resultEl.style.display = '';
     btn.disabled = true;
 
     try {
         const params = new URLSearchParams({ dong, ho });
         const data = await apiGet(`/fee/admin-search?${params}`);
         renderAdminFeeResult(data, resultEl);
+        resultEl.style.display = 'none';
+        toggleBtn.style.display = '';
+        toggleBtn.textContent = '상세 고지서 보기 ▼';
+
+        const sess = AuthSession.get();
+        const companyId = sess?.company_id || sess?.companyId;
+        window.renderDashboard(data, AuthSession.getToken(), companyId, {
+            historyUrl: '/api/fee/admin-history',
+            averageUrl: '/api/fee/admin-average',
+        });
     } catch (e) {
         resultEl.innerHTML = '';
         const msg = e.message || '데이터를 조회하지 못했습니다.';
