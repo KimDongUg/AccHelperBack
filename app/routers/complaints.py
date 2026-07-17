@@ -294,10 +294,13 @@ def _upsert_complaint_person(db: Session, body: ComplaintCreate):
 
 
 def _require_resident_or_admin(
+    complaint_id: int,
     request: Request,
+    db: Session = Depends(get_db),
     admin: dict | None = Depends(optional_admin),
 ) -> dict | None:
-    """관리자 또는 입주민(market JWT) 둘 중 하나만 있으면 허용."""
+    """관리자 또는 입주민(market JWT) 둘 중 하나만 있으면 허용.
+    샘플 회사(company_id >= 1000)는 데모 목적으로 인증 없이 열람 허용."""
     if admin is not None:
         return admin
     auth = request.headers.get("Authorization", "")
@@ -311,6 +314,9 @@ def _require_resident_or_admin(
                 return None  # 입주민 — admin 아님
         except jwt.PyJWTError:
             pass
+    row = db.query(Complaint.company_id).filter(Complaint.id == complaint_id).first()
+    if row and row[0] >= 1000:
+        return None
     raise HTTPException(status_code=401, detail="입주민 인증이 필요합니다.")
 
 
