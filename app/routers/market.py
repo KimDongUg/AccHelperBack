@@ -50,13 +50,16 @@ def _decode_market_token(token: str) -> Optional[dict]:
         return None
 
 
-def _get_market_user(request: Request) -> dict:
+def _get_market_user(request: Request, company_id: int | None = None) -> dict:
+    """샘플 회사(company_id >= 1000)는 데모 목적으로 인증 없이 열람 허용."""
     auth = request.headers.get("Authorization", "")
     token = auth.removeprefix("Bearer ").strip() if auth.startswith("Bearer ") else ""
     if not token:
         token = request.cookies.get("market_token", "")
     payload = _decode_market_token(token)
     if not payload:
+        if company_id and company_id >= 1000:
+            return {"unit": None, "building": None, "company_id": company_id, "sample": True}
         raise HTTPException(status_code=401, detail="입주민 인증이 필요합니다.")
     return payload
 
