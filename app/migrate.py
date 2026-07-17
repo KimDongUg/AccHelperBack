@@ -94,6 +94,13 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "notice_image_link", "VARCHAR(500)")
         _pg_add_column_if_missing(conn, "companies", "enable_fee", "BOOLEAN DEFAULT FALSE")
         _pg_add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
+        _pg_add_column_if_missing(conn, "companies", "single_building_dong", "VARCHAR(10)")
+        # Backfill: 세종푸르지오시티 2차(company_id=1)는 단일동 아파트이므로 기존 프론트 하드코딩과
+        # 동일하게 동을 '1동'으로 고정 (market-login.html/complaint.js의 이름 매칭 로직 대체)
+        conn.execute(text(
+            "UPDATE companies SET single_building_dong = '1동' "
+            "WHERE company_id = 1 AND single_building_dong IS NULL"
+        ))
         # Backfill: mark existing companies as approved
         conn.execute(text(
             "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
@@ -461,9 +468,14 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "companies", "categories", "TEXT")
             _add_column_if_missing(conn, "companies", "enable_fee", "BOOLEAN DEFAULT 0")
             _add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
+            _add_column_if_missing(conn, "companies", "single_building_dong", "VARCHAR(10)")
             # Backfill: mark existing companies as approved
             conn.execute(text(
                 "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"
+            ))
+            conn.execute(text(
+                "UPDATE companies SET single_building_dong = '1동' "
+                "WHERE company_id = 1 AND single_building_dong IS NULL"
             ))
 
         # --- qa_knowledge table ---
