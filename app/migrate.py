@@ -143,10 +143,15 @@ def _run_pg_migration(engine: Engine):
             _pg_add_column_if_missing(conn, "chat_logs", "used_rag", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "chat_logs", "evidence_ids", "TEXT DEFAULT ''")
 
-        # market_posts table — is_hidden, hidden_reason
+        # market_posts table — is_hidden, hidden_reason, company_id
         if _pg_table_exists(conn, "market_posts"):
             _pg_add_column_if_missing(conn, "market_posts", "is_hidden", "BOOLEAN DEFAULT FALSE")
             _pg_add_column_if_missing(conn, "market_posts", "hidden_reason", "VARCHAR(255)")
+            _pg_add_column_if_missing(conn, "market_posts", "company_id", "INTEGER")
+            # 기존 게시글(회사 구분 도입 전)은 세종푸르지오시티 2차(company_id=1) 소속으로 백필
+            conn.execute(text(
+                "UPDATE market_posts SET company_id = 1 WHERE company_id IS NULL"
+            ))
 
         # apartment_residents — company_id NULL 백필 (company_id=1로 일괄 설정)
         if _pg_table_exists(conn, "apartment_residents"):
@@ -236,6 +241,7 @@ def _run_pg_migration(engine: Engine):
             conn.execute(text("""
                 CREATE TABLE market_posts (
                     id SERIAL PRIMARY KEY,
+                    company_id INTEGER,
                     category VARCHAR(50) NOT NULL,
                     title VARCHAR(255) NOT NULL,
                     content TEXT NOT NULL,
@@ -576,6 +582,7 @@ def run_migration(engine: Engine):
             conn.execute(text("""
                 CREATE TABLE market_posts (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER,
                     category VARCHAR(50) NOT NULL,
                     title VARCHAR(255) NOT NULL,
                     content TEXT NOT NULL,
@@ -592,6 +599,10 @@ def run_migration(engine: Engine):
         else:
             _add_column_if_missing(conn, "market_posts", "is_hidden", "BOOLEAN DEFAULT 0")
             _add_column_if_missing(conn, "market_posts", "hidden_reason", "VARCHAR(255)")
+            _add_column_if_missing(conn, "market_posts", "company_id", "INTEGER")
+            conn.execute(text(
+                "UPDATE market_posts SET company_id = 1 WHERE company_id IS NULL"
+            ))
 
         if not _table_exists(conn, "market_images"):
             conn.execute(text("""

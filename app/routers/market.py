@@ -31,11 +31,12 @@ ALLOWED_STATUSES = {"판매중", "예약중", "거래완료"}
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
 
-def _create_market_token(building: str, unit: str, name: str) -> str:
+def _create_market_token(building: str, unit: str, name: str, company_id: int | None = None) -> str:
     payload = {
         "building": building,
         "unit": unit,
         "name": name,
+        "company_id": company_id,
         "verified": True,
         "iat": datetime.now(timezone.utc),
         "exp": datetime.now(timezone.utc) + timedelta(hours=MARKET_JWT_EXPIRE_HOURS),
@@ -125,14 +126,15 @@ class LoginRequest(BaseModel):
 def market_login(req: LoginRequest, db: Session = Depends(get_db)):
     phone_norm = _normalize_phone(req.phone)
 
-    resident = (
-        db.query(ApartmentResident)
-        .filter(
-            ApartmentResident.building == req.building,
-            ApartmentResident.unit_number == req.unit_number,
-        )
-        .first()
+    resident_q = db.query(ApartmentResident).filter(
+        ApartmentResident.building == req.building,
+        ApartmentResident.unit_number == req.unit_number,
     )
+    if req.company_id:
+        resident_q = resident_q.filter(
+            or_(ApartmentResident.company_id == req.company_id, ApartmentResident.company_id == None)  # noqa: E711
+        )
+    resident = resident_q.first()
 
     if resident:
         # 기존 입주민: 이름 + 전화번호 검증
@@ -181,7 +183,8 @@ def market_login(req: LoginRequest, db: Session = Depends(get_db)):
         )
         is_new = True
 
-    token = _create_market_token(req.building, req.unit_number, req.name)
+    effective_company_id = resident.company_id or req.company_id
+    token = _create_market_token(req.building, req.unit_number, req.name, effective_company_id)
     return {
         "success": True,
         "token": token,
@@ -271,10 +274,14 @@ def list_posts(
     category: Optional[str] = None,
     page: int = 1,
     size: int = 20,
+    company_id: Optional[int] = None,
     db: Session = Depends(get_db),
     user: Optional[dict] = Depends(_get_market_user_optional),
 ):
     q = db.query(MarketPost).filter(MarketPost.is_hidden == False)
+    effective_company_id = (user or {}).get("company_id") or company_id
+    if effective_company_id:
+        q = q.filter(MarketPost.company_id == effective_company_id)
     if category and category != "전체":
         q = q.filter(MarketPost.category == category)
     total = q.count()
@@ -305,6 +312,7 @@ async def create_post(
         raise HTTPException(status_code=400, detail="이미지는 최대 3장까지 업로드 가능합니다.")
 
     post = MarketPost(
+        company_id=user.get("company_id"),
         category=category,
         title=title,
         content=content,
@@ -340,6 +348,7 @@ async def create_post(
 @router.get("/posts/{post_id}")
 def get_post(
     post_id: int,
+    company_id: Optional[int] = None,
     user: dict = Depends(_get_market_user),
     db: Session = Depends(get_db),
 ):
@@ -347,6 +356,10 @@ def get_post(
         MarketPost.id == post_id, MarketPost.is_hidden == False
     ).first()
     if not post:
+        raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
+
+    effective_company_id = user.get("company_id") or company_id
+    if effective_company_id and post.company_id and post.company_id != effective_company_id:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
 
     images = db.query(MarketImage).filter(MarketImage.post_id == post_id).all()

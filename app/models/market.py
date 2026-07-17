@@ -23,6 +23,7 @@ class MarketPost(Base):
     __tablename__ = "market_posts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    company_id = Column(Integer, nullable=True)
     category = Column(String(50), nullable=False)
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
