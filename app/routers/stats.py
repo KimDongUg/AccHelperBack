@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.dependencies import require_auth, require_super_admin
+from app.models.access_log import AccessLog
 from app.models.admin_user import AdminUser
 from app.models.chat_log import ChatLog
 from app.models.company import Company
@@ -46,6 +47,15 @@ def get_stats(
 
     today_chats = chat_query.filter(ChatLog.timestamp >= today_start).count()
     total_chats = chat_query.count()
+
+    fee_query_log = db.query(AccessLog).filter(
+        AccessLog.action == "fee_query",
+        AccessLog.success == True,
+        AccessLog.created_at >= today_start,
+    )
+    if company_id != 0:
+        fee_query_log = fee_query_log.filter(AccessLog.company_id == company_id)
+    today_fee_queries = fee_query_log.count()
 
     # Category distribution
     categories = {}
@@ -93,6 +103,7 @@ def get_stats(
         "active_qa": active_qa,
         "today_chats": today_chats,
         "total_chats": total_chats,
+        "today_fee_queries": today_fee_queries,
         "categories": categories,
         "qa_customized": qa_customized,
         "quota": quota_info,
