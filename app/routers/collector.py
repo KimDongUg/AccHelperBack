@@ -6,6 +6,7 @@ from pathlib import Path
 
 import openpyxl
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import DATA_DIR
@@ -50,6 +51,41 @@ def _get_company_by_api_key(authorization: str = Header(...), db: Session = Depe
     return company
 
 
+def _store_rows(rows: list[dict], year_month: str, company_id: int, db: Session) -> int:
+    """세대별 dict 목록(동/호/이름/휴대폰/항목_.../검침_... 등)을 FeeEntry로 저장.
+    엑셀 업로드(_parse_and_store)와 JSON 직접 업로드(upload_fee_json) 공용 로직."""
+    db.query(FeeEntry).filter(
+        FeeEntry.year_month == year_month, FeeEntry.company_id == company_id
+    ).delete()
+
+    count = 0
+    for raw in rows:
+        rd = {k: ("" if v is None else str(v).strip()) for k, v in raw.items()}
+
+        dong  = rd.get("동", "")
+        ho    = rd.get("호", "")
+        name  = rd.get("name", rd.get("이름", ""))
+        phone = rd.get("휴대폰", "").replace("-", "").replace(" ", "")
+
+        if not dong or not ho:
+            continue
+
+        fee_data = {k: v for k, v in rd.items() if k not in _FIXED_KEYS and v}
+        entry = FeeEntry(
+            company_id=company_id,
+            year_month=year_month,
+            dong=dong, ho=ho,
+            name=name, phone=phone,
+            fee_json=json.dumps(fee_data, ensure_ascii=False),
+            uploaded_at=now_kst(),
+        )
+        db.add(entry)
+        count += 1
+
+    db.commit()
+    return count
+
+
 def _parse_and_store(file_path: Path, year_month: str, company_id: int, db: Session):
     try:
         wb = openpyxl.load_workbook(file_path, read_only=True, data_only=True)
@@ -59,39 +95,13 @@ def _parse_and_store(file_path: Path, year_month: str, company_id: int, db: Sess
             return 0
 
         headers = [str(v).strip() if v is not None else "" for v in rows[0]]
-
-        # 기존 같은 년월 데이터 삭제
-        db.query(FeeEntry).filter(
-            FeeEntry.year_month == year_month, FeeEntry.company_id == company_id
-        ).delete()
-
-        count = 0
+        dict_rows = []
         for row in rows[1:]:
             if not any(v for v in row):
                 continue
-            rd = {headers[i]: str(v).strip() if v is not None else "" for i, v in enumerate(row)}
+            dict_rows.append({headers[i]: v for i, v in enumerate(row)})
 
-            dong  = rd.get("동", "")
-            ho    = rd.get("호", "")
-            name  = rd.get("name", rd.get("이름", ""))
-            phone = rd.get("휴대폰", "").replace("-", "").replace(" ", "")
-
-            if not dong or not ho:
-                continue
-
-            fee_data = {k: v for k, v in rd.items() if k not in _FIXED_KEYS and v}
-            entry = FeeEntry(
-                company_id=company_id,
-                year_month=year_month,
-                dong=dong, ho=ho,
-                name=name, phone=phone,
-                fee_json=json.dumps(fee_data, ensure_ascii=False),
-                uploaded_at=now_kst(),
-            )
-            db.add(entry)
-            count += 1
-
-        db.commit()
+        count = _store_rows(dict_rows, year_month, company_id, db)
         wb.close()
         return count
     except Exception as e:
@@ -100,9 +110,40 @@ def _parse_and_store(file_path: Path, year_month: str, company_id: int, db: Sess
         return 0
 
 
+class UploadJsonRequest(BaseModel):
+    year_month: str
+    rows: list[dict]
+
+
 @router.get("/health")
 def health():
     return {"ok": True}
+
+
+@router.get("/verify")
+def verify_key(company: Company = Depends(_get_company_by_api_key)):
+    """확장프로그램 설정 화면에서 API 키가 유효한지 즉시 확인하는 용도."""
+    return {"ok": True, "company_id": company.company_id, "company_name": company.company_name}
+
+
+@router.post("/upload-json")
+def upload_fee_json(
+    payload: UploadJsonRequest,
+    company: Company = Depends(_get_company_by_api_key),
+    db: Session = Depends(get_db),
+):
+    """확장프로그램 → 관리비 데이터 직접 업로드 (xlsx 변환 없이 JSON 그대로)"""
+    if not payload.rows:
+        raise HTTPException(status_code=400, detail="데이터가 비어 있습니다.")
+    if not re.fullmatch(r"\d{6}", payload.year_month or ""):
+        raise HTTPException(status_code=400, detail="year_month은 YYYYMM 형식이어야 합니다.")
+
+    count = _store_rows(payload.rows, payload.year_month, company.company_id, db)
+    logger.info(
+        "관리비 JSON 업로드: company_id=%d year_month=%s (%d rows)",
+        company.company_id, payload.year_month, count,
+    )
+    return {"ok": True, "year_month": payload.year_month, "rows": count}
 
 
 @router.post("/upload")
