@@ -48,14 +48,22 @@ def get_stats(
     today_chats = chat_query.filter(ChatLog.timestamp >= today_start).count()
     total_chats = chat_query.count()
 
-    fee_query_log = db.query(AccessLog).filter(
+    fee_success_log = db.query(AccessLog).filter(
         AccessLog.action == "fee_query",
         AccessLog.success == True,
         AccessLog.created_at >= today_start,
     )
+    fee_fail_log = db.query(AccessLog).filter(
+        AccessLog.action != "admin_query",
+        AccessLog.success == False,
+        AccessLog.created_at >= today_start,
+    )
     if company_id != 0:
-        fee_query_log = fee_query_log.filter(AccessLog.company_id == company_id)
-    today_fee_queries = fee_query_log.count()
+        fee_success_log = fee_success_log.filter(AccessLog.company_id == company_id)
+        fee_fail_log = fee_fail_log.filter(AccessLog.company_id == company_id)
+    today_fee_success = fee_success_log.count()
+    today_fee_fail = fee_fail_log.count()
+    today_fee_total = today_fee_success + today_fee_fail
 
     # Category distribution
     categories = {}
@@ -103,7 +111,8 @@ def get_stats(
         "active_qa": active_qa,
         "today_chats": today_chats,
         "total_chats": total_chats,
-        "today_fee_queries": today_fee_queries,
+        "today_fee_total": today_fee_total,
+        "today_fee_fail": today_fee_fail,
         "categories": categories,
         "qa_customized": qa_customized,
         "quota": quota_info,
