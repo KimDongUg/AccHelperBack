@@ -211,6 +211,7 @@ def send_sms(req: SendSmsRequest, request: Request, db: Session = Depends(get_db
     db.commit()
     if not sent:
         _log_access(db, company_id, dong, ho, request, "send_sms", False)
+        return {"success": False, "message": "인증번호 발송에 실패했습니다. 잠시 후 다시 시도해 주세요."}
 
     return {
         "success": True,

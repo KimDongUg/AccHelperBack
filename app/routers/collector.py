@@ -54,6 +54,16 @@ def _get_company_by_api_key(authorization: str = Header(...), db: Session = Depe
 def _store_rows(rows: list[dict], year_month: str, company_id: int, db: Session) -> int:
     """세대별 dict 목록(동/호/이름/휴대폰/항목_.../검침_... 등)을 FeeEntry로 저장.
     엑셀 업로드(_parse_and_store)와 JSON 직접 업로드(upload_fee_json) 공용 로직."""
+    # 이번 업로드에 휴대폰 정보가 비어있는 세대는 직전에 저장된 휴대폰번호를 유지
+    # (업로드 데이터에 따라 휴대폰 컬럼이 통째로 빠지는 경우, OTP 발송이 막히는 것을 방지)
+    known_phones: dict[tuple[str, str], str] = {}
+    for d, h, p in (
+        db.query(FeeEntry.dong, FeeEntry.ho, FeeEntry.phone)
+        .filter(FeeEntry.company_id == company_id, FeeEntry.phone != "")
+        .order_by(FeeEntry.uploaded_at.asc())
+    ):
+        known_phones[(d, h)] = p
+
     db.query(FeeEntry).filter(
         FeeEntry.year_month == year_month, FeeEntry.company_id == company_id
     ).delete()
@@ -69,6 +79,9 @@ def _store_rows(rows: list[dict], year_month: str, company_id: int, db: Session)
 
         if not dong or not ho:
             continue
+
+        if not phone:
+            phone = known_phones.get((dong, ho), "")
 
         fee_data = {k: v for k, v in rd.items() if k not in _FIXED_KEYS and v}
         entry = FeeEntry(
