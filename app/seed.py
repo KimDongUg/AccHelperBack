@@ -215,8 +215,8 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
     {
         # --- Company ---
         "company_id": 1000,
-        "company_name": "샘플오피스텔",
-        "building_type": "오피스텔",
+        "company_name": "샘플아파트",
+        "building_type": "아파트",
         "business_number": "999-99-99999",
         "industry": "일반",
         "subscription_plan": "enterprise",
@@ -228,9 +228,9 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
         "copy_from_company_id": 1,
         "anonymize_map": {
             # 관리단/회사명 변형 (긴 것부터 먼저)
-            "세종시2차푸르지오시티관리단": "샘플오피스텔관리단",
-            "세종푸르지오시티 2차": "샘플오피스텔",
-            "세종푸르지오시티2차": "샘플오피스텔",
+            "세종시2차푸르지오시티관리단": "샘플아파트관리단",
+            "세종푸르지오시티 2차": "샘플아파트",
+            "세종푸르지오시티2차": "샘플아파트",
             # 주소
             "세종 가름로 255-21": "OO시 OO구 OO로 000-00",
             "세종시 가름로 255-21": "OO시 OO구 OO로 000-00",
