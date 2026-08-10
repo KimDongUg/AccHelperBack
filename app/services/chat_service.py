@@ -21,10 +21,8 @@ KOREAN_PARTICLES = re.compile(
 
 FALLBACK_MESSAGE = (
     "죄송합니다.\n\n"
-    "해당 질문에 대한 답변을 찾지 못하여 관리자에게 해당 질문에 대한 답변을 요청하였습니다.\n"
-    "가능한 빠른시간 안에(1시간 ~ 12시간 이내) 답변을 올리겠습니다.\n"
-    "민원관련 내용은 민원게시판에 올려주시면 빠르게 처리해 드리겠습니다.\n\n"
-    "감사합니다!"
+    "해당 질문에 대한 답변을 찾지 못했습니다.\n"
+    "아래에서 비슷한 질문을 확인하시거나, 다른 방법으로 문의해 주세요."
 )
 
 GREETING_PATTERNS = re.compile(
@@ -62,6 +60,7 @@ class RAGResult:
     evidence_ids: list[int] = field(default_factory=list)
     tokens_used: int = 0
     avg_similarity: float = 0.0
+    evidences: list[dict] = field(default_factory=list)
 
 
 # ─── Keyword search (fallback) ───
@@ -228,7 +227,8 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
 
         sql = text("""
             SELECT e.qa_id, e.embedding_text,
-                   1 - (e.embedding <=> :embedding::vector) AS similarity
+                   1 - (e.embedding <=> :embedding::vector) AS similarity,
+                   q.question, q.answer, q.category
             FROM qa_embeddings e
             JOIN qa_knowledge q ON q.qa_id = e.qa_id
             WHERE e.company_id = :company_id
@@ -268,6 +268,18 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
     similarities = [float(row[2]) for row in results]
     avg_similarity = sum(similarities) / len(similarities) if similarities else 0.0
 
+    # 사용자에게 노출할 유사 QA 최대 5개 (LLM 컨텍스트는 RAG_TOP_K개 그대로 사용)
+    evidences = [
+        {
+            "qa_id": row[0],
+            "question": row[3],
+            "answer": row[4],
+            "category": row[5],
+            "similarity": round(float(row[2]), 4),
+        }
+        for row in results[:5]
+    ]
+
     evidence_texts = []
     for i, row in enumerate(results, 1):
         evidence_texts.append(f"[근거 {i}] {row[1]}")
@@ -304,6 +316,7 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
             evidence_ids=evidence_ids,
             tokens_used=tokens_used,
             avg_similarity=round(avg_similarity, 4),
+            evidences=evidences,
         )
 
     except Exception as e:
@@ -316,6 +329,7 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
                 used_rag=False,
                 evidence_ids=evidence_ids,
                 avg_similarity=round(avg_similarity, 4),
+                evidences=evidences,
             )
 
-        return RAGResult(answer=FALLBACK_MESSAGE, used_rag=False)
+        return RAGResult(answer=FALLBACK_MESSAGE, used_rag=False, evidences=evidences)

@@ -353,6 +353,57 @@ def _run_pg_migration(engine: Engine):
         else:
             _pg_add_column_if_missing(conn, "access_log", "company_id", "INTEGER NOT NULL DEFAULT 1")
 
+        # --- chat_threads / chat_messages 테이블 (1:1 톡) ---
+        if not _pg_table_exists(conn, "chat_threads"):
+            conn.execute(text("""
+                CREATE TABLE chat_threads (
+                    id SERIAL PRIMARY KEY,
+                    company_id INTEGER NOT NULL REFERENCES companies(company_id) ON DELETE CASCADE,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    resident_name VARCHAR(100) NOT NULL,
+                    resident_phone VARCHAR(30),
+                    status VARCHAR(20) NOT NULL DEFAULT 'open',
+                    claimed_admin_id INTEGER REFERENCES admin_users(user_id),
+                    claimed_at TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    last_message_at TIMESTAMP DEFAULT NOW()
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_chat_threads_company_status ON chat_threads (company_id, status)"))
+            conn.execute(text("CREATE INDEX ix_chat_threads_company_dong_ho ON chat_threads (company_id, dong, ho)"))
+            logger.info("PG: Created table chat_threads")
+
+        if not _pg_table_exists(conn, "chat_messages"):
+            conn.execute(text("""
+                CREATE TABLE chat_messages (
+                    id SERIAL PRIMARY KEY,
+                    thread_id INTEGER NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+                    sender_type VARCHAR(10) NOT NULL,
+                    sender_admin_id INTEGER REFERENCES admin_users(user_id),
+                    content TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    read_at TIMESTAMP
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_chat_messages_thread_id ON chat_messages (thread_id)"))
+            logger.info("PG: Created table chat_messages")
+
+        # --- public_holidays 테이블 (1:1 톡 영업시간 판정용 공휴일 캐시) ---
+        if not _pg_table_exists(conn, "public_holidays"):
+            conn.execute(text("""
+                CREATE TABLE public_holidays (
+                    id SERIAL PRIMARY KEY,
+                    year INTEGER NOT NULL,
+                    holiday_date VARCHAR(8) NOT NULL,
+                    name VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    CONSTRAINT uq_public_holidays_year_date UNIQUE (year, holiday_date)
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_public_holidays_year ON public_holidays (year)"))
+            logger.info("PG: Created table public_holidays")
+
         conn.commit()
     logger.info("PG: Column migrations committed")
 
@@ -700,6 +751,57 @@ def run_migration(engine: Engine):
             logger.info("Created table access_log")
         else:
             _add_column_if_missing(conn, "access_log", "company_id", "INTEGER NOT NULL DEFAULT 1")
+
+        # --- chat_threads / chat_messages 테이블 (1:1 톡) ---
+        if not _table_exists(conn, "chat_threads"):
+            conn.execute(text("""
+                CREATE TABLE chat_threads (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    company_id INTEGER NOT NULL,
+                    dong VARCHAR(20) NOT NULL,
+                    ho VARCHAR(20) NOT NULL,
+                    resident_name VARCHAR(100) NOT NULL,
+                    resident_phone VARCHAR(30),
+                    status VARCHAR(20) NOT NULL DEFAULT 'open',
+                    claimed_admin_id INTEGER,
+                    claimed_at DATETIME,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    last_message_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_chat_threads_company_status ON chat_threads (company_id, status)"))
+            conn.execute(text("CREATE INDEX ix_chat_threads_company_dong_ho ON chat_threads (company_id, dong, ho)"))
+            logger.info("Created table chat_threads")
+
+        if not _table_exists(conn, "chat_messages"):
+            conn.execute(text("""
+                CREATE TABLE chat_messages (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    thread_id INTEGER NOT NULL,
+                    sender_type VARCHAR(10) NOT NULL,
+                    sender_admin_id INTEGER,
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    read_at DATETIME
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_chat_messages_thread_id ON chat_messages (thread_id)"))
+            logger.info("Created table chat_messages")
+
+        # --- public_holidays 테이블 (1:1 톡 영업시간 판정용 공휴일 캐시) ---
+        if not _table_exists(conn, "public_holidays"):
+            conn.execute(text("""
+                CREATE TABLE public_holidays (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    year INTEGER NOT NULL,
+                    holiday_date VARCHAR(8) NOT NULL,
+                    name VARCHAR(100),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE (year, holiday_date)
+                )
+            """))
+            conn.execute(text("CREATE INDEX ix_public_holidays_year ON public_holidays (year)"))
+            logger.info("Created table public_holidays")
 
         # 회사1(세종푸르지오시티 2차) 관리비 조회 활성화 + 기존 수집기 키 백필
         if _table_exists(conn, "companies"):

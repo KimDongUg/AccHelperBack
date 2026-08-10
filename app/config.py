@@ -99,3 +99,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 # Static files
 STATIC_CACHE_MAX_AGE = int(os.getenv("STATIC_CACHE_MAX_AGE", "86400"))
+
+# 1:1 톡 — 영업시간 판정용 공공데이터포털(특일 정보) API
+HOLIDAY_API_SERVICE_KEY = os.getenv("HOLIDAY_API_SERVICE_KEY", "")
+RATE_LIMIT_CHAT_TALK_SEND = os.getenv("RATE_LIMIT_CHAT_TALK_SEND", "20/minute")

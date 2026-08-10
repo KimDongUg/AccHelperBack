@@ -10,6 +10,14 @@ class ChatRequest(BaseModel):
     company_id: int | None = None
 
 
+class EvidenceItem(BaseModel):
+    qa_id: int
+    question: str
+    answer: str
+    category: str | None = None
+    similarity: float
+
+
 class ChatResponse(BaseModel):
     answer: str
     category: str | None = None
@@ -17,6 +25,7 @@ class ChatResponse(BaseModel):
     used_rag: bool = False
     evidence_ids: list[int] = []
     similarity_score: float | None = None
+    evidences: list[EvidenceItem] = []
 
 
 class ChatHistoryItem(BaseModel):

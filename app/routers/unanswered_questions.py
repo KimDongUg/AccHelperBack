@@ -36,8 +36,10 @@ def create_unanswered_question(
     db.commit()
     db.refresh(uq)
 
-    # 알림톡 발송 (백그라운드 — 발송 실패가 질문 저장을 막지 않도록)
-    background_tasks.add_task(trigger_unanswered_alert, question_id=uq.id)
+    # 미답변 알림톡 잠정 중단 — 유사 QA 5개 + 1:1톡/문자문의/답변예약 흐름이
+    # 이 역할을 대신하므로 즉시 알림 발송은 멈춤 (trigger_unanswered_alert 함수 자체는
+    # 추후 재활성화할 수 있도록 그대로 유지)
+    # background_tasks.add_task(trigger_unanswered_alert, question_id=uq.id)
 
     return uq
 

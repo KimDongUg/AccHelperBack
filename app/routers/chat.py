@@ -74,6 +74,7 @@ def chat(req: ChatRequest, request: Request, db: Session = Depends(get_db)):
         used_rag=rag_result.used_rag,
         evidence_ids=rag_result.evidence_ids,
         similarity_score=rag_result.avg_similarity if rag_result.used_rag else None,
+        evidences=rag_result.evidences,
     )
 
 

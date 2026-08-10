@@ -15,6 +15,8 @@ from app.models.market import ApartmentResident, MarketPost, MarketImage, Market
 from app.models.complaint import Complaint
 from app.models.complaint_person import ComplaintPerson
 from app.models.fee_data import FeeEntry
+from app.models.chat_thread import ChatThread, ChatMessage
+from app.models.public_holiday import PublicHoliday
 
 __all__ = [
     "Company",
@@ -39,4 +41,7 @@ __all__ = [
     "Complaint",
     "ComplaintPerson",
     "FeeEntry",
+    "ChatThread",
+    "ChatMessage",
+    "PublicHoliday",
 ]
