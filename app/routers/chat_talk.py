@@ -161,13 +161,18 @@ def send_resident_message(
 
     thread = _get_or_create_open_thread(db, company_id, dong, ho, name or "입주민")
 
+    is_first_message = (
+        db.query(ChatMessage).filter(ChatMessage.thread_id == thread.id).count() == 0
+    )
+
     msg = ChatMessage(thread_id=thread.id, sender_type="resident", content=body.content.strip())
     db.add(msg)
     thread.last_message_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(msg)
 
-    background_tasks.add_task(trigger_chat_talk_admin_alert, thread.id)
+    if is_first_message:
+        background_tasks.add_task(trigger_chat_talk_admin_alert, thread.id)
 
     return {"ok": True, "thread_id": thread.id, "message_id": msg.id}
 

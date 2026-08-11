@@ -259,7 +259,7 @@ def trigger_market_comment_alert(post_id: int, comment_content: str, commenter_u
 
 
 def trigger_chat_talk_admin_alert(thread_id: int) -> None:
-    """입주민이 1:1 톡 메시지를 보냈을 때 (활성 상태인) 관리자 전원에게 알림톡 발송."""
+    """입주민이 스레드에 처음 메시지를 보냈을 때만(재문의부터는 제외) 관리자 전원에게 알림톡 발송."""
     from app.models.chat_thread import ChatThread, ChatMessage
 
     db = SessionLocal()
