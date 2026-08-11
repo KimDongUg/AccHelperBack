@@ -159,6 +159,92 @@ def send_fee_otp_alimtalk(
         return True
 
 
+def send_chat_talk_admin_alimtalk(
+    to: str,
+    apt_name: str,
+    unit: str,
+    content: str,
+    time: str,
+    url: str,
+) -> bool:
+    """
+    1:1 톡 신규 메시지(입주민 → 관리자) 알림톡 발송
+    템플릿 변수: #{아파트명}, #{동호수}, #{내용}, #{시간}, #{링크}
+    """
+    if not config.SOLAPI_CHAT_TALK_ADMIN_TEMPLATE_ID:
+        logger.warning("[Solapi] SOLAPI_CHAT_TALK_ADMIN_TEMPLATE_ID 미설정 — 1:1톡 관리자 알림톡 생략")
+        return False
+
+    payload = {
+        "message": {
+            "to": to.replace("-", ""),
+            "kakaoOptions": {
+                "pfId": config.SOLAPI_PF_ID,
+                "templateId": config.SOLAPI_CHAT_TALK_ADMIN_TEMPLATE_ID,
+                "variables": {
+                    "#{아파트명}": apt_name,
+                    "#{동호수}": unit,
+                    "#{내용}": content,
+                    "#{시간}": time,
+                    "#{링크}": url,
+                },
+            },
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": _make_auth_header(),
+    }
+
+    with httpx.Client(timeout=10.0) as client:
+        resp = client.post(SOLAPI_SEND_URL, json=payload, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("[Solapi] %s %s | payload=%s", resp.status_code, resp.text, payload)
+        resp.raise_for_status()
+        return True
+
+
+def send_chat_talk_reply_alimtalk(
+    to: str,
+    apt_name: str,
+    url: str,
+) -> bool:
+    """
+    1:1 톡 첫 답변(관리자 → 입주민) 알림톡 발송
+    템플릿 변수: #{아파트명}, #{링크}
+    """
+    if not config.SOLAPI_CHAT_TALK_REPLY_TEMPLATE_ID:
+        logger.warning("[Solapi] SOLAPI_CHAT_TALK_REPLY_TEMPLATE_ID 미설정 — 1:1톡 답변 알림톡 생략")
+        return False
+
+    payload = {
+        "message": {
+            "to": to.replace("-", ""),
+            "kakaoOptions": {
+                "pfId": config.SOLAPI_PF_ID,
+                "templateId": config.SOLAPI_CHAT_TALK_REPLY_TEMPLATE_ID,
+                "variables": {
+                    "#{아파트명}": apt_name,
+                    "#{링크}": url,
+                },
+            },
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": _make_auth_header(),
+    }
+
+    with httpx.Client(timeout=10.0) as client:
+        resp = client.post(SOLAPI_SEND_URL, json=payload, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("[Solapi] %s %s | payload=%s", resp.status_code, resp.text, payload)
+        resp.raise_for_status()
+        return True
+
+
 def send_complaint_alimtalk(
     to: str,
     apt_name: str,

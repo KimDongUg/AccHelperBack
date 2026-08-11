@@ -14,7 +14,13 @@ from app.database import SessionLocal
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.unanswered_question import UnansweredQuestion
-from app.services.solapi_service import send_unanswered_alimtalk, send_complaint_alimtalk, send_market_comment_alimtalk
+from app.services.solapi_service import (
+    send_unanswered_alimtalk,
+    send_complaint_alimtalk,
+    send_market_comment_alimtalk,
+    send_chat_talk_admin_alimtalk,
+    send_chat_talk_reply_alimtalk,
+)
 from app.utils import now_kst
 
 logger = logging.getLogger(__name__)
@@ -36,6 +42,13 @@ def _build_complaint_url(company_id: int, complaint_id: int) -> str:
     return (
         f"{config.ADMIN_BASE_URL}/complaint-post.html"
         f"?id={complaint_id}&company={company_id}"
+    )
+
+
+def _build_chat_talk_admin_url(company_id: int, thread_id: int) -> str:
+    return (
+        f"{config.ADMIN_BASE_URL}/admin.html"
+        f"?company={company_id}&threadId={thread_id}"
     )
 
 
@@ -240,6 +253,135 @@ def trigger_market_comment_alert(post_id: int, comment_content: str, commenter_u
         logger.error(
             "[MarketAlert] trigger_market_comment_alert 오류 | post_id=%s | %s",
             post_id, e,
+        )
+    finally:
+        db.close()
+
+
+def trigger_chat_talk_admin_alert(thread_id: int) -> None:
+    """입주민이 1:1 톡 메시지를 보냈을 때 (활성 상태인) 관리자 전원에게 알림톡 발송."""
+    from app.models.chat_thread import ChatThread, ChatMessage
+
+    db = SessionLocal()
+    try:
+        thread = db.query(ChatThread).get(thread_id)
+        if not thread:
+            return
+
+        company = db.query(Company).filter(
+            Company.company_id == thread.company_id
+        ).first()
+        apt_name = company.company_name if company else "관리자"
+
+        if company and is_facility_management_company(company.company_name):
+            logger.info(
+                "[ChatTalkAdminAlert] 시설관리 회사 알림톡 차단 | company_id=%s",
+                thread.company_id,
+            )
+            return
+
+        admins = db.query(AdminUser).filter(
+            AdminUser.company_id == thread.company_id,
+            AdminUser.is_active == True,
+        ).all()
+        if not admins:
+            logger.warning(
+                "[ChatTalkAdminAlert] 알림 수신 관리자 없음 | company_id=%s", thread.company_id
+            )
+            return
+
+        last_msg = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.thread_id == thread_id, ChatMessage.sender_type == "resident")
+            .order_by(ChatMessage.created_at.desc())
+            .first()
+        )
+        content = last_msg.content if last_msg else ""
+        time_str = _format_time(last_msg.created_at) if last_msg else _format_time(now_kst())
+        unit_display = f"{thread.dong} {thread.ho}"
+        url = _build_chat_talk_admin_url(thread.company_id, thread.id)
+
+        for admin in admins:
+            if not admin.phone:
+                logger.warning(
+                    "[ChatTalkAdminAlert] 전화번호 없음 | admin_id=%s → skip", admin.user_id
+                )
+                continue
+            try:
+                send_chat_talk_admin_alimtalk(
+                    to=admin.phone,
+                    apt_name=apt_name,
+                    unit=unit_display,
+                    content=content,
+                    time=time_str,
+                    url=url,
+                )
+                logger.info(
+                    "[ChatTalkAdminAlert] 알림톡 발송 성공 | admin=%s | thread_id=%d",
+                    admin.full_name or admin.email, thread_id,
+                )
+            except Exception as e:
+                logger.error(
+                    "[ChatTalkAdminAlert] 알림톡 발송 실패 | admin_id=%s | %s", admin.user_id, e
+                )
+
+    except Exception as e:
+        logger.error(
+            "[ChatTalkAdminAlert] trigger_chat_talk_admin_alert 오류 | thread_id=%s | %s",
+            thread_id, e,
+        )
+    finally:
+        db.close()
+
+
+def trigger_chat_talk_reply_alert(thread_id: int) -> None:
+    """관리자가 1:1 톡에 첫 답변을 남겼을 때 입주민에게 알림톡 발송."""
+    from app.models.chat_thread import ChatThread
+
+    db = SessionLocal()
+    try:
+        thread = db.query(ChatThread).get(thread_id)
+        if not thread:
+            return
+        if not thread.resident_phone:
+            logger.warning(
+                "[ChatTalkReplyAlert] 입주민 전화번호 없음 | thread_id=%s → skip", thread_id
+            )
+            return
+
+        company = db.query(Company).filter(
+            Company.company_id == thread.company_id
+        ).first()
+        apt_name = company.company_name if company else "관리사무소"
+
+        if company and is_facility_management_company(company.company_name):
+            logger.info(
+                "[ChatTalkReplyAlert] 시설관리 회사 알림톡 차단 | company_id=%s",
+                thread.company_id,
+            )
+            return
+
+        url = f"{config.ADMIN_BASE_URL}/chat-talk.html"
+
+        try:
+            send_chat_talk_reply_alimtalk(
+                to=thread.resident_phone,
+                apt_name=apt_name,
+                url=url,
+            )
+            logger.info(
+                "[ChatTalkReplyAlert] 알림톡 발송 성공 | thread_id=%d | to=%s",
+                thread_id, thread.resident_phone,
+            )
+        except Exception as e:
+            logger.error(
+                "[ChatTalkReplyAlert] 알림톡 발송 실패 | thread_id=%s | %s", thread_id, e
+            )
+
+    except Exception as e:
+        logger.error(
+            "[ChatTalkReplyAlert] trigger_chat_talk_reply_alert 오류 | thread_id=%s | %s",
+            thread_id, e,
         )
     finally:
         db.close()

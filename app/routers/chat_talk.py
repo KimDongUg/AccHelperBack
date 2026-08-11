@@ -4,7 +4,7 @@ import logging
 import math
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -26,6 +26,7 @@ from app.schemas.chat_talk import (
     ThreadStatusUpdate,
 )
 from app.services.business_hours import get_availability, is_business_hours
+from app.services.alert_service import trigger_chat_talk_admin_alert, trigger_chat_talk_reply_alert
 
 logger = logging.getLogger("acchelper")
 router = APIRouter(prefix="/api/chat-talk", tags=["chat-talk"])
@@ -141,6 +142,7 @@ def get_my_thread(request: Request, db: Session = Depends(get_db)):
 def send_resident_message(
     body: ChatMessageCreate,
     request: Request,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
     """입주민이 메시지 전송 — 영업시간 내에만 허용."""
@@ -164,6 +166,8 @@ def send_resident_message(
     thread.last_message_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(msg)
+
+    background_tasks.add_task(trigger_chat_talk_admin_alert, thread.id)
 
     return {"ok": True, "thread_id": thread.id, "message_id": msg.id}
 
@@ -289,6 +293,7 @@ def get_admin_thread(
 def send_admin_message(
     thread_id: int,
     body: ChatMessageCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
@@ -304,6 +309,13 @@ def send_admin_message(
         thread.claimed_admin_id = admin["user_id"]
         thread.claimed_at = datetime.now(timezone.utc)
 
+    is_first_admin_reply = (
+        db.query(ChatMessage)
+        .filter(ChatMessage.thread_id == thread.id, ChatMessage.sender_type == "admin")
+        .count()
+        == 0
+    )
+
     msg = ChatMessage(
         thread_id=thread.id,
         sender_type="admin",
@@ -314,6 +326,9 @@ def send_admin_message(
     thread.last_message_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(msg)
+
+    if is_first_admin_reply:
+        background_tasks.add_task(trigger_chat_talk_reply_alert, thread.id)
 
     return {"ok": True, "message_id": msg.id}
 
