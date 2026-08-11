@@ -1,6 +1,7 @@
 import json
 import logging
 import math
+import re
 import secrets
 from datetime import datetime, timedelta
 
@@ -686,12 +687,17 @@ def list_fee_residents(
             or s in it["name"].lower() or s in it["phone"].lower()
         ]
 
+    def _num_key(s: str) -> int:
+        """호수·동을 숫자 기준으로 정렬하기 위한 키 ('101호' -> 101, 숫자가 없으면 맨 뒤로)."""
+        m = re.match(r"\d+", s or "")
+        return int(m.group()) if m else 10**9
+
     sort_key_map = {
         "fee_last_query_at": lambda it: it["_sort_fee_last"] or datetime.min,
         "fee_query_count": lambda it: it["fee_query_count"] or 0,
         "chat_last_at": lambda it: it["_sort_chat_last"] or datetime.min,
         "chat_count": lambda it: it["chat_count"] or 0,
-        "dong": lambda it: (it["dong"], it["ho"]),
+        "dong": lambda it: (_num_key(it["dong"]), it["dong"], _num_key(it["ho"]), it["ho"]),
     }
     key_fn = sort_key_map.get(sort, sort_key_map["fee_last_query_at"])
     items.sort(key=key_fn, reverse=(order != "asc"))
