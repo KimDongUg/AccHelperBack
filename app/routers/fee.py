@@ -608,38 +608,42 @@ def list_fee_residents(
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """입주민 목록 — 관리비 조회 이력(access_log) 기준 roster + 1:1 톡 활동 병합."""
+    """입주민 목록 — FeeEntry(업로드된 전체 세대) 기준 roster + 관리비 조회 이력·1:1 톡 활동 병합.
+    관리비를 한 번도 조회하지 않은 입주민도 모두 노출되며, 조회/톡 이력이 없으면 해당 칸은 빈 값."""
     cid = admin["company_id"]
 
-    # 1) 관리비 조회 로그 집계 — 이 목록의 기준 roster (조회 이력이 있는 동/호수만 노출)
-    logs = (
-        db.query(AccessLog.dong, AccessLog.ho, AccessLog.created_at)
-        .filter(AccessLog.company_id == cid, AccessLog.action == "fee_query", AccessLog.success == True)
-        .all()
-    )
-    roster: dict[tuple, dict] = {}
-    for dong, ho, created_at in logs:
-        row = roster.setdefault((dong, ho), {"fee_count": 0, "fee_last": None})
-        row["fee_count"] += 1
-        if row["fee_last"] is None or created_at > row["fee_last"]:
-            row["fee_last"] = created_at
-
-    if not roster:
-        return {"total": 0, "pages": 1, "page": page, "items": []}
-
-    # 2) 이름/전화번호 — FeeEntry 최신 업로드분 기준
+    # 1) 전체 입주민 roster — FeeEntry에 업로드된 모든 세대 (동/호 기준, 이름/전화번호는 최신 업로드분)
     entries = (
         db.query(FeeEntry.dong, FeeEntry.ho, FeeEntry.name, FeeEntry.phone, FeeEntry.uploaded_at)
         .filter(FeeEntry.company_id == cid)
         .all()
     )
-    name_phone: dict[tuple, tuple] = {}
+    roster: dict[tuple, dict] = {}
     for dong, ho, name, phone, uploaded_at in entries:
         key = (dong, ho)
-        if key not in name_phone or uploaded_at > name_phone[key][2]:
-            name_phone[key] = (name, phone, uploaded_at)
+        row = roster.setdefault(key, {"name": "", "phone": "", "_uploaded_at": None})
+        if row["_uploaded_at"] is None or uploaded_at > row["_uploaded_at"]:
+            row["name"] = name or ""
+            row["phone"] = phone or ""
+            row["_uploaded_at"] = uploaded_at
 
-    # 3) 1:1 톡 집계
+    if not roster:
+        return {"total": 0, "pages": 1, "page": page, "items": []}
+
+    # 2) 관리비 조회 로그 집계 (조회한 적 없으면 빈 값)
+    logs = (
+        db.query(AccessLog.dong, AccessLog.ho, AccessLog.created_at)
+        .filter(AccessLog.company_id == cid, AccessLog.action == "fee_query", AccessLog.success == True)
+        .all()
+    )
+    fee_agg: dict[tuple, dict] = {}
+    for dong, ho, created_at in logs:
+        row = fee_agg.setdefault((dong, ho), {"count": 0, "last": None})
+        row["count"] += 1
+        if row["last"] is None or created_at > row["last"]:
+            row["last"] = created_at
+
+    # 3) 1:1 톡 집계 (대화한 적 없으면 빈 값)
     threads = (
         db.query(ChatThread.dong, ChatThread.ho, ChatThread.last_message_at)
         .filter(ChatThread.company_id == cid)
@@ -658,19 +662,19 @@ def list_fee_residents(
         return dt.strftime("%Y-%m-%d %H:%M")
 
     items = []
-    for (dong, ho), fee_info in roster.items():
-        np = name_phone.get((dong, ho))
+    for (dong, ho), roster_info in roster.items():
+        fee_info = fee_agg.get((dong, ho), {"count": 0, "last": None})
         chat_info = chat_agg.get((dong, ho), {"count": 0, "last": None})
         items.append({
             "dong": dong,
             "ho": ho,
-            "name": np[0] if np and np[0] else "",
-            "phone": np[1] if np and np[1] else "",
+            "name": roster_info["name"],
+            "phone": roster_info["phone"],
             "chat_count": chat_info["count"] or "",
             "chat_last_at": _fmt(chat_info["last"]),
-            "fee_query_count": fee_info["fee_count"] or "",
-            "fee_last_query_at": _fmt(fee_info["fee_last"]),
-            "_sort_fee_last": fee_info["fee_last"],
+            "fee_query_count": fee_info["count"] or "",
+            "fee_last_query_at": _fmt(fee_info["last"]),
+            "_sort_fee_last": fee_info["last"],
             "_sort_chat_last": chat_info["last"],
         })
 
