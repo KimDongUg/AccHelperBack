@@ -1,9 +1,10 @@
 import json
 import logging
+import math
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
@@ -20,6 +21,7 @@ from app.config import (
 from app.database import get_db
 from app.dependencies import require_admin, require_fee_token
 from app.models.access_log import AccessLog
+from app.models.chat_thread import ChatThread
 from app.models.fee_data import FeeEntry
 from app.models.fee_otp import FeeOtp
 from app.rate_limit import limiter
@@ -594,3 +596,112 @@ def get_fee(
 
     _log_access(db, company_id, dong_n, ho_n, request, "fee_query", True)
     return _build_fee_response(entry)
+
+
+@router.get("/residents")
+def list_fee_residents(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    search: str = Query("", description="동/호수·이름·전화번호 검색"),
+    sort: str = Query("fee_last_query_at", description="정렬 기준"),
+    order: str = Query("desc", description="asc / desc"),
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin),
+):
+    """입주민 목록 — 관리비 조회 이력(access_log) 기준 roster + 1:1 톡 활동 병합."""
+    cid = admin["company_id"]
+
+    # 1) 관리비 조회 로그 집계 — 이 목록의 기준 roster (조회 이력이 있는 동/호수만 노출)
+    logs = (
+        db.query(AccessLog.dong, AccessLog.ho, AccessLog.created_at)
+        .filter(AccessLog.company_id == cid, AccessLog.action == "fee_query", AccessLog.success == True)
+        .all()
+    )
+    roster: dict[tuple, dict] = {}
+    for dong, ho, created_at in logs:
+        row = roster.setdefault((dong, ho), {"fee_count": 0, "fee_last": None})
+        row["fee_count"] += 1
+        if row["fee_last"] is None or created_at > row["fee_last"]:
+            row["fee_last"] = created_at
+
+    if not roster:
+        return {"total": 0, "pages": 1, "page": page, "items": []}
+
+    # 2) 이름/전화번호 — FeeEntry 최신 업로드분 기준
+    entries = (
+        db.query(FeeEntry.dong, FeeEntry.ho, FeeEntry.name, FeeEntry.phone, FeeEntry.uploaded_at)
+        .filter(FeeEntry.company_id == cid)
+        .all()
+    )
+    name_phone: dict[tuple, tuple] = {}
+    for dong, ho, name, phone, uploaded_at in entries:
+        key = (dong, ho)
+        if key not in name_phone or uploaded_at > name_phone[key][2]:
+            name_phone[key] = (name, phone, uploaded_at)
+
+    # 3) 1:1 톡 집계
+    threads = (
+        db.query(ChatThread.dong, ChatThread.ho, ChatThread.last_message_at)
+        .filter(ChatThread.company_id == cid)
+        .all()
+    )
+    chat_agg: dict[tuple, dict] = {}
+    for dong, ho, last_message_at in threads:
+        row = chat_agg.setdefault((dong, ho), {"count": 0, "last": None})
+        row["count"] += 1
+        if row["last"] is None or last_message_at > row["last"]:
+            row["last"] = last_message_at
+
+    def _fmt(dt):
+        if not dt:
+            return ""
+        return dt.strftime("%Y-%m-%d %H:%M")
+
+    items = []
+    for (dong, ho), fee_info in roster.items():
+        np = name_phone.get((dong, ho))
+        chat_info = chat_agg.get((dong, ho), {"count": 0, "last": None})
+        items.append({
+            "dong": dong,
+            "ho": ho,
+            "name": np[0] if np and np[0] else "",
+            "phone": np[1] if np and np[1] else "",
+            "chat_count": chat_info["count"] or "",
+            "chat_last_at": _fmt(chat_info["last"]),
+            "fee_query_count": fee_info["fee_count"] or "",
+            "fee_last_query_at": _fmt(fee_info["fee_last"]),
+            "_sort_fee_last": fee_info["fee_last"],
+            "_sort_chat_last": chat_info["last"],
+        })
+
+    if search:
+        s = search.strip().lower()
+        items = [
+            it for it in items
+            if s in it["dong"].lower() or s in it["ho"].lower()
+            or s in it["name"].lower() or s in it["phone"].lower()
+        ]
+
+    sort_key_map = {
+        "fee_last_query_at": lambda it: it["_sort_fee_last"] or datetime.min,
+        "fee_query_count": lambda it: it["fee_query_count"] or 0,
+        "chat_last_at": lambda it: it["_sort_chat_last"] or datetime.min,
+        "chat_count": lambda it: it["chat_count"] or 0,
+        "dong": lambda it: (it["dong"], it["ho"]),
+    }
+    key_fn = sort_key_map.get(sort, sort_key_map["fee_last_query_at"])
+    items.sort(key=key_fn, reverse=(order != "asc"))
+
+    total = len(items)
+    start = (page - 1) * size
+    page_items = items[start:start + size]
+    for it in page_items:
+        it.pop("_sort_fee_last", None)
+        it.pop("_sort_chat_last", None)
+
+    return {
+        "total": total,
+        "pages": math.ceil(total / size) if total else 1,
+        "page": page,
+        "items": page_items,
+    }
