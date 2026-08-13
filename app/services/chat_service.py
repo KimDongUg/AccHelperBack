@@ -231,13 +231,13 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
 
         sql = text("""
             SELECT e.qa_id, e.embedding_text,
-                   1 - (e.embedding <=> :embedding::vector) AS similarity,
+                   1 - (e.embedding <=> CAST(:embedding AS vector)) AS similarity,
                    q.question, q.answer, q.category
             FROM qa_embeddings e
             JOIN qa_knowledge q ON q.qa_id = e.qa_id
             WHERE e.company_id = :company_id
               AND q.is_active = true
-              AND 1 - (e.embedding <=> :embedding::vector) >= :min_score
+              AND 1 - (e.embedding <=> CAST(:embedding AS vector)) >= :min_score
             ORDER BY similarity DESC
             LIMIT :top_k
         """)
