@@ -1,7 +1,6 @@
 import json
 import logging
 import re
-from datetime import datetime
 from pathlib import Path
 
 import openpyxl
@@ -176,7 +175,7 @@ async def upload_fee_excel(
     if len(content) > 50 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="파일 크기 초과 (최대 50MB).")
 
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = now_kst().strftime("%Y%m%d_%H%M%S")
 
     # 청구 년월은 수집기가 ERP 화면에서 읽어 파일명에 담아 보낸 값을 사용한다
     # (업로드 시각의 달이 아니라, 데이터가 실제로 속한 청구월이어야 함)

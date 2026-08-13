@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
-from sqlalchemy.sql import func
 from app.database import Base
+from app.utils import now_kst
 
 
 class Complaint(Base):
@@ -15,7 +15,7 @@ class Complaint(Base):
     privacy_agreed_at = Column(DateTime, nullable=True) # 개인정보 동의 시각 (법적 근거 보관)
     title = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=now_kst)
 
     # 첨부 이미지 (선택, 최대 2장)
     image1_url = Column(String(500), nullable=True)

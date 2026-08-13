@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
-from sqlalchemy.sql import func
 from app.database import Base
+from app.utils import now_kst
 
 
 class ApartmentResident(Base):
@@ -16,7 +16,7 @@ class ApartmentResident(Base):
     company_id = Column(Integer, nullable=True)
     is_self_registered = Column(Boolean, default=False)
     is_verified = Column(Boolean, default=True)
-    registered_at = Column(DateTime, server_default=func.now())
+    registered_at = Column(DateTime, default=now_kst)
 
 
 class MarketPost(Base):
@@ -33,7 +33,7 @@ class MarketPost(Base):
     writer_unit = Column(String(20), nullable=False)
     is_hidden = Column(Boolean, default=False)
     hidden_reason = Column(String(255), nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=now_kst)
 
 
 class MarketImage(Base):
@@ -51,7 +51,7 @@ class MarketComment(Base):
     post_id = Column(Integer, ForeignKey("market_posts.id", ondelete="CASCADE"), nullable=False)
     writer_unit = Column(String(20), nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=now_kst)
 
 
 class MarketReport(Base):
@@ -61,4 +61,4 @@ class MarketReport(Base):
     post_id = Column(Integer, ForeignKey("market_posts.id", ondelete="CASCADE"), nullable=False)
     reporter_unit = Column(String(20), nullable=False)
     reason = Column(String(100), nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=now_kst)

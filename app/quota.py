@@ -1,7 +1,6 @@
 """Quota checking and usage tracking for tenants."""
 
 import logging
-from datetime import datetime
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
@@ -11,12 +10,13 @@ from app.dependencies import require_auth
 from app.models.company import Company
 from app.models.tenant_quota import TenantQuota
 from app.models.tenant_usage import TenantUsageMonthly
+from app.utils import now_kst
 
 logger = logging.getLogger("acchelper")
 
 
 def _current_yyyymm() -> str:
-    return datetime.utcnow().strftime("%Y-%m")
+    return now_kst().strftime("%Y-%m")
 
 
 def _get_or_create_usage(db: Session, company_id: int) -> TenantUsageMonthly:

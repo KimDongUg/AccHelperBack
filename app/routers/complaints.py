@@ -2,7 +2,7 @@
 
 import math
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 
 import jwt
@@ -16,6 +16,7 @@ from app.dependencies import require_admin, optional_admin
 from app.models.complaint import Complaint
 from app.models.complaint_person import ComplaintPerson
 from app.services.alert_service import trigger_complaint_alert
+from app.utils import now_kst
 
 MARKET_JWT_SECRET = SECRET_KEY + "_market"
 
@@ -58,9 +59,7 @@ class DeleteRequest(BaseModel):
 def _time_ago(dt: Optional[datetime]) -> str:
     if not dt:
         return ""
-    now = datetime.now(timezone.utc)
-    aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
-    diff = (now - aware).total_seconds()
+    diff = (now_kst() - dt).total_seconds()
     if diff < 60:
         return "방금 전"
     if diff < 3600:
@@ -166,8 +165,7 @@ def list_complaint_persons(
     def _fmt(dt):
         if not dt:
             return ""
-        aware = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
-        return aware.strftime("%Y-%m-%d %H:%M")
+        return dt.strftime("%Y-%m-%d %H:%M")
 
     return {
         "total": total,
@@ -236,7 +234,7 @@ def create_complaint(
         ho=body.ho.strip(),
         writer_name=body.name.strip(),
         writer_phone=body.phone.strip() if body.phone else None,
-        privacy_agreed_at=datetime.now(timezone.utc),  # 개인정보 동의 시각 서버 기록
+        privacy_agreed_at=now_kst(),  # 개인정보 동의 시각 서버 기록
         title=body.title.strip(),
         content=body.content.strip(),
         image1_url=body.image1_url or None,
@@ -269,7 +267,7 @@ def _upsert_complaint_person(db: Session, body: ComplaintCreate):
         ComplaintPerson.phone == phone,
     ).first()
 
-    now = datetime.now(timezone.utc)
+    now = now_kst()
     if person:
         # 동일인 — 최근 민원일·건수만 갱신
         person.last_complained_at = now
@@ -415,7 +413,7 @@ def reply_complaint(
         raise HTTPException(status_code=400, detail="삭제된 글에는 답변할 수 없습니다.")
 
     c.reply_content = body.content.strip()
-    c.replied_at = datetime.now(timezone.utc)
+    c.replied_at = now_kst()
     db.commit()
     return {"ok": True}
 
@@ -459,7 +457,7 @@ def delete_complaint(
 
     c.is_deleted = True
     c.delete_reason = body.reason.strip()
-    c.deleted_at = datetime.now(timezone.utc)
+    c.deleted_at = now_kst()
     db.commit()
     logger.info("Complaint deleted: id=%d by admin=%d reason=%s", c.id, admin["user_id"], c.delete_reason)
     return {"ok": True}

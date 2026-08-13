@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
-from sqlalchemy.sql import func
 from app.database import Base
+from app.utils import now_kst
 
 
 class ChatThread(Base):
@@ -16,8 +16,8 @@ class ChatThread(Base):
     status = Column(String(20), nullable=False, default="open")  # open / closed
     claimed_admin_id = Column(Integer, ForeignKey("admin_users.user_id"), nullable=True)
     claimed_at = Column(DateTime, nullable=True)
-    created_at = Column(DateTime, server_default=func.now())
-    last_message_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=now_kst)
+    last_message_at = Column(DateTime, default=now_kst)
 
 
 class ChatMessage(Base):
@@ -29,5 +29,5 @@ class ChatMessage(Base):
     sender_type = Column(String(10), nullable=False)  # resident / admin
     sender_admin_id = Column(Integer, ForeignKey("admin_users.user_id"), nullable=True)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, default=now_kst)
     read_at = Column(DateTime, nullable=True)  # resident 메시지에만 의미 있음 (admin 안읽음 배지용)

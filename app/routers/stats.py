@@ -23,7 +23,7 @@ router = APIRouter(prefix="/api/stats", tags=["stats"])
 
 
 def _current_yyyymm() -> str:
-    return datetime.utcnow().strftime("%Y-%m")
+    return now_kst().strftime("%Y-%m")
 
 
 @router.get("")

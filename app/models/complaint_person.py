@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
-from sqlalchemy.sql import func
 from app.database import Base
+from app.utils import now_kst
 
 
 class ComplaintPerson(Base):
@@ -13,6 +13,6 @@ class ComplaintPerson(Base):
     ho = Column(String(20), nullable=False)
     name = Column(String(100), nullable=False)
     phone = Column(String(30), nullable=True)
-    first_complained_at = Column(DateTime, server_default=func.now())  # 최초 민원 접수일
-    last_complained_at = Column(DateTime, server_default=func.now())   # 최근 민원 접수일
+    first_complained_at = Column(DateTime, default=now_kst)  # 최초 민원 접수일
+    last_complained_at = Column(DateTime, default=now_kst)   # 최근 민원 접수일
     complaint_count = Column(Integer, default=1)                        # 총 민원 건수

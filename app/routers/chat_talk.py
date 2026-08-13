@@ -2,7 +2,6 @@
 
 import logging
 import math
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy import text
@@ -16,6 +15,7 @@ from app.models.chat_thread import ChatMessage, ChatThread
 from app.models.market import ApartmentResident
 from app.rate_limit import limiter
 from app.routers.market import _get_market_user
+from app.utils import now_kst
 from app.schemas.chat_talk import (
     AvailabilityResponse,
     ChatMessageCreate,
@@ -167,7 +167,7 @@ def send_resident_message(
 
     msg = ChatMessage(thread_id=thread.id, sender_type="resident", content=body.content.strip())
     db.add(msg)
-    thread.last_message_at = datetime.now(timezone.utc)
+    thread.last_message_at = now_kst()
     db.commit()
     db.refresh(msg)
 
@@ -259,7 +259,7 @@ def get_admin_thread(
             "UPDATE chat_threads SET claimed_admin_id = :aid, claimed_at = :now "
             "WHERE id = :tid AND claimed_admin_id IS NULL"
         ),
-        {"aid": admin["user_id"], "now": datetime.now(timezone.utc), "tid": thread_id},
+        {"aid": admin["user_id"], "now": now_kst(), "tid": thread_id},
     )
     # 입주민이 보낸 미확인 메시지 읽음 처리
     db.execute(
@@ -267,7 +267,7 @@ def get_admin_thread(
             "UPDATE chat_messages SET read_at = :now "
             "WHERE thread_id = :tid AND sender_type = 'resident' AND read_at IS NULL"
         ),
-        {"now": datetime.now(timezone.utc), "tid": thread_id},
+        {"now": now_kst(), "tid": thread_id},
     )
     db.commit()
     db.refresh(thread)
@@ -312,7 +312,7 @@ def send_admin_message(
 
     if thread.claimed_admin_id is None:
         thread.claimed_admin_id = admin["user_id"]
-        thread.claimed_at = datetime.now(timezone.utc)
+        thread.claimed_at = now_kst()
 
     is_first_admin_reply = (
         db.query(ChatMessage)
@@ -328,7 +328,7 @@ def send_admin_message(
         content=body.content.strip(),
     )
     db.add(msg)
-    thread.last_message_at = datetime.now(timezone.utc)
+    thread.last_message_at = now_kst()
     db.commit()
     db.refresh(msg)
 
