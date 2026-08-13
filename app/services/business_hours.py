@@ -133,7 +133,7 @@ def is_business_hours(db: Session, dt: datetime | None = None) -> tuple[bool, st
     if t < WORK_START or t >= WORK_END:
         return False, "outside_hours"
 
-    if LUNCH_START <= t < LUNCH_END:
+    if False and LUNCH_START <= t < LUNCH_END:  # TEMP: 1:1톡 채널 ID 테스트용 임시 비활성화, 테스트 후 원복 예정
         return False, "lunch"
 
     holidays = get_holidays_for_year(db, dt.year)
