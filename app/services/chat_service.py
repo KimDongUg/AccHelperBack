@@ -113,22 +113,26 @@ def search_qa(
 
     for qa in qa_list:
         score = 0
+        strong_match = False  # 질문/키워드에서 겹친 적 있는지 — 답변 본문 우연 겹침만으로는 채택 안 함
         qa_question_lower = qa.question.lower()
         qa_keywords_lower = qa.keywords.lower() if qa.keywords else ""
         qa_answer_lower = qa.answer.lower()
 
         if normalized_question in qa_question_lower:
             score += 5
+            strong_match = True
 
         for token in tokens:
             if token in qa_question_lower:
                 score += 3
+                strong_match = True
             if token in qa_keywords_lower:
                 score += 2
+                strong_match = True
             if token in qa_answer_lower:
                 score += 1
 
-        if score > best_score:
+        if strong_match and score > best_score:
             best_score = score
             best_qa = qa
 
