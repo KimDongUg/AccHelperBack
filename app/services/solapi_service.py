@@ -179,7 +179,7 @@ def send_chat_talk_admin_alimtalk(
         "message": {
             "to": to.replace("-", ""),
             "kakaoOptions": {
-                "pfId": config.SOLAPI_PF_ID,
+                "pfId": config.SOLAPI_CHAT_TALK_ADMIN_PF_ID,
                 "templateId": config.SOLAPI_CHAT_TALK_ADMIN_TEMPLATE_ID,
                 "variables": {
                     "#{아파트명}": apt_name,
@@ -222,7 +222,7 @@ def send_chat_talk_reply_alimtalk(
         "message": {
             "to": to.replace("-", ""),
             "kakaoOptions": {
-                "pfId": config.SOLAPI_PF_ID,
+                "pfId": config.SOLAPI_CHAT_TALK_REPLY_PF_ID,
                 "templateId": config.SOLAPI_CHAT_TALK_REPLY_TEMPLATE_ID,
                 "variables": {
                     "#{아파트명}": apt_name,
