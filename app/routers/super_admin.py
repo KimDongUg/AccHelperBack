@@ -5,14 +5,14 @@ import logging
 import os
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import DATA_DIR
 
-from app.database import get_db
+from app.database import SessionLocal, get_db
 from app.dependencies import require_super_admin
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
@@ -112,15 +112,30 @@ def update_quota(
     return {"success": True, "message": "쿼터가 업데이트되었습니다."}
 
 
+def _run_embeddings_rebuild(company_id: int | None):
+    db = SessionLocal()
+    try:
+        stats = bulk_rebuild_embeddings(db, company_id)
+        logger.info("임베딩 재생성 완료 | company_id=%s | %s", company_id, stats)
+    except Exception as e:
+        logger.error("임베딩 재생성 실패 | company_id=%s | %s", company_id, e)
+    finally:
+        db.close()
+
+
 @router.post("/embeddings/rebuild")
 def rebuild_embeddings(
+    background_tasks: BackgroundTasks,
     company_id: int | None = Query(None),
-    db: Session = Depends(get_db),
     user: dict = Depends(require_super_admin),
 ):
-    """Rebuild all embeddings (optionally for a specific company)."""
-    stats = bulk_rebuild_embeddings(db, company_id)
-    return {"success": True, "message": "임베딩 재생성 완료", **stats}
+    """Rebuild all embeddings (optionally for a specific company).
+
+    QA 개수가 많으면 OpenAI 임베딩 호출이 오래 걸려 프록시(Vercel/Render) 타임아웃에
+    걸릴 수 있으므로 백그라운드로 실행하고 즉시 응답한다.
+    """
+    background_tasks.add_task(_run_embeddings_rebuild, company_id)
+    return {"success": True, "message": "임베딩 재생성을 시작했습니다. 완료까지 QA 개수에 따라 몇 분 걸릴 수 있습니다."}
 
 
 VALID_CATEGORIES = {"세금", "급여", "비용처리", "회계처리", "기타"}

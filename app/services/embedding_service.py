@@ -95,7 +95,11 @@ def delete_qa_embedding(db: Session, qa_id: int):
 
 
 def bulk_rebuild_embeddings(db: Session, company_id: int | None = None) -> dict:
-    """Rebuild embeddings for all active QA items. Returns stats."""
+    """Rebuild embeddings for all active QA items. Returns stats.
+
+    커밋을 항목마다 하나씩 즉시 반영한다 — 요청이 도중에 끊겨도(프록시 타임아웃 등)
+    그때까지 처리된 임베딩은 유실되지 않고 남아있도록 하기 위함.
+    """
     query = db.query(QaKnowledge).filter(QaKnowledge.is_active == True)
     if company_id:
         query = query.filter(QaKnowledge.company_id == company_id)
@@ -109,6 +113,6 @@ def bulk_rebuild_embeddings(db: Session, company_id: int | None = None) -> dict:
             success += 1
         else:
             failed += 1
+        db.commit()
 
-    db.commit()
     return {"total": len(qa_list), "success": success, "failed": failed}
