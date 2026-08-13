@@ -301,6 +301,7 @@ def trigger_chat_talk_admin_alert(thread_id: int) -> None:
         unit_display = f"{thread.dong} {thread.ho}"
         url = _build_chat_talk_admin_url(thread.company_id, thread.id)
 
+        sent_ok = False
         for admin in admins:
             if not admin.phone:
                 logger.warning(
@@ -308,14 +309,15 @@ def trigger_chat_talk_admin_alert(thread_id: int) -> None:
                 )
                 continue
             try:
-                send_chat_talk_admin_alimtalk(
+                if send_chat_talk_admin_alimtalk(
                     to=admin.phone,
                     apt_name=apt_name,
                     unit=unit_display,
                     content=content,
                     time=time_str,
                     url=url,
-                )
+                ):
+                    sent_ok = True
                 logger.info(
                     "[ChatTalkAdminAlert] 알림톡 발송 성공 | admin=%s | thread_id=%d",
                     admin.full_name or admin.email, thread_id,
@@ -324,6 +326,10 @@ def trigger_chat_talk_admin_alert(thread_id: int) -> None:
                 logger.error(
                     "[ChatTalkAdminAlert] 알림톡 발송 실패 | admin_id=%s | %s", admin.user_id, e
                 )
+
+        if last_msg:
+            last_msg.alimtalk_sent = sent_ok
+            db.commit()
 
     except Exception as e:
         logger.error(
@@ -336,17 +342,31 @@ def trigger_chat_talk_admin_alert(thread_id: int) -> None:
 
 def trigger_chat_talk_reply_alert(thread_id: int) -> None:
     """관리자가 1:1 톡에 첫 답변을 남겼을 때 입주민에게 알림톡 발송."""
-    from app.models.chat_thread import ChatThread
+    from app.models.chat_thread import ChatThread, ChatMessage
 
     db = SessionLocal()
     try:
         thread = db.query(ChatThread).get(thread_id)
         if not thread:
             return
+
+        first_admin_msg = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.thread_id == thread_id, ChatMessage.sender_type == "admin")
+            .order_by(ChatMessage.created_at.asc())
+            .first()
+        )
+
+        def _mark_and_return(sent_ok: bool):
+            if first_admin_msg:
+                first_admin_msg.alimtalk_sent = sent_ok
+                db.commit()
+
         if not thread.resident_phone:
             logger.warning(
                 "[ChatTalkReplyAlert] 입주민 전화번호 없음 | thread_id=%s → skip", thread_id
             )
+            _mark_and_return(False)
             return
 
         company = db.query(Company).filter(
@@ -359,12 +379,14 @@ def trigger_chat_talk_reply_alert(thread_id: int) -> None:
                 "[ChatTalkReplyAlert] 시설관리 회사 알림톡 차단 | company_id=%s",
                 thread.company_id,
             )
+            _mark_and_return(False)
             return
 
         url = f"{config.ADMIN_BASE_URL}/chat-talk.html"
 
+        sent_ok = False
         try:
-            send_chat_talk_reply_alimtalk(
+            sent_ok = send_chat_talk_reply_alimtalk(
                 to=thread.resident_phone,
                 apt_name=apt_name,
                 url=url,
@@ -377,6 +399,7 @@ def trigger_chat_talk_reply_alert(thread_id: int) -> None:
             logger.error(
                 "[ChatTalkReplyAlert] 알림톡 발송 실패 | thread_id=%s | %s", thread_id, e
             )
+        _mark_and_return(sent_ok)
 
     except Exception as e:
         logger.error(

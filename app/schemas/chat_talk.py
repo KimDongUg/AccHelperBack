@@ -12,6 +12,7 @@ class ChatMessageOut(BaseModel):
     sender_type: str
     content: str
     created_at: datetime
+    alimtalk_sent: bool | None = None
 
     model_config = {"from_attributes": True}
 

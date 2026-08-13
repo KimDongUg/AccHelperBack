@@ -383,11 +383,14 @@ def _run_pg_migration(engine: Engine):
                     sender_admin_id INTEGER REFERENCES admin_users(user_id),
                     content TEXT NOT NULL,
                     created_at TIMESTAMP DEFAULT NOW(),
-                    read_at TIMESTAMP
+                    read_at TIMESTAMP,
+                    alimtalk_sent BOOLEAN
                 )
             """))
             conn.execute(text("CREATE INDEX ix_chat_messages_thread_id ON chat_messages (thread_id)"))
             logger.info("PG: Created table chat_messages")
+        else:
+            _pg_add_column_if_missing(conn, "chat_messages", "alimtalk_sent", "BOOLEAN")
 
         # --- public_holidays 테이블 (1:1 톡 영업시간 판정용 공휴일 캐시) ---
         if not _pg_table_exists(conn, "public_holidays"):
@@ -782,11 +785,14 @@ def run_migration(engine: Engine):
                     sender_admin_id INTEGER,
                     content TEXT NOT NULL,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    read_at DATETIME
+                    read_at DATETIME,
+                    alimtalk_sent BOOLEAN
                 )
             """))
             conn.execute(text("CREATE INDEX ix_chat_messages_thread_id ON chat_messages (thread_id)"))
             logger.info("Created table chat_messages")
+        else:
+            _add_column_if_missing(conn, "chat_messages", "alimtalk_sent", "BOOLEAN")
 
         # --- public_holidays 테이블 (1:1 톡 영업시간 판정용 공휴일 캐시) ---
         if not _table_exists(conn, "public_holidays"):

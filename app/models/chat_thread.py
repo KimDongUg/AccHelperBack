@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey
 from app.database import Base
 from app.utils import now_kst
 
@@ -31,3 +31,4 @@ class ChatMessage(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=now_kst)
     read_at = Column(DateTime, nullable=True)  # resident 메시지에만 의미 있음 (admin 안읽음 배지용)
+    alimtalk_sent = Column(Boolean, nullable=True)  # 스레드 첫 메시지/첫 답변에만 값 설정 (그 외는 NULL)
