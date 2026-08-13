@@ -142,6 +142,13 @@ def search_qa(
     max_possible = 5 + len(tokens) * 6
     confidence = min(best_score / max(max_possible, 1), 1.0)
 
+    # "오늘", "저는" 같은 흔한 단어 하나가 질문에 우연히 겹치는 것만으로 채택되는
+    # 경우를 걸러내기 위한 최소 신뢰도 기준 (관측치: 정상 매치는 대체로 0.3+,
+    # 흔한 단어 1개 우연 매치는 0.1대)
+    MIN_CONFIDENCE = 0.2
+    if confidence < MIN_CONFIDENCE:
+        return FALLBACK_MESSAGE, None, None, confidence
+
     return best_qa.answer, best_qa.category, best_qa.qa_id, round(confidence, 3)
 
 
