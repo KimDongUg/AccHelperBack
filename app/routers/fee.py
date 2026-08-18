@@ -577,19 +577,21 @@ def get_fee(
     dong: str,
     ho: str,
     company_id: int = 1,
+    year_month: str = "",
     db: Session = Depends(get_db),
     _auth: dict = Depends(require_fee_token),
 ):
-    """인증된 JWT로 관리비 데이터 조회"""
+    """인증된 JWT로 관리비 데이터 조회. year_month 지정 시 해당 월, 미지정 시 최신월."""
     dong_n = _normalize(dong)
     ho_n = _normalize(ho)
 
-    entry = (
-        db.query(FeeEntry)
-        .filter(FeeEntry.company_id == company_id, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n)
-        .order_by(FeeEntry.uploaded_at.desc())
-        .first()
+    query = db.query(FeeEntry).filter(
+        FeeEntry.company_id == company_id, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n
     )
+    if year_month:
+        query = query.filter(FeeEntry.year_month == year_month)
+
+    entry = query.order_by(FeeEntry.uploaded_at.desc()).first()
 
     if not entry:
         _log_access(db, company_id, dong_n, ho_n, request, "fee_query", False)
