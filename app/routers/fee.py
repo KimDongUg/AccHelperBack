@@ -351,10 +351,12 @@ def admin_fee_search(
     request: Request,
     dong: str,
     ho: str,
+    year_month: str = "",
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
-    """관리자 전용 관리비 조회 (OTP 인증 불필요, company_id는 JWT에서 자동 추출)"""
+    """관리자 전용 관리비 조회 (OTP 인증 불필요, company_id는 JWT에서 자동 추출).
+    year_month 지정 시 해당 월, 미지정 시 최신월."""
     cid = admin["company_id"]
     if cid == 0:
         raise HTTPException(status_code=400, detail="수퍼관리자는 특정 회사 계정으로 접근하세요.")
@@ -362,12 +364,14 @@ def admin_fee_search(
     ho_n = _normalize(ho)
     if not dong_n or not ho_n:
         raise HTTPException(status_code=400, detail="동, 호를 입력하세요.")
-    entry = (
-        db.query(FeeEntry)
-        .filter(FeeEntry.company_id == cid, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n)
-        .order_by(FeeEntry.uploaded_at.desc())
-        .first()
+
+    query = db.query(FeeEntry).filter(
+        FeeEntry.company_id == cid, FeeEntry.dong == dong_n, FeeEntry.ho == ho_n
     )
+    if year_month:
+        query = query.filter(FeeEntry.year_month == year_month)
+
+    entry = query.order_by(FeeEntry.uploaded_at.desc()).first()
     if not entry:
         _log_access(db, cid, dong_n, ho_n, request, "admin_query", False)
         raise HTTPException(status_code=404, detail="해당 세대의 관리비 데이터를 찾을 수 없습니다.")
