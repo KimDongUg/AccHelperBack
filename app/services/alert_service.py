@@ -17,6 +17,7 @@ from app.models.unanswered_question import UnansweredQuestion
 from app.services.solapi_service import (
     send_unanswered_alimtalk,
     send_complaint_alimtalk,
+    send_complaint_reply_alimtalk,
     send_market_comment_alimtalk,
     send_chat_talk_admin_alimtalk,
     send_chat_talk_reply_alimtalk,
@@ -203,6 +204,61 @@ def trigger_complaint_alert(complaint_id: int) -> None:
     except Exception as e:
         logger.error(
             "[ComplaintAlert] trigger_complaint_alert 오류 | complaint_id=%s | %s",
+            complaint_id, e,
+        )
+    finally:
+        db.close()
+
+
+def trigger_complaint_reply_alert(complaint_id: int) -> None:
+    """관리자가 민원에 답변했을 때 민원인에게 알림톡 발송."""
+    from app.models.complaint import Complaint
+
+    db = SessionLocal()
+    try:
+        complaint = db.query(Complaint).get(complaint_id)
+        if not complaint:
+            return
+
+        if not complaint.writer_phone:
+            logger.warning(
+                "[ComplaintReplyAlert] 민원인 전화번호 없음 | complaint_id=%s → skip", complaint_id
+            )
+            return
+
+        company = db.query(Company).filter(
+            Company.company_id == complaint.company_id
+        ).first()
+        apt_name = company.company_name if company else "관리사무소"
+
+        if company and is_facility_management_company(company.company_name):
+            logger.info(
+                "[ComplaintReplyAlert] 시설관리 회사 알림톡 차단 | company_id=%s",
+                complaint.company_id,
+            )
+            return
+
+        url = _build_complaint_url(complaint.company_id, complaint.id)
+
+        try:
+            send_complaint_reply_alimtalk(
+                to=complaint.writer_phone,
+                apt_name=apt_name,
+                title=complaint.title,
+                url=url,
+            )
+            logger.info(
+                "[ComplaintReplyAlert] 알림톡 발송 성공 | complaint_id=%d | to=%s",
+                complaint.id, complaint.writer_phone,
+            )
+        except Exception as e:
+            logger.error(
+                "[ComplaintReplyAlert] 알림톡 발송 실패 | complaint_id=%s | %s", complaint_id, e
+            )
+
+    except Exception as e:
+        logger.error(
+            "[ComplaintReplyAlert] trigger_complaint_reply_alert 오류 | complaint_id=%s | %s",
             complaint_id, e,
         )
     finally:

@@ -4,6 +4,7 @@ import json
 import logging
 import re
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -54,6 +55,12 @@ DEFAULT_SYSTEM_PROMPT = """당신은 아파트 관리 도우미 챗봇입니다.
 5. 근거에서 질문에 대한 답을 찾았다면 확신 있게 그 답변만 하세요. 답을 이미 찾았는데도
    "해당 내용은 확인이 필요합니다. 관리사무소에 문의해 주세요."를 덧붙이지 마세요 —
    이 문구는 근거에서 답을 전혀 찾지 못했을 때만 사용하세요."""
+
+
+# 최상위 근거의 질문이 사용자 질문과 이 이상 문자적으로 일치하면, GPT의 "찾았는지" 판단을
+# 거치지 않고 DB 원본 답변을 그대로 반환한다. (GPT가 근거 안에 답이 명확히 있어도
+# "업체명이 문자 그대로 없다" 같은 지나치게 엄격한 판단으로 정답을 놓치는 문제 방지)
+HIGH_QUESTION_SIMILARITY = 0.85
 
 
 @dataclass
@@ -293,6 +300,24 @@ def search_qa_rag(db: Session, question: str, company_id: int) -> RAGResult:
         }
         for row in results[:5]
     ]
+
+    # 3-1. 최상위 근거의 질문 텍스트가 사용자 질문과 거의 동일하면 GPT를 거치지 않고
+    # 해당 QA의 원본 답변을 그대로 반환한다.
+    top_question_similarity = SequenceMatcher(
+        None, normalize_text(question), normalize_text(results[0][3])
+    ).ratio()
+    if top_question_similarity >= HIGH_QUESTION_SIMILARITY:
+        logger.info(
+            "High question similarity match (%.3f) — returning original answer for qa_id=%s",
+            top_question_similarity, evidence_ids[0],
+        )
+        return RAGResult(
+            answer=results[0][4],
+            used_rag=True,
+            evidence_ids=evidence_ids,
+            avg_similarity=round(avg_similarity, 4),
+            evidences=evidences,
+        )
 
     evidence_texts = []
     for i, row in enumerate(results, 1):

@@ -15,7 +15,7 @@ from app.database import get_db
 from app.dependencies import require_admin, optional_admin
 from app.models.complaint import Complaint
 from app.models.complaint_person import ComplaintPerson
-from app.services.alert_service import trigger_complaint_alert
+from app.services.alert_service import trigger_complaint_alert, trigger_complaint_reply_alert
 from app.utils import now_kst
 
 MARKET_JWT_SECRET = SECRET_KEY + "_market"
@@ -400,6 +400,7 @@ def update_complaint(
 def reply_complaint(
     complaint_id: int,
     body: ReplyCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     admin: dict = Depends(require_admin),
 ):
@@ -412,9 +413,13 @@ def reply_complaint(
     if c.is_deleted:
         raise HTTPException(status_code=400, detail="삭제된 글에는 답변할 수 없습니다.")
 
+    is_first_reply = c.reply_content is None
     c.reply_content = body.content.strip()
     c.replied_at = now_kst()
     db.commit()
+
+    if is_first_reply:
+        background_tasks.add_task(trigger_complaint_reply_alert, c.id)
     return {"ok": True}
 
 

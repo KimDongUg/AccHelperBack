@@ -245,6 +245,48 @@ def send_chat_talk_reply_alimtalk(
         return True
 
 
+def send_complaint_reply_alimtalk(
+    to: str,
+    apt_name: str,
+    title: str,
+    url: str,
+) -> bool:
+    """
+    민원 답변 완료 알림톡 발송 (관리자 → 민원인)
+    템플릿 변수: #{apt_name}, #{title}, #{url}
+    """
+    if not config.SOLAPI_COMPLAINT_REPLY_TEMPLATE_ID:
+        logger.warning("[Solapi] SOLAPI_COMPLAINT_REPLY_TEMPLATE_ID 미설정 — 민원 답변 알림톡 생략")
+        return False
+
+    payload = {
+        "message": {
+            "to": to.replace("-", ""),
+            "kakaoOptions": {
+                "pfId": config.SOLAPI_PF_ID,
+                "templateId": config.SOLAPI_COMPLAINT_REPLY_TEMPLATE_ID,
+                "variables": {
+                    "#{apt_name}": apt_name,
+                    "#{title}": title,
+                    "#{url}": url,
+                },
+            },
+        }
+    }
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": _make_auth_header(),
+    }
+
+    with httpx.Client(timeout=10.0) as client:
+        resp = client.post(SOLAPI_SEND_URL, json=payload, headers=headers)
+        if resp.status_code >= 400:
+            logger.error("[Solapi] %s %s | payload=%s", resp.status_code, resp.text, payload)
+        resp.raise_for_status()
+        return True
+
+
 def send_complaint_alimtalk(
     to: str,
     apt_name: str,
