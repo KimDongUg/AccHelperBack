@@ -250,6 +250,7 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
             "password": "sample123",
             "email": "sample@sample.com",
             "full_name": "샘플 관리자",
+            "phone": "010-3526-4754",
             "role": "admin",
         },
     },
@@ -362,6 +363,7 @@ def seed_sample_companies(db: Session) -> None:
                     password_hash=hash_password(admin_cfg["password"]),
                     email=admin_cfg["email"],
                     full_name=admin_cfg.get("full_name"),
+                    phone=admin_cfg.get("phone"),
                     role=admin_cfg.get("role", "admin"),
                     is_active=True,
                 )
