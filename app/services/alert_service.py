@@ -39,11 +39,16 @@ def _build_admin_url(company_id: int, question_id: int) -> str:
     )
 
 
-def _build_complaint_url(company_id: int, complaint_id: int) -> str:
-    return (
+def _build_complaint_url(company_id: int, complaint_id: int, for_admin: bool = False) -> str:
+    url = (
         f"{config.ADMIN_BASE_URL}/complaint-post.html"
         f"?id={complaint_id}&company={company_id}"
     )
+    if for_admin:
+        # 관리자에게 보내는 링크임을 표시 — 프론트에서 입주민 본인확인 대신
+        # 바로 관리자 로그인 화면으로 보내도록 분기하는 데 사용
+        url += "&for=admin"
+    return url
 
 
 def _build_chat_talk_admin_url(company_id: int, thread_id: int) -> str:
@@ -175,7 +180,7 @@ def trigger_complaint_alert(complaint_id: int) -> None:
             )
             return
 
-        complaint_url = _build_complaint_url(complaint.company_id, complaint.id)
+        complaint_url = _build_complaint_url(complaint.company_id, complaint.id, for_admin=True)
         complaint_time = _format_time(complaint.created_at)
         writer_display = f"{complaint.dong} {complaint.ho}"
 
