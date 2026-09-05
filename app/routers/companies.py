@@ -12,7 +12,6 @@ from app.dependencies import require_admin, require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.qa_knowledge import QaKnowledge
 from app.models.company import Company
-from app.models.notice import Notice
 from app.models.chat_log import ChatLog
 from app.models.feedback import Feedback
 from app.models.activity_log import AdminActivityLog
@@ -101,19 +100,7 @@ def get_public_company(
         if not is_super:
             raise HTTPException(status_code=403, detail="승인되지 않은 업체입니다.")
 
-    resp = CompanyPublicResponse.model_validate(company)
-
-    # 공지사항 배너: notices 테이블에서 활성(is_active=True)인 항목을 사용
-    active_notice = (
-        db.query(Notice)
-        .filter(Notice.company_id == company_id, Notice.is_active == True)
-        .first()
-    )
-    resp.notice_active = active_notice is not None
-    resp.notice_text = active_notice.text if active_notice else None
-    resp.notice_text_link = active_notice.text_link if active_notice else None
-
-    return resp
+    return company
 
 
 @router.post("/register", response_model=CompanyRegisterResponse)
