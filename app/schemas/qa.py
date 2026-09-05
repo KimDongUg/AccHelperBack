@@ -58,3 +58,25 @@ class QaListResponse(BaseModel):
     total: int
     page: int
     pages: int
+
+
+class NoticeListItem(BaseModel):
+    qa_id: int
+    question: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class NoticeListResponse(BaseModel):
+    items: list[NoticeListItem]
+
+
+class NoticeDetail(BaseModel):
+    qa_id: int
+    category: str
+    question: str
+    answer: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

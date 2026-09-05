@@ -9,7 +9,16 @@ from app.models.chat_log import ChatLog
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
 from app.quota import increment_usage
-from app.schemas.qa import QaCreate, QaListResponse, QaMoveCategory, QaResponse, QaUpdate
+from app.schemas.qa import (
+    NoticeDetail,
+    NoticeListItem,
+    NoticeListResponse,
+    QaCreate,
+    QaListResponse,
+    QaMoveCategory,
+    QaResponse,
+    QaUpdate,
+)
 from app.services.embedding_service import delete_qa_embedding, upsert_qa_embedding
 from app.utils import now_kst
 
@@ -74,6 +83,51 @@ def list_qa(
         result_items.append(resp)
 
     return QaListResponse(items=result_items, total=total, page=page, pages=pages)
+
+
+# --- Public endpoints (no auth) — 입주민용 공지사항 목록/상세 ---
+# QA 관리 화면에서 특정 카테고리(예: "공고문")로 등록해둔 항목들을 그대로
+# 재사용해 목록으로 보여준다. 별도 공지 테이블을 새로 두지 않는다.
+
+@router.get("/public/list", response_model=NoticeListResponse)
+def list_public_notices(
+    company_id: int = Query(...),
+    category: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    query = (
+        db.query(QaKnowledge)
+        .filter(
+            QaKnowledge.company_id == company_id,
+            QaKnowledge.category == category,
+            QaKnowledge.is_active == True,
+        )
+        .order_by(QaKnowledge.created_at.desc())
+    )
+    items = [NoticeListItem.model_validate(qa) for qa in query.all()]
+    return NoticeListResponse(items=items)
+
+
+@router.get("/public/{qa_id}", response_model=NoticeDetail)
+def get_public_notice(
+    qa_id: int,
+    company_id: int = Query(...),
+    category: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    qa = (
+        db.query(QaKnowledge)
+        .filter(
+            QaKnowledge.qa_id == qa_id,
+            QaKnowledge.company_id == company_id,
+            QaKnowledge.category == category,
+            QaKnowledge.is_active == True,
+        )
+        .first()
+    )
+    if not qa:
+        raise HTTPException(status_code=404, detail="공지사항을 찾을 수 없습니다.")
+    return NoticeDetail.model_validate(qa)
 
 
 @router.get("/check-duplicate")
