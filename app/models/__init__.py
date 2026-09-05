@@ -17,6 +17,7 @@ from app.models.complaint_person import ComplaintPerson
 from app.models.fee_data import FeeEntry
 from app.models.chat_thread import ChatThread, ChatMessage
 from app.models.public_holiday import PublicHoliday
+from app.models.notice import Notice
 
 __all__ = [
     "Company",
@@ -44,4 +45,5 @@ __all__ = [
     "ChatThread",
     "ChatMessage",
     "PublicHoliday",
+    "Notice",
 ]
