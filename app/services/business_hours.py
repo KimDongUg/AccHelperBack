@@ -18,7 +18,6 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import HOLIDAY_API_SERVICE_KEY
-from app.utils import now_kst
 
 logger = logging.getLogger("acchelper")
 
@@ -122,24 +121,11 @@ def get_holidays_for_year(db: Session, year: int) -> set[str]:
 def is_business_hours(db: Session, dt: datetime | None = None) -> tuple[bool, str]:
     """영업시간(1:1 톡 가능 시간) 여부와 사유를 반환한다.
 
+    2026-09-07 요청에 따라 1:1 톡을 24시간 상시 이용 가능하도록 변경 —
+    시간대 제한 없이 항상 이용 가능으로 판정한다.
+
     reason: "ok" | "weekend" | "outside_hours" | "lunch" | "holiday"
     """
-    dt = dt or now_kst()
-
-    if dt.weekday() >= 5:  # 5=토, 6=일
-        return False, "weekend"
-
-    t = (dt.hour, dt.minute)
-    if t < WORK_START or t >= WORK_END:
-        return False, "outside_hours"
-
-    if LUNCH_START <= t < LUNCH_END:
-        return False, "lunch"
-
-    holidays = get_holidays_for_year(db, dt.year)
-    if dt.strftime("%Y%m%d") in holidays:
-        return False, "holiday"
-
     return True, "ok"
 
 
