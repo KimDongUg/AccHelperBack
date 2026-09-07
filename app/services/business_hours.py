@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.config import HOLIDAY_API_SERVICE_KEY
+from app.utils import now_kst
 
 logger = logging.getLogger("acchelper")
 
@@ -118,20 +119,40 @@ def get_holidays_for_year(db: Session, year: int) -> set[str]:
     return {h["locdate"] for h in holidays}
 
 
-def is_business_hours(db: Session, dt: datetime | None = None) -> tuple[bool, str]:
+def is_business_hours(db: Session, dt: datetime | None = None, company_id: int | None = None) -> tuple[bool, str]:
     """영업시간(1:1 톡 가능 시간) 여부와 사유를 반환한다.
 
-    2026-09-07 요청에 따라 1:1 톡을 24시간 상시 이용 가능하도록 변경 —
-    시간대 제한 없이 항상 이용 가능으로 판정한다.
+    샘플 회사(company_id >= 1000, AI 헬퍼 도입 문의용 데모)는 실제 관리사무소가
+    없으므로 시간대 제한 없이 24시간 상시 이용 가능. 그 외 실제 아파트는 기존
+    영업시간(평일 09:00~18:00, 점심시간 제외, 주말/공휴일 제외)을 그대로 적용한다.
 
     reason: "ok" | "weekend" | "outside_hours" | "lunch" | "holiday"
     """
+    if company_id is not None and company_id >= 1000:
+        return True, "ok"
+
+    dt = dt or now_kst()
+
+    if dt.weekday() >= 5:  # 5=토, 6=일
+        return False, "weekend"
+
+    t = (dt.hour, dt.minute)
+    if t < WORK_START or t >= WORK_END:
+        return False, "outside_hours"
+
+    if LUNCH_START <= t < LUNCH_END:
+        return False, "lunch"
+
+    holidays = get_holidays_for_year(db, dt.year)
+    if dt.strftime("%Y%m%d") in holidays:
+        return False, "holiday"
+
     return True, "ok"
 
 
-def get_availability(db: Session, dt: datetime | None = None) -> dict:
+def get_availability(db: Session, dt: datetime | None = None, company_id: int | None = None) -> dict:
     """1:1 톡 / 관리실 문자 링크가 공유하는 가용성 응답."""
-    available, reason = is_business_hours(db, dt)
+    available, reason = is_business_hours(db, dt, company_id=company_id)
     return {
         "available": available,
         "reason": reason,

@@ -14,7 +14,7 @@ from app.models.admin_user import AdminUser
 from app.models.chat_thread import ChatMessage, ChatThread
 from app.models.market import ApartmentResident
 from app.rate_limit import limiter
-from app.routers.market import _get_market_user
+from app.routers.market import _get_market_user, _get_market_user_optional
 from app.utils import now_kst
 from app.schemas.chat_talk import (
     AvailabilityResponse,
@@ -87,9 +87,15 @@ def _admin_name_map(db: Session, admin_ids: set[int]) -> dict[int, str]:
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.get("/availability", response_model=AvailabilityResponse)
-def availability(db: Session = Depends(get_db)):
-    """1:1 톡 / 관리실 문자 링크가 공유하는 가용성(영업시간) 조회 — 인증 불필요."""
-    return get_availability(db)
+def availability(request: Request, company_id: int | None = None, db: Session = Depends(get_db)):
+    """1:1 톡 / 관리실 문자 링크가 공유하는 가용성(영업시간) 조회 — 인증 불필요.
+
+    로그인 상태면 세션(market_token)의 company_id를 신뢰하고, 아직 로그인 전이면
+    (예: 랜딩페이지의 샘플회사 데모 안내) 쿼리파라미터 company_id를 사용한다.
+    """
+    user = _get_market_user_optional(request)
+    resolved_company_id = (user or {}).get("company_id") or company_id
+    return get_availability(db, company_id=resolved_company_id)
 
 
 @router.get("/thread", response_model=ChatThreadOut)
@@ -154,7 +160,7 @@ def send_resident_message(
     if not company_id or not dong or not ho:
         raise HTTPException(status_code=401, detail="입주민 인증이 필요합니다.")
 
-    available, _reason = is_business_hours(db)
+    available, _reason = is_business_hours(db, company_id=company_id)
     if not available:
         from app.services.business_hours import UNAVAILABLE_MESSAGE
         raise HTTPException(status_code=403, detail=UNAVAILABLE_MESSAGE)
