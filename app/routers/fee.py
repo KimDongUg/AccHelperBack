@@ -120,6 +120,14 @@ def _build_fee_response(entry: FeeEntry) -> dict:
     total_부과    = summary.get("당월부과합계", summary.get("당월부과액", ""))
     total_납기후  = summary.get("합계(납기후)", "")
 
+    # ─── 실사용 관리비 (이주정산/과입금 등 일회성 음수 조정 항목 제외) ──────────
+    # 이주정산으로 당월 청구액이 0원/음수가 되면 실제 사용량과 무관한 값이
+    # 월별 추이·AI 분석에 섞여 들어가므로, 항목별 부과내역 중 양수(실사용) 항목만
+    # 합산한 값을 별도로 제공한다. 도넛차트(F-02)가 프론트에서 음수 항목을
+    # 분리하는 것과 동일한 원리.
+    vat = _to_int(summary.get("부가가치세", ""))
+    usage_total = sum(v for v in (_to_int(x) for x in billing_items.values()) if v > 0) + max(vat, 0)
+
     return {
         "dong":           entry.dong,
         "ho":             entry.ho,
@@ -127,6 +135,7 @@ def _build_fee_response(entry: FeeEntry) -> dict:
         "year_month":     entry.year_month,
         "total":          total_납기내 or total_부과,
         "total_after":    total_납기후,
+        "usage_total":    usage_total,
         "exclusive_area": all_items.get("전용면적", ""),
         "billing_items":  billing_items,
         "billing_구분":   billing_구분,
@@ -397,7 +406,8 @@ def _compute_fee_history(db: Session, company_id: int, dong: str, ho: str, month
             amt = int(str(amt_str).replace(",", ""))
         except (ValueError, TypeError):
             amt = 0
-        history.append({"year_month": e.year_month, "amount": amt})
+        usage_amt = _to_int(resp.get("usage_total", 0))
+        history.append({"year_month": e.year_month, "amount": amt, "usage_amount": usage_amt})
     return history
 
 
