@@ -216,8 +216,8 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
     {
         # --- Company ---
         "company_id": 1000,
-        "company_name": "샘플아파트",
-        "building_type": "아파트",
+        "company_name": "샘플오피스텔",
+        "building_type": "오피스텔",
         "business_number": "999-99-99999",
         "industry": "일반",
         "subscription_plan": "enterprise",
@@ -229,9 +229,9 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
         "copy_from_company_id": 1,
         "anonymize_map": {
             # 관리단/회사명 변형 (긴 것부터 먼저)
-            "세종시2차푸르지오시티관리단": "샘플아파트관리단",
-            "세종푸르지오시티 2차": "샘플아파트",
-            "세종푸르지오시티2차": "샘플아파트",
+            "세종시2차푸르지오시티관리단": "샘플오피스텔관리단",
+            "세종푸르지오시티 2차": "샘플오피스텔",
+            "세종푸르지오시티2차": "샘플오피스텔",
             # 주소
             "세종 가름로 255-21": "OO시 OO구 OO로 000-00",
             "세종시 가름로 255-21": "OO시 OO구 OO로 000-00",
@@ -410,31 +410,36 @@ def seed_sample_companies(db: Session) -> None:
                 db.add(admin)
                 db.commit()
 
-        # --- Q&A entries: copy from source with anonymization ---------------
-        if db.query(QaKnowledge).filter(QaKnowledge.company_id == cid).count() == 0:
-            if source:
-                source_qas = (
-                    db.query(QaKnowledge)
-                    .filter(QaKnowledge.company_id == source_id)
-                    .all()
+        # --- Q&A entries -----------------------------------------------------
+        if source:
+            # Dynamic mirror: always refresh from the source company so
+            # anonymization fixes (e.g. company_name / anon_map changes)
+            # apply on every restart instead of only at first seed.
+            db.query(QaKnowledge).filter(QaKnowledge.company_id == cid).delete()
+            source_qas = (
+                db.query(QaKnowledge)
+                .filter(QaKnowledge.company_id == source_id)
+                .all()
+            )
+            for qa in source_qas:
+                new_qa = QaKnowledge(
+                    company_id=cid,
+                    category=qa.category,
+                    question=_anonymize_text(qa.question, anon_map),
+                    answer=_anonymize_text(qa.answer, anon_map),
+                    keywords=qa.keywords or "",
+                    aliases=qa.aliases or "",
+                    tags=qa.tags or "",
+                    is_active=qa.is_active,
                 )
-                for qa in source_qas:
-                    new_qa = QaKnowledge(
-                        company_id=cid,
-                        category=qa.category,
-                        question=_anonymize_text(qa.question, anon_map),
-                        answer=_anonymize_text(qa.answer, anon_map),
-                        keywords=qa.keywords or "",
-                        aliases=qa.aliases or "",
-                        tags=qa.tags or "",
-                        is_active=qa.is_active,
-                    )
-                    db.add(new_qa)
-                logger.info(
-                    "Sample company %d: copied %d QA entries from company %d",
-                    cid, len(source_qas), source_id,
-                )
-            elif cfg.get("qa_entries"):
+                db.add(new_qa)
+            logger.info(
+                "Sample company %d: refreshed %d QA entries from company %d",
+                cid, len(source_qas), source_id,
+            )
+            db.commit()
+        elif db.query(QaKnowledge).filter(QaKnowledge.company_id == cid).count() == 0:
+            if cfg.get("qa_entries"):
                 # Static Q&A dataset provided directly in the config
                 custom_entries = cfg["qa_entries"]
                 for entry in copy.deepcopy(custom_entries):
