@@ -36,6 +36,10 @@ from app.services.jwt_service import decode_token
 
 router = APIRouter(prefix="/api/companies", tags=["companies"])
 
+# 신규 회사 등록 시 건물 유형별로 초기 QA를 복사해 올 샘플 회사 ID
+SAMPLE_OFFICETEL_COMPANY_ID = 1000
+SAMPLE_APARTMENT_COMPANY_ID = 1002
+
 
 def _serialize_categories(update_data: dict) -> dict:
     """Convert categories list[dict] to JSON string for DB storage."""
@@ -184,27 +188,25 @@ def register_company(
     )
     db.add(admin)
 
-    # 최근 등록된 회사의 QA 데이터 복사
-    latest_company = (
-        db.query(Company)
-        .filter(Company.company_id != company.company_id, Company.deleted_at == None)
-        .order_by(Company.created_at.desc())
-        .first()
+    # 건물 유형별 샘플 회사의 QA 데이터를 초기 데이터로 복사
+    # 오피스텔 -> 샘플오피스텔(1000), 아파트/기타 -> 샘플아파트(1002)
+    sample_source_id = (
+        SAMPLE_OFFICETEL_COMPANY_ID if data.building_type == "오피스텔"
+        else SAMPLE_APARTMENT_COMPANY_ID
     )
-    if latest_company:
-        source_qas = db.query(QaKnowledge).filter(
-            QaKnowledge.company_id == latest_company.company_id
-        ).all()
-        for qa in source_qas:
-            new_qa = QaKnowledge(
-                company_id=company.company_id,
-                category=qa.category,
-                question=qa.question,
-                answer=qa.answer,
-                keywords=qa.keywords,
-                is_active=qa.is_active,
-            )
-            db.add(new_qa)
+    source_qas = db.query(QaKnowledge).filter(
+        QaKnowledge.company_id == sample_source_id
+    ).all()
+    for qa in source_qas:
+        new_qa = QaKnowledge(
+            company_id=company.company_id,
+            category=qa.category,
+            question=qa.question,
+            answer=qa.answer,
+            keywords=qa.keywords,
+            is_active=qa.is_active,
+        )
+        db.add(new_qa)
 
     db.commit()
 
