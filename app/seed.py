@@ -9,6 +9,7 @@ from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
+from app.seed_data_apartment import APARTMENT_COMPLAINT_QA_ENTRIES
 from app.services.auth_service import hash_password
 
 logger = logging.getLogger("acchelper")
@@ -254,17 +255,49 @@ SAMPLE_COMPANY_CONFIGS: list[dict] = [
             "role": "admin",
         },
     },
+    {
+        # --- Company ---
+        "company_id": 1002,
+        "company_name": "샘플아파트",
+        "building_type": "아파트",
+        "business_number": "999-99-88888",
+        "industry": "일반",
+        "subscription_plan": "enterprise",
+        "max_qa_count": 1000,
+        "max_admins": 50,
+        "is_active": True,
+        "approval_status": "approved",
+        # --- Static Q&A: real household-complaint records, anonymized ---
+        # (소분류 -> category, 질문 -> question, 응답 -> answer)
+        "qa_entries": APARTMENT_COMPLAINT_QA_ENTRIES,
+        "greeting_text": (
+            "안녕하세요! 샘플아파트 AI 헬퍼입니다.<br>"
+            "관리비, 시설물 AS, 소음·누수 민원 등 궁금한 점을 물어보세요."
+        ),
+        "categories": [
+            {"label": "전기/조명", "question": "센서등이 안들어와요."},
+            {"label": "난방/온수", "question": "난방이 안돼요."},
+            {"label": "누수/결로", "question": "천장에서 누수가 있어요."},
+            {"label": "출입문/현관", "question": "공동현관문이 안열려요."},
+        ],
+        # --- Tenant quota (enterprise) ---
+        "quota": {
+            "monthly_chat_cnt": 500,
+            "monthly_tokens": 200000,
+            "monthly_embed_cnt": 1000,
+        },
+        # --- Admin user ---
+        "admin": {
+            "username": "sample_admin",
+            "password": "sample123",
+            "email": "sample-apt@sample.com",
+            "full_name": "샘플 관리자",
+            "phone": "010-3526-4754",
+            "role": "admin",
+        },
+    },
     # -----------------------------------------------------------------------
-    # To add more sample companies (아파트, 상가, etc.), append here:
-    #
-    # {
-    #     "company_id": 1001,
-    #     "company_name": "샘플아파트",
-    #     "building_type": "아파트",
-    #     "copy_from_company_id": 1,
-    #     "anonymize_map": { "세종푸르지오시티 2차": "샘플아파트", ... },
-    #     ...
-    # },
+    # To add more sample companies (아파트, 상가, etc.), append here.
     # -----------------------------------------------------------------------
 ]
 
@@ -331,6 +364,13 @@ def seed_sample_companies(db: Session) -> None:
                 company.address = _anonymize_text(source.address, anon_map)
             if source.hero_text:
                 company.hero_text = _anonymize_text(source.hero_text, anon_map)
+        else:
+            if cfg.get("greeting_text"):
+                company.greeting_text = cfg["greeting_text"]
+            if cfg.get("categories"):
+                company.categories = json.dumps(cfg["categories"], ensure_ascii=False)
+            if cfg.get("hero_text"):
+                company.hero_text = cfg["hero_text"]
         db.commit()
 
         # --- Tenant quota --------------------------------------------------
@@ -393,6 +433,15 @@ def seed_sample_companies(db: Session) -> None:
                 logger.info(
                     "Sample company %d: copied %d QA entries from company %d",
                     cid, len(source_qas), source_id,
+                )
+            elif cfg.get("qa_entries"):
+                # Static Q&A dataset provided directly in the config
+                custom_entries = cfg["qa_entries"]
+                for entry in copy.deepcopy(custom_entries):
+                    db.add(QaKnowledge(company_id=cid, **entry))
+                logger.info(
+                    "Sample company %d: seeded %d custom QA entries",
+                    cid, len(custom_entries),
                 )
             else:
                 # Fallback: use base entries when source company is missing
