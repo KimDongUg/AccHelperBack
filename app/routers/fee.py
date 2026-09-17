@@ -20,7 +20,7 @@ from app.config import (
     RATE_LIMIT_FEE_VERIFY,
 )
 from app.database import get_db
-from app.dependencies import require_admin, require_fee_token
+from app.dependencies import require_admin_with_scope, require_fee_token
 from app.models.access_log import AccessLog
 from app.models.chat_thread import ChatThread
 from app.models.fee_data import FeeEntry
@@ -279,7 +279,7 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
 @router.get("/admin-stats")
 def admin_fee_stats(
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자 전용 관리비 조회 통계 (일별/월별/년도별) — 관리자 자체 조회(admin_query)는 입주민 사용 통계가 아니므로 제외"""
     from collections import defaultdict
@@ -327,7 +327,7 @@ def admin_fee_stats(
 @router.get("/admin-log")
 def admin_fee_log(
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
     limit: int = 100,
     offset: int = 0,
 ):
@@ -362,7 +362,7 @@ def admin_fee_search(
     ho: str,
     year_month: str = "",
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자 전용 관리비 조회 (OTP 인증 불필요, company_id는 JWT에서 자동 추출).
     year_month 지정 시 해당 월, 미지정 시 최신월."""
@@ -433,7 +433,7 @@ def admin_fee_history(
     ho: str,
     months: int = 12,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자 전용 관리비 히스토리 (OTP 인증 불필요, company_id는 JWT에서 자동 추출)"""
     cid = admin["company_id"]
@@ -575,7 +575,7 @@ def admin_fee_average(
     dong: str = "",
     ho: str = "",
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자 전용 단지 평균 (OTP 인증 불필요, company_id는 JWT에서 자동 추출)"""
     cid = admin["company_id"]
@@ -623,7 +623,7 @@ def list_fee_residents(
     sort: str = Query("fee_last_query_at", description="정렬 기준"),
     order: str = Query("desc", description="asc / desc"),
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """입주민 목록 — FeeEntry(업로드된 전체 세대) 기준 roster + 관리비 조회 이력·1:1 톡 활동 병합.
     관리비를 한 번도 조회하지 않은 입주민도 모두 노출되며, 조회/톡 이력이 없으면 해당 칸은 빈 값."""

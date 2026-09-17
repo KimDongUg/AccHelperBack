@@ -1,10 +1,10 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin, require_auth
+from app.dependencies import require_admin_with_scope, require_auth
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.schemas.admin import (
@@ -75,17 +75,14 @@ def change_my_password(
 
 @router.get("", response_model=AdminListResponse)
 def list_admins(
-    company_id: int | None = Query(None, alias="company_id"),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """List admins for current company. super_admin(company_id=0)은
     company_id 쿼리 파라미터로 특정 회사만 필터링할 수 있고, 생략 시 전체를 본다."""
-    user_company_id = user["company_id"]
+    company_id = user["company_id"]
     query = db.query(AdminUser)
-    if user_company_id != 0:
-        query = query.filter(AdminUser.company_id == user_company_id)
-    elif company_id is not None:
+    if company_id != 0:
         query = query.filter(AdminUser.company_id == company_id)
     admins = query.order_by(AdminUser.user_id).all()
     return AdminListResponse(items=admins, total=len(admins))
@@ -95,7 +92,7 @@ def list_admins(
 def get_admin(
     user_id: int,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     company_id = user["company_id"]
     query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
@@ -111,7 +108,7 @@ def get_admin(
 def create_admin(
     data: AdminCreate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     company_id = user["company_id"]
 
@@ -170,7 +167,7 @@ def update_admin(
     user_id: int,
     data: AdminUpdate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     company_id = user["company_id"]
     query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
@@ -217,7 +214,7 @@ def update_admin(
 def delete_admin(
     user_id: int,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     company_id = user["company_id"]
     query = db.query(AdminUser).filter(AdminUser.user_id == user_id)
@@ -239,7 +236,7 @@ def reset_password(
     user_id: int,
     data: AdminPasswordChange,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """Admin resets another user's password."""
     company_id = user["company_id"]

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.config import RATE_LIMIT_CHAT_TALK_SEND
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import require_admin_with_scope
 from app.models.admin_user import AdminUser
 from app.models.chat_thread import ChatMessage, ChatThread
 from app.models.market import ApartmentResident
@@ -187,7 +187,7 @@ def send_resident_message(
 def list_admin_threads(
     page: int = 1,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     company_id = admin["company_id"]
     base_q = db.query(ChatThread).filter(ChatThread.company_id == company_id)
@@ -250,7 +250,7 @@ def list_admin_threads(
 def get_admin_thread(
     thread_id: int,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     thread = db.query(ChatThread).filter(
         ChatThread.id == thread_id,
@@ -306,7 +306,7 @@ def send_admin_message(
     body: ChatMessageCreate,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자 답장 — 영업시간 제한 없음(언제든 답장 가능)."""
     thread = db.query(ChatThread).filter(
@@ -349,7 +349,7 @@ def update_thread_status(
     thread_id: int,
     body: ThreadStatusUpdate,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     thread = db.query(ChatThread).filter(
         ChatThread.id == thread_id,

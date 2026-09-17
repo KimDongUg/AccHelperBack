@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func, text
 
 from app.database import get_db
-from app.dependencies import require_admin, require_super_admin
+from app.dependencies import require_admin, require_admin_with_scope, require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.qa_knowledge import QaKnowledge
 from app.models.company import Company
@@ -222,11 +222,12 @@ def register_company(
 @router.get("/me", response_model=CompanyResponse)
 def get_my_company(
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
-    """로그인한 사용자의 회사 정보 조회"""
+    """로그인한 사용자의 회사 정보 조회. super_admin은 company_id 쿼리 파라미터로
+    특정 회사를 지정하면 그 회사의 admin과 동일한 정보를 본다."""
     company_id = user["company_id"]
-    # super_admin(company_id=0)은 전체 관리자이므로 별도 처리
+    # super_admin(company_id=0)이 특정 회사를 지정하지 않았으면 전체 관리자이므로 별도 처리
     if company_id == 0:
         raise HTTPException(status_code=400, detail="시스템 관리자는 /api/companies/{id}를 사용하세요.")
     company = db.query(Company).filter(Company.company_id == company_id).first()
@@ -239,7 +240,7 @@ def get_my_company(
 def update_my_company(
     data: CompanyUpdate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """로그인한 사용자의 회사 정보 수정"""
     company_id = user["company_id"]

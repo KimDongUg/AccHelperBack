@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.config import SECRET_KEY, UPLOAD_DIR
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import require_admin_with_scope
 from app.models.market import (
     ApartmentResident, MarketPost, MarketImage, MarketComment, MarketReport
 )
@@ -199,7 +199,7 @@ def market_login(req: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/admin/residents")
 def list_residents(
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """당근회원 목록 — 인증한 입주민 전체 (자가등록 + ERP 등록).
     company_id 미설정(NULL) 레코드도 포함 (이전 버전 데이터 호환).
@@ -234,7 +234,7 @@ def list_residents(
 def verify_resident(
     resident_id: int,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """입주민 승인"""
     r = db.query(ApartmentResident).filter(
@@ -252,7 +252,7 @@ def verify_resident(
 def delete_resident(
     resident_id: int,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """입주민 삭제 (허위 등록 처리)"""
     r = db.query(ApartmentResident).filter(
@@ -531,10 +531,12 @@ def admin_list_posts(
     category: Optional[str] = None,
     hidden: Optional[bool] = None,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자용 전체 게시글 목록 (숨김 포함)."""
     q = db.query(MarketPost)
+    if admin["company_id"] != 0:
+        q = q.filter(MarketPost.company_id == admin["company_id"])
     if hidden is not None:
         q = q.filter(MarketPost.is_hidden == hidden)
     if category:
@@ -583,10 +585,13 @@ def admin_hide_post(
     post_id: int,
     body: AdminHideBody,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """게시글 숨김 / 복원 (사유 포함)."""
-    post = db.query(MarketPost).filter(MarketPost.id == post_id).first()
+    query = db.query(MarketPost).filter(MarketPost.id == post_id)
+    if admin["company_id"] != 0:
+        query = query.filter(MarketPost.company_id == admin["company_id"])
+    post = query.first()
     if not post:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     post.is_hidden = body.hidden
@@ -599,10 +604,13 @@ def admin_hide_post(
 def admin_delete_post(
     post_id: int,
     db: Session = Depends(get_db),
-    admin: dict = Depends(require_admin),
+    admin: dict = Depends(require_admin_with_scope),
 ):
     """관리자 게시글 영구 삭제."""
-    post = db.query(MarketPost).filter(MarketPost.id == post_id).first()
+    query = db.query(MarketPost).filter(MarketPost.id == post_id)
+    if admin["company_id"] != 0:
+        query = query.filter(MarketPost.company_id == admin["company_id"])
+    post = query.first()
     if not post:
         raise HTTPException(status_code=404, detail="게시글을 찾을 수 없습니다.")
     db.delete(post)

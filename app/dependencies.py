@@ -1,4 +1,4 @@
-from fastapi import Cookie, Depends, HTTPException, Request
+from fastapi import Cookie, Depends, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -45,6 +45,30 @@ def optional_admin(request: Request, session_token: str | None = Cookie(None)) -
     if payload.get("role") not in ("admin", "super_admin"):
         return None
     return payload
+
+
+def require_auth_with_scope(
+    company_id: int | None = Query(None, alias="company_id"),
+    user: dict = Depends(require_auth),
+) -> dict:
+    """require_admin_with_scope와 동일한 회사 오버라이드를 admin 역할 제한 없이 적용한다
+    (대시보드 통계처럼 role in (admin, super_admin, viewer) 모두 접근 가능한 엔드포인트용)."""
+    if user["company_id"] == 0 and company_id is not None:
+        return {**user, "company_id": company_id}
+    return user
+
+
+def require_admin_with_scope(
+    company_id: int | None = Query(None, alias="company_id"),
+    user: dict = Depends(require_admin),
+) -> dict:
+    """super_admin(company_id=0)이 company_id 쿼리 파라미터로 특정 회사를 지정하면,
+    그 회사의 admin으로 로그인한 것과 동일하게 동작하도록 company_id를 바꿔치기한다.
+    (super-admin 대시보드에서 개별 회사 관리자화면으로 들어갔을 때 그 회사 admin과
+    동일한 데이터를 보게 하기 위함). 일반 admin은 파라미터를 무시하고 자기 회사로 고정."""
+    if user["company_id"] == 0 and company_id is not None:
+        return {**user, "company_id": company_id}
+    return user
 
 
 def require_super_admin(request: Request, session_token: str | None = Cookie(None)) -> dict:

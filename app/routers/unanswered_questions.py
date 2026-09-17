@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin
+from app.dependencies import require_admin_with_scope
 from app.models.unanswered_question import UnansweredQuestion
 from app.schemas.unanswered_question import (
     UnansweredQuestionCountResponse,
@@ -46,7 +46,7 @@ def list_unanswered_questions(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """미답변 목록 조회 (pending만, 관리자 인증 필요)"""
     company_id = user["company_id"]
@@ -69,7 +69,7 @@ def list_unanswered_questions(
 @router.get("/count", response_model=UnansweredQuestionCountResponse)
 def count_unanswered_questions(
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """미답변(pending) 건수 (관리자 인증 필요)"""
     company_id = user["company_id"]
@@ -85,7 +85,7 @@ def update_unanswered_question_status(
     question_id: int,
     data: UnansweredQuestionStatusUpdate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """미답변 질문 상태 변경 (관리자 인증 필요)"""
     if data.status not in ("resolved", "dismissed"):

@@ -6,7 +6,7 @@ from sqlalchemy import Integer as SAInteger, String, case, cast, func, literal_c
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_auth, require_super_admin
+from app.dependencies import require_auth_with_scope, require_super_admin
 from app.models.access_log import AccessLog
 from app.models.admin_user import AdminUser
 from app.models.chat_log import ChatLog
@@ -29,7 +29,7 @@ def _current_yyyymm() -> str:
 @router.get("")
 def get_stats(
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     company_id = user["company_id"]
 
@@ -198,7 +198,7 @@ def get_overview(
 def get_trends(
     days: int = Query(30, ge=1, le=90),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     """Daily chat/RAG usage trends."""
     company_id = user["company_id"]
@@ -234,7 +234,7 @@ def get_usage_stats(
     date_to: str = Query(..., alias="to"),
     company_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     """
     Usage statistics (visitors, question views, answer views) grouped by period.
@@ -347,7 +347,7 @@ def get_question_views(
     date_to: str = Query(..., alias="to"),
     company_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     """
     Question view counts grouped by period (daily/monthly/quarterly/yearly).
@@ -411,7 +411,7 @@ def get_question_views_detail(
     size: int = Query(20, ge=1, le=100),
     company_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     """
     Detailed per-question breakdown for a specific period.
@@ -476,7 +476,7 @@ def get_complaint_stats(
     date_to: str = Query(..., alias="to"),
     period: str = Query("monthly", regex="^(daily|monthly|quarterly|yearly)$"),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     """민원 통계 — 기간별 접수·답변 현황."""
     company_id = user["company_id"]
@@ -530,7 +530,7 @@ def get_market_stats(
     date_to: str = Query(..., alias="to"),
     period: str = Query("monthly", regex="^(daily|monthly|quarterly|yearly)$"),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_auth),
+    user: dict = Depends(require_auth_with_scope),
 ):
     """당근마켓 통계 — 기간별 게시글·댓글 현황."""
     try:

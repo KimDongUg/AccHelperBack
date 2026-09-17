@@ -4,7 +4,7 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.dependencies import require_admin, require_auth
+from app.dependencies import require_admin_with_scope, require_auth
 from app.models.chat_log import ChatLog
 from app.models.feedback import Feedback
 from app.schemas.feedback import (
@@ -71,7 +71,7 @@ def list_feedback(
     page: int = 1,
     size: int = 20,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """List feedbacks (admin). Filter by rating (like/dislike)."""
     company_id = user["company_id"]
@@ -98,7 +98,7 @@ def list_feedback(
 @router.get("/api/feedback/count", response_model=FeedbackCountResponse)
 def feedback_dislike_count(
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """미처리 불만족(dislike) 건수"""
     company_id = user["company_id"]
@@ -118,7 +118,7 @@ def list_feedback_api(
     page: int = Query(1, ge=1),
     size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """피드백 목록 조회 (관리자). rating/status 필터 가능."""
     company_id = user["company_id"]
@@ -146,7 +146,7 @@ def update_feedback_status(
     feedback_id: int,
     data: FeedbackStatusUpdate,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """피드백 처리 상태 변경 (관리자)"""
     if data.status not in ("resolved", "dismissed"):
@@ -171,7 +171,7 @@ def list_unmatched(
     page: int = 1,
     size: int = 20,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """List unmatched questions (used_rag=false and no qa_id)."""
     company_id = user["company_id"]
@@ -210,7 +210,7 @@ def list_chat_logs(
     page: int = 1,
     size: int = 20,
     db: Session = Depends(get_db),
-    user: dict = Depends(require_admin),
+    user: dict = Depends(require_admin_with_scope),
 ):
     """List all chat logs (admin)."""
     company_id = user["company_id"]
