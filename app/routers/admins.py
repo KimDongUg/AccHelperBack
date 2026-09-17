@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -75,13 +75,17 @@ def change_my_password(
 
 @router.get("", response_model=AdminListResponse)
 def list_admins(
+    company_id: int | None = Query(None, alias="company_id"),
     db: Session = Depends(get_db),
     user: dict = Depends(require_admin),
 ):
-    """List admins for current company."""
-    company_id = user["company_id"]
+    """List admins for current company. super_admin(company_id=0)은
+    company_id 쿼리 파라미터로 특정 회사만 필터링할 수 있고, 생략 시 전체를 본다."""
+    user_company_id = user["company_id"]
     query = db.query(AdminUser)
-    if company_id != 0:
+    if user_company_id != 0:
+        query = query.filter(AdminUser.company_id == user_company_id)
+    elif company_id is not None:
         query = query.filter(AdminUser.company_id == company_id)
     admins = query.order_by(AdminUser.user_id).all()
     return AdminListResponse(items=admins, total=len(admins))
