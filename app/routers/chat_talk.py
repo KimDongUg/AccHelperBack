@@ -121,6 +121,16 @@ def get_my_thread(request: Request, db: Session = Depends(get_db)):
     if not thread:
         raise HTTPException(status_code=404, detail="아직 시작된 대화가 없습니다.")
 
+    # 관리자가 보낸 미확인 메시지 읽음 처리 (카카오톡처럼 입주민이 대화창을 열면 "1"이 사라짐)
+    db.execute(
+        text(
+            "UPDATE chat_messages SET read_at = :now "
+            "WHERE thread_id = :tid AND sender_type = 'admin' AND read_at IS NULL"
+        ),
+        {"now": now_kst(), "tid": thread.id},
+    )
+    db.commit()
+
     messages = (
         db.query(ChatMessage)
         .filter(ChatMessage.thread_id == thread.id)
