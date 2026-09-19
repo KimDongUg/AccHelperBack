@@ -122,7 +122,7 @@ def list_subscribers(
 
         # 구독 활성 여부
         billing_active = False
-        if c.subscription_plan == "enterprise":
+        if c.subscription_plan in ("enterprise", "free"):
             billing_active = True
         elif c.subscription_plan == "trial" and c.trial_ends_at and c.trial_ends_at > now:
             billing_active = True

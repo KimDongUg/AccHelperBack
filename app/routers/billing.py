@@ -326,7 +326,7 @@ def billing_status(
     # active = 유료 구독 중이거나 체험 기간 내
     is_active = False
     if company:
-        if company.subscription_plan == "enterprise":
+        if company.subscription_plan in ("enterprise", "free"):
             is_active = True
         elif company.subscription_plan == "trial" and company.trial_ends_at:
             is_active = company.trial_ends_at > datetime.utcnow()

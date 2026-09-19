@@ -140,7 +140,7 @@ def login(req: LoginRequest, request: Request, response: Response, db: Session =
 
     plan = company.subscription_plan or "free"
     billing_active = False
-    if plan == "enterprise":
+    if plan in ("enterprise", "free"):
         billing_active = True
     elif plan == "trial" and company.trial_ends_at:
         billing_active = company.trial_ends_at > now
@@ -233,7 +233,7 @@ def check_auth(request: Request, user: dict = Depends(require_auth), db: Session
             plan = company.subscription_plan or "free"
             now = datetime.utcnow()
             billing_active = False
-            if plan == "enterprise":
+            if plan in ("enterprise", "free"):
                 billing_active = True
             elif plan == "trial" and company.trial_ends_at:
                 billing_active = company.trial_ends_at > now
