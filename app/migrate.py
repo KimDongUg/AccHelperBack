@@ -93,6 +93,7 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "notice_image_url", "VARCHAR(500)")
         _pg_add_column_if_missing(conn, "companies", "notice_image_link", "VARCHAR(500)")
         _pg_add_column_if_missing(conn, "companies", "enable_fee", "BOOLEAN DEFAULT FALSE")
+        _pg_add_column_if_missing(conn, "companies", "fee_notice_text", "TEXT")
         _pg_add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
         _pg_add_column_if_missing(conn, "companies", "single_building_dong", "VARCHAR(10)")
         # Backfill: 세종푸르지오시티 2차(company_id=1)는 단일동 아파트이므로 기존 프론트 하드코딩과
@@ -527,6 +528,7 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "companies", "greeting_text", "TEXT")
             _add_column_if_missing(conn, "companies", "categories", "TEXT")
             _add_column_if_missing(conn, "companies", "enable_fee", "BOOLEAN DEFAULT 0")
+            _add_column_if_missing(conn, "companies", "fee_notice_text", "TEXT")
             _add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
             _add_column_if_missing(conn, "companies", "single_building_dong", "VARCHAR(10)")
             # Backfill: mark existing companies as approved

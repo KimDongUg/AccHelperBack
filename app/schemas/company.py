@@ -43,6 +43,7 @@ class CompanyUpdate(BaseModel):
     notice_image_url: str | None = None
     notice_image_link: str | None = None
     enable_fee: bool | None = None
+    fee_notice_text: str | None = None
     single_building_dong: str | None = None
 
 
@@ -72,6 +73,7 @@ class CompanyResponse(BaseModel):
     notice_image_url: str | None = None
     notice_image_link: str | None = None
     enable_fee: bool = False
+    fee_notice_text: str | None = None
     single_building_dong: str | None = None
     collector_api_key: str | None = None
     created_at: datetime
@@ -108,6 +110,7 @@ class CompanyPublicResponse(BaseModel):
     notice_image_url: str | None = None
     notice_image_link: str | None = None
     enable_fee: bool = False
+    fee_notice_text: str | None = None
     single_building_dong: str | None = None
 
     model_config = {"from_attributes": True}

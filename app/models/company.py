@@ -37,6 +37,7 @@ class Company(Base):
     notice_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notice_image_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     enable_fee: Mapped[bool] = mapped_column(Boolean, default=False)
+    fee_notice_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     collector_api_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     single_building_dong: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
