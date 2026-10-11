@@ -1,6 +1,7 @@
 """Super admin endpoints for tenant and quota management."""
 
 import io
+from datetime import datetime, timedelta
 import logging
 import os
 from pathlib import Path
@@ -8,6 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import DATA_DIR
@@ -16,8 +18,11 @@ from app.database import SessionLocal, get_db
 from app.dependencies import require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.company import Company
+from app.models.page_visit_log import PageVisitLog
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
+from app.routers.visits import VISIT_PAGES
+from app.utils import now_kst
 from app.services.embedding_service import bulk_rebuild_embeddings, upsert_qa_embedding
 
 logger = logging.getLogger("acchelper")
@@ -160,6 +165,63 @@ def update_sample_access(
     admin.can_view_sample_admin = data.can_view_sample_admin
     db.commit()
     return {"success": True, "can_view_sample_admin": admin.can_view_sample_admin}
+
+
+@router.get("/visit-stats")
+def visit_stats(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """랜딩페이지/샘플 체험 페이지 접속자 현황.
+
+    방문자 = 날짜별 고유 방문자(같은 브라우저는 하루 1명) 합계, 조회수 = 전체 접속 횟수.
+    """
+    day = func.date(PageVisitLog.created_at)
+    rows = (
+        db.query(
+            PageVisitLog.page,
+            day.label("d"),
+            func.count(PageVisitLog.id),
+            func.count(func.distinct(PageVisitLog.visitor_id)),
+        )
+        .group_by(PageVisitLog.page, day)
+        .all()
+    )
+
+    today = now_kst().date()
+    periods = {"today": 0, "week": 6, "month": 29}  # 오늘 포함 N+1일
+    empty = lambda: {"visitors": 0, "views": 0}
+    stats = {
+        page: {"page": page, "label": label, "today": empty(), "week": empty(), "month": empty(), "total": empty()}
+        for page, label in VISIT_PAGES.items()
+    }
+    daily: dict[str, dict[str, dict]] = {}
+
+    for page, d, views, visitors in rows:
+        if page not in stats:
+            continue
+        d = d if hasattr(d, "toordinal") else datetime.strptime(str(d), "%Y-%m-%d").date()
+        age = (today - d).days
+        for key, max_age in periods.items():
+            if 0 <= age <= max_age:
+                stats[page][key]["visitors"] += visitors
+                stats[page][key]["views"] += views
+        stats[page]["total"]["visitors"] += visitors
+        stats[page]["total"]["views"] += views
+        if 0 <= age <= 13:
+            daily.setdefault(d.isoformat(), {})[page] = {"visitors": visitors, "views": views}
+
+    # 최근 14일 일별 방문자 (접속 없는 날도 0으로 채움)
+    daily_list = []
+    for i in range(13, -1, -1):
+        d = (today - timedelta(days=i)).isoformat()
+        day_rows = daily.get(d, {})
+        daily_list.append({
+            "date": d,
+            **{page: day_rows.get(page, empty()) for page in VISIT_PAGES},
+        })
+
+    return {"pages": list(stats.values()), "daily": daily_list}
 
 
 def _run_embeddings_rebuild(company_id: int | None):

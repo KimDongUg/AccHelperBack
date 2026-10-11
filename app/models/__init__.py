@@ -11,6 +11,7 @@ from app.models.feedback import Feedback
 from app.models.prompt_template import PromptTemplate
 from app.models.unanswered_question import UnansweredQuestion
 from app.models.cta_click_log import CtaClickLog
+from app.models.page_visit_log import PageVisitLog
 from app.models.market import ApartmentResident, MarketPost, MarketImage, MarketComment, MarketReport
 from app.models.complaint import Complaint
 from app.models.complaint_person import ComplaintPerson
@@ -33,6 +34,7 @@ __all__ = [
     "PromptTemplate",
     "UnansweredQuestion",
     "CtaClickLog",
+    "PageVisitLog",
     "ApartmentResident",
     "MarketPost",
     "MarketImage",

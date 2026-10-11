@@ -34,6 +34,7 @@ from app.routers import super_admin as super_admin_router
 from app.routers import unanswered_questions as unanswered_questions_router
 from app.routers import upload as upload_router
 from app.routers import cta_logs as cta_logs_router
+from app.routers import visits as visits_router
 from app.routers import market as market_router
 from app.routers import complaints as complaints_router
 from app.routers import collector as collector_router
@@ -142,6 +143,7 @@ app.include_router(super_admin_router.router)
 app.include_router(unanswered_questions_router.router)
 app.include_router(upload_router.router)
 app.include_router(cta_logs_router.router)
+app.include_router(visits_router.router)
 app.include_router(market_router.router)
 app.include_router(complaints_router.router)
 app.include_router(collector_router.router)
