@@ -213,6 +213,8 @@ def _run_pg_migration(engine: Engine):
         # admin_users table — 알림톡 수신 여부
         _pg_add_column_if_missing(conn, "admin_users", "receive_unanswered_alert", "BOOLEAN DEFAULT TRUE")
         _pg_add_column_if_missing(conn, "admin_users", "receive_complaint_alert", "BOOLEAN DEFAULT TRUE")
+        # admin_users table — 샘플 관리페이지 체험 권한 (슈퍼관리자가 지정)
+        _pg_add_column_if_missing(conn, "admin_users", "can_view_sample_admin", "BOOLEAN DEFAULT FALSE")
 
         # --- 우리아파트 당근 market 테이블 (PostgreSQL) ---
         if not _pg_table_exists(conn, "apartment_residents"):
@@ -496,6 +498,7 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "admin_users", "position", "VARCHAR(50)")
             _add_column_if_missing(conn, "admin_users", "role", "VARCHAR(20) DEFAULT 'admin'")
             _add_column_if_missing(conn, "admin_users", "permissions", "TEXT")
+            _add_column_if_missing(conn, "admin_users", "can_view_sample_admin", "BOOLEAN DEFAULT 0")
 
             # Backfill: set email from username if email is null
             conn.execute(text(

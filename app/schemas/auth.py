@@ -21,6 +21,7 @@ class SessionData(BaseModel):
     permissions: str | None = None
     subscription_plan: str | None = None
     billing_active: bool = False
+    can_view_sample_admin: bool = False
     login_time: str | int
     expiry_time: str | int
 
@@ -69,3 +70,7 @@ class ResetPasswordRequest(BaseModel):
 class ResetPasswordResponse(BaseModel):
     success: bool
     message: str
+
+
+class DemoLoginRequest(BaseModel):
+    demo: str  # "apt" | "office"

@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
 from app.config import APP_ENV, JWT_EXPIRE_HOURS, RATE_LIMIT_AUTH, RATE_LIMIT_PASSWORD_RESET
@@ -11,6 +11,7 @@ from app.models.company import Company
 from app.rate_limit import limiter
 from app.schemas.auth import (
     AuthCheckResponse,
+    DemoLoginRequest,
     FindEmailRequest,
     FindEmailResponse,
     LoginRequest,
@@ -50,6 +51,22 @@ def _build_session_data(user_row, company_name: str, plan: str, billing_active: 
         login_time=datetime.utcnow().isoformat() + "Z",
         expiry_time=expiry_time,
     )
+
+
+# 랜딩페이지 "샘플 관리페이지 체험하기" — demo 키 → 샘플 회사 ID
+DEMO_COMPANY_IDS = {"apt": 1002, "office": 1000}
+
+
+def _can_view_sample_admin(user: dict, db: Session) -> bool:
+    """슈퍼관리자이거나, 슈퍼관리자가 지정한 관리자(또는 그 관리자가 진입한 샘플 세션)인지."""
+    if user.get("role") == "super_admin":
+        return True
+    # 샘플 세션이면 그 세션으로 진입한 원래 관리자 기준으로 판단 (권한 회수 즉시 반영)
+    uid = user.get("demo_by_user_id") or user.get("user_id")
+    row = db.query(AdminUser).filter(AdminUser.user_id == uid).first()
+    if not row or not row.is_active:
+        return False
+    return row.role == "super_admin" or bool(row.can_view_sample_admin)
 
 
 @router.post("/login", response_model=LoginResponse)
@@ -251,10 +268,70 @@ def check_auth(request: Request, user: dict = Depends(require_auth), db: Session
         permissions=user.get("permissions"),
         subscription_plan=user.get("subscription_plan"),
         billing_active=user.get("billing_active", False),
+        can_view_sample_admin=_can_view_sample_admin(user, db),
         login_time=user.get("iat", ""),
         expiry_time=user.get("exp", ""),
     )
     return AuthCheckResponse(authenticated=True, session=session)
+
+
+@router.post("/demo-login", response_model=LoginResponse)
+@limiter.limit(RATE_LIMIT_AUTH)
+def demo_login(
+    req: DemoLoginRequest,
+    request: Request,
+    response: Response,
+    user: dict = Depends(require_auth),
+    db: Session = Depends(get_db),
+):
+    """지정된 관리자만 샘플 회사 관리자 세션으로 전환 (샘플 계정 비밀번호를 프론트에 두지 않기 위함)."""
+    if not _can_view_sample_admin(user, db):
+        raise HTTPException(status_code=403, detail="샘플 관리페이지 체험 권한이 없습니다.")
+
+    company_id = DEMO_COMPANY_IDS.get(req.demo)
+    if company_id is None:
+        raise HTTPException(status_code=400, detail="알 수 없는 샘플 유형입니다.")
+
+    company = db.query(Company).filter(Company.company_id == company_id, Company.deleted_at == None).first()
+    sample_admin = (
+        db.query(AdminUser)
+        .filter(AdminUser.company_id == company_id, AdminUser.role == "admin", AdminUser.is_active == True)
+        .order_by(AdminUser.user_id)
+        .first()
+    )
+    if not company or not sample_admin:
+        raise HTTPException(status_code=404, detail="샘플 관리자 계정을 찾을 수 없습니다.")
+
+    now = datetime.utcnow()
+    expiry_str = (now + timedelta(hours=JWT_EXPIRE_HOURS)).isoformat() + "Z"
+    plan = company.subscription_plan or "free"
+    billing_active = plan in ("enterprise", "free") or (
+        plan == "trial" and company.trial_ends_at is not None and company.trial_ends_at > now
+    )
+
+    token = create_access_token(
+        {
+            "user_id": sample_admin.user_id,
+            "company_id": company.company_id,
+            "company_name": company.company_name,
+            "email": sample_admin.email,
+            "full_name": sample_admin.full_name,
+            "role": sample_admin.role,
+            "subscription_plan": plan,
+            "billing_active": billing_active,
+            "demo_by_user_id": user.get("demo_by_user_id") or user.get("user_id"),
+        },
+        expire_hours=JWT_EXPIRE_HOURS,
+    )
+
+    session = _build_session_data(sample_admin, company.company_name, plan, billing_active, expiry_str)
+    session.can_view_sample_admin = True
+    response.set_cookie(
+        key="session_token", value=token,
+        max_age=JWT_EXPIRE_HOURS * 3600, httponly=True, samesite="lax",
+        secure=_COOKIE_SECURE,
+    )
+    return LoginResponse(success=True, message="로그인 성공", token=token, session=session)
 
 
 @router.post("/find-email", response_model=FindEmailResponse)

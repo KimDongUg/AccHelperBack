@@ -14,6 +14,7 @@ from app.config import DATA_DIR
 
 from app.database import SessionLocal, get_db
 from app.dependencies import require_super_admin
+from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
@@ -27,6 +28,10 @@ router = APIRouter(prefix="/api/super", tags=["super-admin"])
 class TenantUpdate(BaseModel):
     status: str | None = None  # active/suspended/trial_expired
     subscription_plan: str | None = None
+
+
+class SampleAccessUpdate(BaseModel):
+    can_view_sample_admin: bool
 
 
 class QuotaUpdate(BaseModel):
@@ -110,6 +115,51 @@ def update_quota(
 
     db.commit()
     return {"success": True, "message": "쿼터가 업데이트되었습니다."}
+
+
+@router.get("/sample-access")
+def list_sample_access(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """전체 회사 관리자 목록 + 샘플 관리페이지 체험 권한 여부 (슈퍼관리자는 항상 허용이라 제외)."""
+    rows = (
+        db.query(AdminUser, Company.company_name)
+        .outerjoin(Company, Company.company_id == AdminUser.company_id)
+        .filter(AdminUser.role != "super_admin", AdminUser.company_id != 0)
+        .order_by(AdminUser.company_id, AdminUser.user_id)
+        .all()
+    )
+    admins = [
+        {
+            "user_id": a.user_id,
+            "company_id": a.company_id,
+            "company_name": company_name or "",
+            "email": a.email,
+            "full_name": a.full_name,
+            "role": a.role,
+            "is_active": a.is_active,
+            "can_view_sample_admin": bool(a.can_view_sample_admin),
+        }
+        for a, company_name in rows
+    ]
+    return {"admins": admins, "total": len(admins)}
+
+
+@router.put("/sample-access/{user_id}")
+def update_sample_access(
+    user_id: int,
+    data: SampleAccessUpdate,
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """관리자별 샘플 관리페이지 체험 권한 지정/해제."""
+    admin = db.query(AdminUser).filter(AdminUser.user_id == user_id).first()
+    if not admin:
+        raise HTTPException(status_code=404, detail="관리자를 찾을 수 없습니다.")
+    admin.can_view_sample_admin = data.can_view_sample_admin
+    db.commit()
+    return {"success": True, "can_view_sample_admin": admin.can_view_sample_admin}
 
 
 def _run_embeddings_rebuild(company_id: int | None):

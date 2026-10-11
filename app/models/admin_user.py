@@ -27,5 +27,7 @@ class AdminUser(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     receive_unanswered_alert: Mapped[bool] = mapped_column(Boolean, default=True)
     receive_complaint_alert: Mapped[bool] = mapped_column(Boolean, default=True)
+    # 슈퍼관리자가 지정한 관리자만 랜딩페이지의 "샘플 관리페이지 체험하기"를 사용 가능
+    can_view_sample_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
     last_login: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
