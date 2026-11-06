@@ -40,6 +40,7 @@ class Company(Base):
     fee_notice_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     collector_api_key: Mapped[str | None] = mapped_column(String(64), unique=True, nullable=True)
     single_building_dong: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    household_count: Mapped[int | None] = mapped_column(Integer, nullable=True)  # 세대수
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=now_kst, onupdate=now_kst

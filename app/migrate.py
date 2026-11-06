@@ -96,6 +96,7 @@ def _run_pg_migration(engine: Engine):
         _pg_add_column_if_missing(conn, "companies", "fee_notice_text", "TEXT")
         _pg_add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
         _pg_add_column_if_missing(conn, "companies", "single_building_dong", "VARCHAR(10)")
+        _pg_add_column_if_missing(conn, "companies", "household_count", "INTEGER")
         # Backfill: 세종푸르지오시티 2차(company_id=1)는 단일동 아파트이므로 기존 프론트 하드코딩과
         # 동일하게 동을 '1동'으로 고정 (market-login.html/complaint.js의 이름 매칭 로직 대체)
         conn.execute(text(
@@ -534,6 +535,7 @@ def run_migration(engine: Engine):
             _add_column_if_missing(conn, "companies", "fee_notice_text", "TEXT")
             _add_column_if_missing(conn, "companies", "collector_api_key", "VARCHAR(64)")
             _add_column_if_missing(conn, "companies", "single_building_dong", "VARCHAR(10)")
+            _add_column_if_missing(conn, "companies", "household_count", "INTEGER")
             # Backfill: mark existing companies as approved
             conn.execute(text(
                 "UPDATE companies SET approval_status = 'approved' WHERE approval_status IS NULL"

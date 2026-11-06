@@ -150,6 +150,7 @@ def register_company(
         business_number=data.business_number,
         industry=data.industry,
         address=data.address,
+        household_count=data.household_count,
         phone=data.phone,
         collector_api_key=secrets.token_hex(32),
     )

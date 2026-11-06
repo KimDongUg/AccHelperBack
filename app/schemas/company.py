@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class CategoryItem(BaseModel):
@@ -45,6 +45,7 @@ class CompanyUpdate(BaseModel):
     enable_fee: bool | None = None
     fee_notice_text: str | None = None
     single_building_dong: str | None = None
+    household_count: int | None = None
 
 
 class CompanyResponse(BaseModel):
@@ -75,6 +76,7 @@ class CompanyResponse(BaseModel):
     enable_fee: bool = False
     fee_notice_text: str | None = None
     single_building_dong: str | None = None
+    household_count: int | None = None
     collector_api_key: str | None = None
     created_at: datetime
     updated_at: datetime
@@ -112,6 +114,7 @@ class CompanyPublicResponse(BaseModel):
     enable_fee: bool = False
     fee_notice_text: str | None = None
     single_building_dong: str | None = None
+    household_count: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -135,6 +138,7 @@ class CompanyRegisterRequest(BaseModel):
     business_number: str
     industry: str | None = None
     address: str | None = None
+    household_count: int | None = Field(None, ge=1)  # 세대수
     phone: str | None = None
     admin_email: str
     admin_password: str
