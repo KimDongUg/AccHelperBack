@@ -208,6 +208,21 @@ def register_company(
         )
         db.add(new_qa)
 
+    # 카테고리 설정도 샘플 회사에서 복사 (없으면 복사한 QA의 카테고리로 생성)
+    # - 비어 있으면 관리자 화면 카테고리 드롭다운이 비어 보임
+    sample_company = db.query(Company).filter(Company.company_id == sample_source_id).first()
+    if sample_company and sample_company.categories:
+        company.categories = sample_company.categories
+    elif source_qas:
+        first_question: dict[str, str] = {}
+        for qa in source_qas:
+            if qa.category and qa.category not in first_question:
+                first_question[qa.category] = qa.question
+        company.categories = json.dumps(
+            [{"label": label, "question": q} for label, q in first_question.items()],
+            ensure_ascii=False,
+        )
+
     db.commit()
 
     return CompanyRegisterResponse(
