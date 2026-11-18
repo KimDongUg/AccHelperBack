@@ -3,7 +3,7 @@
 import logging
 import math
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -75,6 +75,28 @@ def _get_or_create_open_thread(db: Session, company_id: int, dong: str, ho: str,
     db.commit()
     db.refresh(thread)
     return thread
+
+
+async def _save_chat_image(file: UploadFile) -> dict:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="파일이 없습니다.")
+    file_bytes = await file.read()
+    try:
+        from app.services.image_upload import save_image
+        filename = save_image(file_bytes, file.filename)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    # 프론트(Vercel)가 /uploads/*를 백엔드로 프록시하므로 상대경로로 반환
+    return {"url": f"/uploads/{filename}"}
+
+
+def _message_preview(msg: ChatMessage | None) -> str:
+    if not msg:
+        return ""
+    content = msg.content or ""
+    if not content.strip() and msg.image_url:
+        return "📷 사진"
+    return content[:60] + "…" if len(content) > 60 else content
 
 
 def _admin_name_map(db: Session, admin_ids: set[int]) -> dict[int, str]:
@@ -153,6 +175,27 @@ def get_my_thread(request: Request, db: Session = Depends(get_db)):
     )
 
 
+@router.post("/thread/images", status_code=201)
+@limiter.limit(RATE_LIMIT_CHAT_TALK_SEND)
+async def upload_resident_image(
+    request: Request,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """입주민 사진 업로드 — 영업시간 내에만 허용. 반환된 url을 메시지 전송 시 image_url로 사용."""
+    user = _get_market_user(request)
+    company_id = user.get("company_id")
+    if not company_id or not user.get("building") or not user.get("unit"):
+        raise HTTPException(status_code=401, detail="입주민 인증이 필요합니다.")
+
+    available, _reason = is_business_hours(db, company_id=company_id)
+    if not available:
+        from app.services.business_hours import UNAVAILABLE_MESSAGE
+        raise HTTPException(status_code=403, detail=UNAVAILABLE_MESSAGE)
+
+    return await _save_chat_image(file)
+
+
 @router.post("/thread/messages", status_code=201)
 @limiter.limit(RATE_LIMIT_CHAT_TALK_SEND)
 def send_resident_message(
@@ -181,7 +224,12 @@ def send_resident_message(
         db.query(ChatMessage).filter(ChatMessage.thread_id == thread.id).count() == 0
     )
 
-    msg = ChatMessage(thread_id=thread.id, sender_type="resident", content=body.content.strip())
+    msg = ChatMessage(
+        thread_id=thread.id,
+        sender_type="resident",
+        content=body.content.strip(),
+        image_url=body.image_url,
+    )
     db.add(msg)
     thread.last_message_at = now_kst()
     db.commit()
@@ -234,7 +282,7 @@ def list_admin_threads(
             .order_by(ChatMessage.created_at.desc())
             .first()
         )
-        preview = (last_msg.content[:60] + "…" if last_msg and len(last_msg.content) > 60 else (last_msg.content if last_msg else ""))
+        preview = _message_preview(last_msg)
         result_items.append(ChatThreadListItem(
             id=t.id,
             dong=t.dong,
@@ -310,6 +358,23 @@ def get_admin_thread(
     )
 
 
+@router.post("/admin/threads/{thread_id}/images", status_code=201)
+async def upload_admin_image(
+    thread_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    admin: dict = Depends(require_admin_with_scope),
+):
+    """관리자 사진 업로드 — 반환된 url을 답장 전송 시 image_url로 사용."""
+    thread = db.query(ChatThread).filter(
+        ChatThread.id == thread_id,
+        ChatThread.company_id == admin["company_id"],
+    ).first()
+    if not thread:
+        raise HTTPException(status_code=404, detail="스레드를 찾을 수 없습니다.")
+    return await _save_chat_image(file)
+
+
 @router.post("/admin/threads/{thread_id}/messages", status_code=201)
 def send_admin_message(
     thread_id: int,
@@ -342,6 +407,7 @@ def send_admin_message(
         sender_type="admin",
         sender_admin_id=admin["user_id"],
         content=body.content.strip(),
+        image_url=body.image_url,
     )
     db.add(msg)
     thread.last_message_at = now_kst()

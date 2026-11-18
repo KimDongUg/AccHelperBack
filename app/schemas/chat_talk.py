@@ -1,16 +1,26 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class ChatMessageCreate(BaseModel):
-    content: str = Field(..., min_length=1, max_length=2000)
+    """텍스트/사진 중 최소 하나는 있어야 함. image_url은 1:1 톡 업로드 API가 돌려준
+    /uploads/{파일명} 형태만 허용 (외부 URL 삽입 방지)."""
+    content: str = Field("", max_length=2000)
+    image_url: str | None = Field(None, max_length=500, pattern=r"^/uploads/[0-9a-f]{32}\.(jpg|jpeg|png|gif|webp)$")
+
+    @model_validator(mode="after")
+    def _require_content_or_image(self):
+        if not self.content.strip() and not self.image_url:
+            raise ValueError("메시지 내용 또는 사진이 필요합니다.")
+        return self
 
 
 class ChatMessageOut(BaseModel):
     id: int
     sender_type: str
     content: str
+    image_url: str | None = None
     created_at: datetime
     alimtalk_sent: bool | None = None
     read_at: datetime | None = None

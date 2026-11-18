@@ -358,6 +358,8 @@ def trigger_chat_talk_admin_alert(thread_id: int) -> None:
             .first()
         )
         content = last_msg.content if last_msg else ""
+        if last_msg and not content.strip() and last_msg.image_url:
+            content = "(사진)"  # 알림톡 변수는 빈 값이면 발송 실패
         time_str = _format_time(last_msg.created_at) if last_msg else _format_time(now_kst())
         unit_display = f"{thread.dong} {thread.ho}"
         url = _build_chat_talk_admin_url(thread.company_id, thread.id)

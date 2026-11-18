@@ -28,7 +28,8 @@ class ChatMessage(Base):
     thread_id = Column(Integer, ForeignKey("chat_threads.id", ondelete="CASCADE"), nullable=False, index=True)
     sender_type = Column(String(10), nullable=False)  # resident / admin
     sender_admin_id = Column(Integer, ForeignKey("admin_users.user_id"), nullable=True)
-    content = Column(Text, nullable=False)
+    content = Column(Text, nullable=False)  # 사진만 보낸 경우 빈 문자열
+    image_url = Column(String(500), nullable=True)  # /uploads/{파일명} (1:1 톡 사진 첨부)
     created_at = Column(DateTime, default=now_kst)
     read_at = Column(DateTime, nullable=True)  # resident 메시지에만 의미 있음 (admin 안읽음 배지용)
     alimtalk_sent = Column(Boolean, nullable=True)  # 스레드 첫 메시지/첫 답변에만 값 설정 (그 외는 NULL)

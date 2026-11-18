@@ -395,6 +395,7 @@ def _run_pg_migration(engine: Engine):
             logger.info("PG: Created table chat_messages")
         else:
             _pg_add_column_if_missing(conn, "chat_messages", "alimtalk_sent", "BOOLEAN")
+        _pg_add_column_if_missing(conn, "chat_messages", "image_url", "VARCHAR(500)")
 
         # --- public_holidays 테이블 (1:1 톡 영업시간 판정용 공휴일 캐시) ---
         if not _pg_table_exists(conn, "public_holidays"):
@@ -800,6 +801,7 @@ def run_migration(engine: Engine):
             logger.info("Created table chat_messages")
         else:
             _add_column_if_missing(conn, "chat_messages", "alimtalk_sent", "BOOLEAN")
+        _add_column_if_missing(conn, "chat_messages", "image_url", "VARCHAR(500)")
 
         # --- public_holidays 테이블 (1:1 톡 영업시간 판정용 공휴일 캐시) ---
         if not _table_exists(conn, "public_holidays"):
