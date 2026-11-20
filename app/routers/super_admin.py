@@ -24,7 +24,7 @@ from app.models.demo_lead import DemoLead
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
 from app.routers.visits import VISIT_PAGES
-from app.routers.demo_leads import DEMO_TYPES
+from app.routers.demo_leads import DEMO_TYPES, SOURCE_LABELS
 from app.utils import now_kst
 from app.services.embedding_service import bulk_rebuild_embeddings, upsert_qa_embedding
 
@@ -258,6 +258,7 @@ def _demo_lead_dict(r: DemoLead) -> dict:
         "marketing_agreed": r.marketing_agreed,
         "device_type": r.device_type,
         "source": r.source,
+        "source_label": SOURCE_LABELS.get(r.source or "", r.source or "-"),
         "created_at": r.created_at.isoformat() if r.created_at else None,
     }
 
@@ -316,7 +317,7 @@ def export_demo_leads(
             DEMO_TYPES.get(r.demo_type, r.demo_type),
             "동의" if r.marketing_agreed else "미동의",
             r.device_type,
-            r.source or "",
+            SOURCE_LABELS.get(r.source or "", r.source or ""),
         ])
     data = ("﻿" + buf.getvalue()).encode("utf-8")
     filename = f"demo_leads_{now_kst().strftime('%Y%m%d')}.csv"

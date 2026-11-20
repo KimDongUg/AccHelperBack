@@ -16,7 +16,19 @@ logger = logging.getLogger("acchelper")
 
 router = APIRouter(tags=["demo-leads"])
 
-DEMO_TYPES = {"apt": "샘플아파트", "office": "샘플오피스텔"}
+# select = 유형 없이 신청(신청 후 체험 시작 페이지에서 고름)
+DEMO_TYPES = {"apt": "샘플아파트", "office": "샘플오피스텔", "select": "-"}
+# 어느 버튼에서 신청했는지 (슈퍼관리자 표시용)
+SOURCE_LABELS = {
+    "header": "메인 헤더 체험하기",
+    "hero_apt": "메인 샘플아파트 버튼",
+    "hero_office": "메인 샘플오피스텔 버튼",
+    "quick_card": "메인 AI 챗봇 체험하기 카드",
+    "select_apt": "체험선택 페이지 아파트",
+    "select_office": "체험선택 페이지 오피스텔",
+    "select_header": "체험선택 페이지 헤더",
+    "start_header": "체험시작 페이지 헤더",
+}
 ALLOWED_DEVICE_TYPES = {"mobile", "tablet", "desktop"}
 PHONE_RE = re.compile(r"^01[016789]\d{7,8}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
