@@ -1,5 +1,6 @@
 """Super admin endpoints for tenant and quota management."""
 
+import csv
 import io
 from datetime import datetime, timedelta
 import logging
@@ -9,7 +10,7 @@ from pathlib import Path
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.config import DATA_DIR
@@ -19,9 +20,11 @@ from app.dependencies import require_super_admin
 from app.models.admin_user import AdminUser
 from app.models.company import Company
 from app.models.page_visit_log import PageVisitLog
+from app.models.demo_lead import DemoLead
 from app.models.qa_knowledge import QaKnowledge
 from app.models.tenant_quota import TenantQuota
 from app.routers.visits import VISIT_PAGES
+from app.routers.demo_leads import DEMO_TYPES
 from app.utils import now_kst
 from app.services.embedding_service import bulk_rebuild_embeddings, upsert_qa_embedding
 
@@ -222,6 +225,106 @@ def visit_stats(
         })
 
     return {"pages": list(stats.values()), "daily": daily_list}
+
+
+def _demo_lead_query(db: Session, q: str | None, date_from: str | None, date_to: str | None):
+    query = db.query(DemoLead)
+    if q:
+        like = f"%{q.strip()}%"
+        digits = "".join(ch for ch in q if ch.isdigit())
+        conds = [DemoLead.name.ilike(like), DemoLead.building_name.ilike(like), DemoLead.email.ilike(like)]
+        if digits:
+            conds.append(DemoLead.phone.like(f"%{digits}%"))
+        query = query.filter(or_(*conds))
+    try:
+        if date_from:
+            query = query.filter(DemoLead.created_at >= datetime.strptime(date_from, "%Y-%m-%d"))
+        if date_to:
+            query = query.filter(DemoLead.created_at < datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1))
+    except ValueError:
+        raise HTTPException(status_code=400, detail="날짜 형식은 YYYY-MM-DD 입니다.")
+    return query
+
+
+def _demo_lead_dict(r: DemoLead) -> dict:
+    return {
+        "id": r.id,
+        "name": r.name,
+        "phone": r.phone,
+        "email": r.email,
+        "building_name": r.building_name,
+        "demo_type": r.demo_type,
+        "demo_type_label": DEMO_TYPES.get(r.demo_type, r.demo_type),
+        "marketing_agreed": r.marketing_agreed,
+        "device_type": r.device_type,
+        "source": r.source,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    }
+
+
+@router.get("/demo-leads")
+def list_demo_leads(
+    q: str | None = Query(None, max_length=100),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """메인화면 '체험하기' 신청자 목록 (최신순)."""
+    query = _demo_lead_query(db, q, date_from, date_to)
+    total = query.count()
+    rows = (
+        query.order_by(DemoLead.created_at.desc(), DemoLead.id.desc())
+        .offset((page - 1) * size)
+        .limit(size)
+        .all()
+    )
+    today_start = datetime.combine(now_kst().date(), datetime.min.time())
+    today_count = db.query(func.count(DemoLead.id)).filter(DemoLead.created_at >= today_start).scalar() or 0
+    all_count = db.query(func.count(DemoLead.id)).scalar() or 0
+    return {
+        "items": [_demo_lead_dict(r) for r in rows],
+        "total": total,
+        "page": page,
+        "size": size,
+        "summary": {"today": today_count, "all": all_count},
+    }
+
+
+@router.get("/demo-leads/export")
+def export_demo_leads(
+    q: str | None = Query(None, max_length=100),
+    date_from: str | None = Query(None),
+    date_to: str | None = Query(None),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_super_admin),
+):
+    """체험 신청자 CSV 다운로드 (엑셀 호환 UTF-8 BOM)."""
+    rows = _demo_lead_query(db, q, date_from, date_to).order_by(DemoLead.created_at.desc()).all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["신청일시", "이름", "휴대폰", "이메일", "아파트(오피스텔)명", "체험유형", "마케팅동의", "기기", "신청위치"])
+    for r in rows:
+        writer.writerow([
+            r.created_at.strftime("%Y-%m-%d %H:%M") if r.created_at else "",
+            r.name,
+            r.phone,
+            r.email or "",
+            r.building_name,
+            DEMO_TYPES.get(r.demo_type, r.demo_type),
+            "동의" if r.marketing_agreed else "미동의",
+            r.device_type,
+            r.source or "",
+        ])
+    data = ("﻿" + buf.getvalue()).encode("utf-8")
+    filename = f"demo_leads_{now_kst().strftime('%Y%m%d')}.csv"
+    return StreamingResponse(
+        io.BytesIO(data),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def _run_embeddings_rebuild(company_id: int | None):
