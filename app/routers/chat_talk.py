@@ -23,6 +23,7 @@ from app.schemas.chat_talk import (
     ChatThreadListItem,
     ChatThreadListResponse,
     ChatThreadOut,
+    ResidentThreadListItem,
     ThreadStatusUpdate,
 )
 from app.services.business_hours import get_availability, is_business_hours
@@ -120,30 +121,20 @@ def availability(request: Request, company_id: int | None = None, db: Session = 
     return get_availability(db, company_id=resolved_company_id)
 
 
-@router.get("/thread", response_model=ChatThreadOut)
-def get_my_thread(request: Request, db: Session = Depends(get_db)):
-    """입주민 본인의 가장 최근 스레드 조회 (읽기는 영업시간 무관 항상 허용)."""
+def _resident_identity(request: Request) -> tuple[int, str, str, str]:
+    """입주민 토큰에서 (company_id, 동, 호, 이름) 추출 — 없으면 401."""
     user = _get_market_user(request)
     company_id = user.get("company_id")
     dong = user.get("building")
     ho = user.get("unit")
     if not company_id or not dong or not ho:
         raise HTTPException(status_code=401, detail="입주민 인증이 필요합니다.")
+    return company_id, dong, ho, (user.get("name") or "")
 
-    thread = (
-        db.query(ChatThread)
-        .filter(
-            ChatThread.company_id == company_id,
-            ChatThread.dong == dong,
-            ChatThread.ho == ho,
-        )
-        .order_by(ChatThread.created_at.desc())
-        .first()
-    )
-    if not thread:
-        raise HTTPException(status_code=404, detail="아직 시작된 대화가 없습니다.")
 
-    # 관리자가 보낸 미확인 메시지 읽음 처리 (카카오톡처럼 입주민이 대화창을 열면 "1"이 사라짐)
+def _resident_thread_out(db: Session, thread: ChatThread) -> ChatThreadOut:
+    """입주민용 스레드 상세 — 관리자가 보낸 미확인 메시지를 읽음 처리한 뒤 반환."""
+    # 카카오톡처럼 입주민이 대화창을 열면 관리자 메시지의 "1"이 사라짐
     db.execute(
         text(
             "UPDATE chat_messages SET read_at = :now "
@@ -173,6 +164,92 @@ def get_my_thread(request: Request, db: Session = Depends(get_db)):
         last_message_at=thread.last_message_at,
         messages=[ChatMessageOut.model_validate(m) for m in messages],
     )
+
+
+@router.get("/thread", response_model=ChatThreadOut)
+def get_my_thread(request: Request, db: Session = Depends(get_db)):
+    """입주민 본인의 가장 최근 스레드 조회 (읽기는 영업시간 무관 항상 허용)."""
+    company_id, dong, ho, _name = _resident_identity(request)
+
+    thread = (
+        db.query(ChatThread)
+        .filter(
+            ChatThread.company_id == company_id,
+            ChatThread.dong == dong,
+            ChatThread.ho == ho,
+        )
+        .order_by(ChatThread.created_at.desc())
+        .first()
+    )
+    if not thread:
+        raise HTTPException(status_code=404, detail="아직 시작된 대화가 없습니다.")
+    return _resident_thread_out(db, thread)
+
+
+@router.get("/threads", response_model=list[ResidentThreadListItem])
+def list_my_threads(request: Request, db: Session = Depends(get_db)):
+    """'톡 대화 확인' — 인증한 입주민(회사·동·호·이름 일치)의 대화 목록, 최신순.
+    이름+전화번호는 로그인(/api/market/login) 시 입주민 명부와 대조해 이미 검증됨."""
+    company_id, dong, ho, name = _resident_identity(request)
+
+    threads = (
+        db.query(ChatThread)
+        .filter(
+            ChatThread.company_id == company_id,
+            ChatThread.dong == dong,
+            ChatThread.ho == ho,
+            ChatThread.resident_name == name,
+        )
+        .order_by(ChatThread.last_message_at.desc())
+        .all()
+    )
+    items = []
+    for t in threads:
+        last_msg = (
+            db.query(ChatMessage)
+            .filter(ChatMessage.thread_id == t.id)
+            .order_by(ChatMessage.created_at.desc())
+            .first()
+        )
+        unread = (
+            db.query(ChatMessage)
+            .filter(
+                ChatMessage.thread_id == t.id,
+                ChatMessage.sender_type == "admin",
+                ChatMessage.read_at.is_(None),
+            )
+            .count()
+        )
+        items.append(ResidentThreadListItem(
+            id=t.id,
+            status=t.status,
+            created_at=t.created_at,
+            last_message_at=t.last_message_at,
+            last_message_preview=_message_preview(last_msg),
+            unread_count=unread,
+        ))
+    return items
+
+
+@router.get("/threads/{thread_id}", response_model=ChatThreadOut)
+def get_my_thread_by_id(thread_id: int, request: Request, db: Session = Depends(get_db)):
+    """'톡 대화 확인' 상세 — 본인(회사·동·호·이름 일치) 대화만 열람 가능."""
+    company_id, dong, ho, name = _resident_identity(request)
+
+    thread = (
+        db.query(ChatThread)
+        .filter(
+            ChatThread.id == thread_id,
+            ChatThread.company_id == company_id,
+            ChatThread.dong == dong,
+            ChatThread.ho == ho,
+            ChatThread.resident_name == name,
+        )
+        .first()
+    )
+    if not thread:
+        raise HTTPException(status_code=404, detail="대화를 찾을 수 없습니다.")
+    return _resident_thread_out(db, thread)
 
 
 @router.post("/thread/images", status_code=201)

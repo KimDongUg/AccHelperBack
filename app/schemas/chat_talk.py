@@ -54,6 +54,16 @@ class ChatThreadListItem(BaseModel):
     last_message_preview: str
 
 
+class ResidentThreadListItem(BaseModel):
+    """입주민 '톡 대화 확인' 목록 항목."""
+    id: int
+    status: str
+    created_at: datetime
+    last_message_at: datetime
+    last_message_preview: str
+    unread_count: int  # 입주민이 아직 안 읽은 관리자 메시지 수
+
+
 class ChatThreadListResponse(BaseModel):
     items: list[ChatThreadListItem]
     page: int
