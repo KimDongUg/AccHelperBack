@@ -18,6 +18,6 @@ class AccessLog(Base):
     ho: Mapped[str] = mapped_column(String(20), nullable=False, index=True)
     ip: Mapped[str] = mapped_column(String(45), nullable=False, default="")
     user_agent: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    action: Mapped[str] = mapped_column(String(20), nullable=False)  # send_sms / verify / fee_query
+    action: Mapped[str] = mapped_column(String(20), nullable=False)  # send_sms / verify / fee_query(과거 로그만, 현재는 미기록) / admin_query
     success: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=now_kst, index=True)

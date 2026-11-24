@@ -49,7 +49,7 @@ def get_stats(
     total_chats = chat_query.count()
 
     fee_success_log = db.query(AccessLog).filter(
-        AccessLog.action == "fee_query",
+        AccessLog.action.in_(("verify", "fee_query")),  # 인증 성공 기준 (fee_query는 과거 로그)
         AccessLog.success == True,
         AccessLog.created_at >= today_start,
     )

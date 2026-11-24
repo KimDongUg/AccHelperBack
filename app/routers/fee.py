@@ -268,6 +268,8 @@ def verify_otp(req: VerifyOtpRequest, request: Request, db: Session = Depends(ge
 
     db.delete(otp)
     db.commit()
+    # 조회 이력 = 인증 이력: 인증 성공 시점에만 성공 로그를 남긴다 (월 변경/새로고침 조회는 기록하지 않음)
+    _log_access(db, company_id, dong, ho, request, "verify", True)
 
     token = create_access_token(
         {"dong": dong, "ho": ho, "company_id": company_id, "scope": "fee"},
@@ -608,10 +610,9 @@ def get_fee(
     entry = query.order_by(FeeEntry.uploaded_at.desc()).first()
 
     if not entry:
-        _log_access(db, company_id, dong_n, ho_n, request, "fee_query", False)
         raise HTTPException(status_code=404, detail="관리비 데이터를 찾을 수 없습니다.")
 
-    _log_access(db, company_id, dong_n, ho_n, request, "fee_query", True)
+    # 조회 자체는 로그를 남기지 않음 — 이력은 인증(verify) 기준 (과거 fee_query 로그는 그대로 집계에 포함)
     return _build_fee_response(entry)
 
 
@@ -647,10 +648,10 @@ def list_fee_residents(
     if not roster:
         return {"total": 0, "pages": 1, "page": page, "items": []}
 
-    # 2) 관리비 조회 로그 집계 (조회한 적 없으면 빈 값)
+    # 2) 관리비 인증 로그 집계 (verify 성공 + 과거 fee_query 성공, 없으면 빈 값)
     logs = (
         db.query(AccessLog.dong, AccessLog.ho, AccessLog.created_at)
-        .filter(AccessLog.company_id == cid, AccessLog.action == "fee_query", AccessLog.success == True)
+        .filter(AccessLog.company_id == cid, AccessLog.action.in_(("verify", "fee_query")), AccessLog.success == True)
         .all()
     )
     fee_agg: dict[tuple, dict] = {}
